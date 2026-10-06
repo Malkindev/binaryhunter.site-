@@ -645,7 +645,85 @@
   }
   window.addEventListener('sitebuilder-public-api-ready',function(){retrievePublicSymbols();});
 
-  function tick(){repairAuth(publicSettings||{});bootstrapPublicApi();}
+  // ── Floating AI Badge position enforcement ──
+  function enforceAiBadgePosition() {
+    try {
+      var isMobile = window.innerWidth <= 768;
+      var botVal = isMobile ? '16px' : '24px';
+      var rVal = isMobile ? '16px' : '24px';
+
+      var selectors = [
+        '#a1', '.ai-widget', '.ai-badge', '.ai-assistant-badge', '.ai-floating-button',
+        '[class*="ai-widget"]', '[class*="ai-badge"]', '[class*="ai-button"]'
+      ];
+      var els = Array.from(document.querySelectorAll(selectors.join(',')));
+      
+      document.querySelectorAll('div, button').forEach(function (el) {
+        if (els.indexOf(el) !== -1) return;
+        var style = window.getComputedStyle(el);
+        if (style.position === 'fixed' || style.position === 'absolute') {
+          var txt = (el.textContent || '').trim();
+          if (txt === 'AI' || (el.querySelector('canvas') && txt.indexOf('AI') !== -1)) {
+            els.push(el);
+          }
+        }
+      });
+
+      els.forEach(function (el) {
+        if (el && el.style) {
+          el.style.setProperty('position', 'fixed', 'important');
+          el.style.setProperty('bottom', botVal, 'important');
+          el.style.setProperty('right', rVal, 'important');
+          el.style.setProperty('top', 'auto', 'important');
+          el.style.setProperty('left', 'auto', 'important');
+          el.style.setProperty('z-index', '999999', 'important');
+          el.style.setProperty('margin', '0', 'important');
+          el.style.setProperty('transform', 'none', 'important');
+        }
+      });
+    } catch (_) {}
+  }
+
+  // ── Entry Scanner parameters input validation ──
+  function enforceScannerInputBounds() {
+    try {
+      var modals = document.querySelectorAll('.dc-modal, [class*="modal"], [class*="scanner"]');
+      modals.forEach(function (m) {
+        var header = m.querySelector('h1, h2, h3, header, [class*="header"], [class*="title"]');
+        if (header && /scanner|parameters|entry/i.test(header.textContent || '')) {
+          var inputs = m.querySelectorAll('input');
+          inputs.forEach(function (input) {
+            if (input.dataset.boundHandlerInstalled) return;
+            input.dataset.boundHandlerInstalled = 'true';
+            
+            var label = '';
+            var parent = input.closest('label, div, p');
+            if (parent) label = (parent.textContent || '').toLowerCase();
+
+            input.addEventListener('blur', function () {
+              var val = parseFloat(input.value);
+              if (isNaN(val)) return;
+              if (label.indexOf('stake') !== -1) {
+                if (val < 0.35) input.value = '0.35';
+                if (val > 5000) input.value = '5000';
+              } else if (label.indexOf('martingale') !== -1) {
+                if (val < 1) input.value = '1';
+                if (val > 10) input.value = '10';
+              } else if (label.indexOf('win') !== -1 || label.indexOf('number') !== -1) {
+                if (val < 1) input.value = '1';
+                if (val > 500) input.value = '500';
+              } else if (label.indexOf('loss') !== -1 || label.indexOf('stop') !== -1) {
+                if (val < 1) input.value = '1';
+                if (val > 10000) input.value = '10000';
+              }
+            });
+          });
+        }
+      });
+    } catch (_) {}
+  }
+
+  function tick(){repairAuth(publicSettings||{});bootstrapPublicApi();enforceAiBadgePosition();enforceScannerInputBounds();}
   function run(){loadSettings().then(function(){tick();var tries=0,t=setInterval(function(){tick();if(++tries>=40)clearInterval(t);},500);});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
   window.addEventListener('load',run);
@@ -655,6 +733,8 @@
       observerTimer=setTimeout(function(){
         observerTimer=null;
         repairAuth(publicSettings||{});
+        enforceAiBadgePosition();
+        enforceScannerInputBounds();
       },400);
     }).observe(document.documentElement,{childList:true,subtree:true});
   }catch(_){ }

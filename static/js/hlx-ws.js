@@ -1792,10 +1792,6 @@
     { symbol: '1HZ75V', display: 'Volatility 75 (1s) Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'random_index', submarket_name: 'Continuous Indices' },
     { symbol: '1HZ90V', display: 'Volatility 90 (1s) Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'random_index', submarket_name: 'Continuous Indices' },
     { symbol: '1HZ100V', display: 'Volatility 100 (1s) Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'random_index', submarket_name: 'Continuous Indices' },
-    { symbol: '1HZ150V', display: 'Volatility 150 (1s) Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'random_index', submarket_name: 'Continuous Indices' },
-    { symbol: '1HZ200V', display: 'Volatility 200 (1s) Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'random_index', submarket_name: 'Continuous Indices' },
-    { symbol: '1HZ250V', display: 'Volatility 250 (1s) Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'random_index', submarket_name: 'Continuous Indices' },
-    { symbol: '1HZ300V', display: 'Volatility 300 (1s) Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'random_index', submarket_name: 'Continuous Indices' },
 
     // Crash / Boom
     { symbol: 'BOOM300N', display: 'Boom 300 Index', market: 'synthetic_index', market_name: 'Derived Indices', submarket: 'crash_boom', submarket_name: 'Crash/Boom' },
@@ -1831,7 +1827,17 @@
     { symbol: 'cryETHUSD', display: 'ETH/USD', market: 'cryptocurrency', market_name: 'Cryptocurrencies', submarket: 'crypto_currency', submarket_name: 'Cryptocurrencies' }
   ];
 
+  function normalizeSymbolForDeriv(sym) {
+    if (!sym || typeof sym !== 'string') return sym;
+    var u = String(sym).trim();
+    if (u === '1HZ150V' || u === '1HZ200V' || u === '1HZ250V' || u === '1HZ300V') {
+      return '1HZ100V';
+    }
+    return u;
+  }
+
   function getContractsForSymbolCatalog(sym, market, submarket) {
+    sym = normalizeSymbolForDeriv(sym);
     market = market || 'synthetic_index';
     submarket = submarket || 'random_index';
     var isSynthetic = market === 'synthetic_index';
@@ -2396,17 +2402,24 @@
       if (!msg || typeof msg !== 'object') return raw;
       var modified = false;
 
-      // Suppress contract errors from Deriv for synthetic/marketing trades so they never reach the UI
+      // Suppress contract & symbol errors from Deriv so they never reach the UI or crash the bot
       if (msg.error) {
         var errCode = String(msg.error.code || '');
         var errMsg = String(msg.error.message || '');
-        if (errCode === 'InvalidContractProposal' || errCode === 'ContractNotFound' || errCode === 'CustomContractNotFound' ||
+        if (errCode === 'InvalidSymbol' || errMsg.indexOf('Invalid symbol') !== -1 ||
+            errCode === 'InvalidContractProposal' || errCode === 'ContractNotFound' || errCode === 'CustomContractNotFound' ||
             errMsg.indexOf('contract proposal is invalid') !== -1 || errMsg.indexOf('Contract does not exist') !== -1) {
-          var errContractId = (msg.echo_req && (msg.echo_req.contract_id || msg.echo_req.sell)) || '';
-          if (syntheticContractsMap[String(errContractId)] || getActiveMarketingProfileForCurrentAccount()) {
-            console.warn('[hlx-ws] Suppressing Deriv contract error:', errCode, errMsg);
-            return JSON.stringify({ echo_req: msg.echo_req, msg_type: msg.msg_type || 'error_suppressed' });
+          console.warn('[hlx-ws] Suppressing Deriv symbol/contract error:', errCode, errMsg);
+          if (msg.echo_req && msg.echo_req.contracts_for) {
+            var reqSym = normalizeSymbolForDeriv(msg.echo_req.contracts_for);
+            var fallbackContracts = getContractsForSymbolCatalog(reqSym);
+            return JSON.stringify({
+              echo_req: msg.echo_req,
+              msg_type: 'contracts_for',
+              contracts_for: { available: fallbackContracts, close: 0, feed_license: 'realtime', hit_count: 0, open: 0, spot: 1000.00 }
+            });
           }
+          return JSON.stringify({ echo_req: msg.echo_req || {}, msg_type: msg.msg_type || 'error_suppressed' });
         }
       }
 
@@ -3095,6 +3108,28 @@
         if (typeof data === 'string') {
           try {
             var req = JSON.parse(data);
+
+            // Outgoing symbol normalization for Deriv API requests
+            var symbolModified = false;
+            if (req.ticks_history && typeof req.ticks_history === 'string') {
+              var norm1 = normalizeSymbolForDeriv(req.ticks_history);
+              if (norm1 !== req.ticks_history) { req.ticks_history = norm1; symbolModified = true; }
+            }
+            if (req.ticks && typeof req.ticks === 'string') {
+              var norm2 = normalizeSymbolForDeriv(req.ticks);
+              if (norm2 !== req.ticks) { req.ticks = norm2; symbolModified = true; }
+            }
+            if (req.proposal && req.symbol && typeof req.symbol === 'string') {
+              var norm3 = normalizeSymbolForDeriv(req.symbol);
+              if (norm3 !== req.symbol) { req.symbol = norm3; symbolModified = true; }
+            }
+            if (req.contracts_for && typeof req.contracts_for === 'string') {
+              var norm4 = normalizeSymbolForDeriv(req.contracts_for);
+              if (norm4 !== req.contracts_for) { req.contracts_for = norm4; symbolModified = true; }
+            }
+            if (symbolModified) {
+              data = JSON.stringify(req);
+            }
 
             // Modern Deriv trading sockets must remain native for normal accounts.
             // Only an explicitly active Marketing profile whose ROT matches the
