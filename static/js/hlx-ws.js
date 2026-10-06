@@ -1394,31 +1394,9 @@
       if (isUseRealBalanceEnabled()) return;
       var isDemo = isDemoAccountActive();
       var prof = getActiveMarketingProfileForCurrentAccount();
-      var currentAct = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
 
-      if (!prof && profile && profile.marketingEligible) prof = profile;
-      if (!prof) {
-        for (var k in marketingProfilesByRot) {
-          if (marketingProfilesByRot[k] && marketingProfilesByRot[k].marketingEligible) {
-            prof = marketingProfilesByRot[k];
-            break;
-          }
-        }
-      }
-
-      if (!prof) {
-        try {
-          var settings = window.__DERIV_SITE_SETTINGS__ || {};
-          if (settings.useRealBalance === true) return;
-          var startBal = Number(settings.startingBalance || 450.00);
-          prof = {
-            rot: currentAct || settings.rot || 'ROT91298223',
-            marketingEligible: true,
-            startingBalance: startBal,
-            currentBalance: startBal,
-            currency: settings.currency || 'USD'
-          };
-        } catch (_) {}
+      if (!prof && profile && profile.marketingEligible && isSameAccount(profile.rot, (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.rot))) {
+        prof = profile;
       }
 
       if (!prof || !prof.marketingEligible) return;
@@ -1759,8 +1737,11 @@
 
   function bootstrapMarketingSync() {
     try {
-      if (isUseRealBalanceEnabled()) {
-        var act = String(localStorage.getItem('active_loginid') || '').trim();
+      var settings = window.__DERIV_SITE_SETTINGS__ || {};
+      var configuredRot = String(settings.rot || 'ROT91298223').trim().toUpperCase();
+      var act = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
+
+      if (isUseRealBalanceEnabled() || (act.indexOf('ROT') === 0 && !isSameAccount(act, configuredRot))) {
         if (act.indexOf('ROT') === 0) {
           localStorage.removeItem('active_loginid');
           localStorage.removeItem('client.accounts');
@@ -1768,7 +1749,7 @@
           localStorage.removeItem('accountsList');
         }
         activeMarketingProfile = null;
-        return;
+        if (isUseRealBalanceEnabled()) return;
       }
       bootstrapDefaultMarketingAccount();
       // 1. Wipe all legacy / stale caches from old sessions immediately
