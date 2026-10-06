@@ -99,6 +99,7 @@ const HLX_SETTINGS = {
   legacyAppId: /^\d+$/.test(DERIV_CLIENT_ID) ? DERIV_CLIENT_ID : '1089',
   app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
   appMarkupPercentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
+  accuracy: Number(BRAND.accuracy !== undefined ? BRAND.accuracy : 85.0),
 
   // ── Theme Colors ──
   primaryColor: BRAND.primaryColor || '#9D0698',

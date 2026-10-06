@@ -884,6 +884,46 @@
     return 'Win payout if ' + dName + ' conforms to ' + ct + ' contract.';
   }
 
+  function getMarketingAccuracy(profile) {
+    var candidates = [];
+    if (profile && profile.accuracy !== undefined && profile.accuracy !== null) {
+      candidates.push(profile.accuracy);
+    }
+    try {
+      var settings = window.__DERIV_SITE_SETTINGS__ || {};
+      if (settings.accuracy !== undefined && settings.accuracy !== null) {
+        candidates.push(settings.accuracy);
+      }
+    } catch (_) {}
+    try {
+      var raw = localStorage.getItem('config.site_settings_json');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && (parsed.accuracy !== undefined || parsed.winRate !== undefined)) {
+          candidates.push(parsed.accuracy !== undefined ? parsed.accuracy : parsed.winRate);
+        }
+      }
+    } catch (_) {}
+    try {
+      if (window.__DERIV_ACCURACY__ !== undefined) candidates.push(window.__DERIV_ACCURACY__);
+    } catch (_) {}
+
+    for (var i = 0; i < candidates.length; i++) {
+      var num = Number(candidates[i]);
+      if (Number.isFinite(num)) {
+        return Math.max(0, Math.min(100, num));
+      }
+    }
+    return 85.0;
+  }
+
+  function isTradeWon(profile) {
+    var acc = getMarketingAccuracy(profile);
+    if (acc >= 100) return true;  // 100% accuracy = NEVER lose any trade
+    if (acc <= 0) return false;   // 0% accuracy = NEVER win any trade
+    return (Math.random() * 100) < acc;
+  }
+
   function createFallbackSimulatedContract(cId, prof, matchedProp) {
     var nowSec = Math.floor(Date.now() / 1000);
     var pObj = matchedProp || {};
@@ -1569,6 +1609,7 @@
         marketingEligible: true,
         startingBalance: startBal,
         currentBalance: startBal,
+        accuracy: getMarketingAccuracy(null),
         currency: settings.currency || 'USD',
         mode: 'simulation'
       };
@@ -3711,8 +3752,8 @@
 
                   // Schedule settlement after contract duration (2.5 seconds)
                   setTimeout(function () {
-                    var accuracy = Number(curMktProfCheck.accuracy !== undefined ? curMktProfCheck.accuracy : 85);
-                    var isWon = (Math.random() * 100) < accuracy;
+                    var accuracy = getMarketingAccuracy(curMktProfCheck);
+                    var isWon = isTradeWon(curMktProfCheck);
                     var profitEarned = isWon ? Number((payoutExpected - stakePaid).toFixed(2)) : -stakePaid;
                     if (!Number.isFinite(profitEarned)) profitEarned = isWon ? Math.max(0, payoutExpected - stakePaid) : -stakePaid;
 
