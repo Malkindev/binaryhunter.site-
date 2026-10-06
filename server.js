@@ -272,7 +272,7 @@ app.get('/api/marketing/resolve', (req, res) => {
 
   const reqDigits = reqLid.replace(/^[^0-9]+/, '');
   const rotDigits = configuredRot.replace(/^[^0-9]+/, '');
-  const isMatch = !!configuredRot && (!reqLid || reqLid === configuredRot || (reqDigits && rotDigits && reqDigits === rotDigits) || true);
+  const isMatch = !!configuredRot && !!reqLid && (reqLid === configuredRot || (reqDigits && rotDigits && reqDigits === rotDigits));
 
   if (configuredRot && isMatch) {
     const activeRot = reqLid || configuredRot;

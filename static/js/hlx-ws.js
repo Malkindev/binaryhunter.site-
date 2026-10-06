@@ -1582,7 +1582,7 @@
   }
 
   function isSameAccount(id1, id2) {
-    if (!id1 || !id2) return true;
+    if (!id1 || !id2) return false;
     var a = String(id1).trim().toUpperCase();
     var b = String(id2).trim().toUpperCase();
     if (a === b) return true;
@@ -1592,32 +1592,29 @@
     var d1 = a.replace(/^[^0-9]+/, '');
     var d2 = b.replace(/^[^0-9]+/, '');
     if (d1 && d2 && d1 === d2) return true;
-    if (!aDemo && !bDemo) return true;
     return false;
   }
 
   function getActiveMarketingProfileForCurrentAccount() {
+    if (isUseRealBalanceEnabled()) return null;
     if (isDemoAccountActive()) return null;
     var actId = String(localStorage.getItem('active_loginid') || currentRealLoginId || getStoredRealLoginId() || '').trim().toUpperCase();
     if (actId && (actId.indexOf('VRTC') === 0 || actId.indexOf('VRT') === 0 || actId.indexOf('DOT') === 0 || actId.indexOf('DEM') === 0)) return null;
 
-    try {
-      var settings = window.__DERIV_SITE_SETTINGS__ || {};
-      if (settings.useRealBalance === true) {
-        return null;
-      }
-    } catch (_) {}
+    var rotVal = (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.rot) || 'ROT91298223';
+    if (!actId || !isSameAccount(actId, rotVal)) {
+      return null;
+    }
 
-    if (activeMarketingProfile && activeMarketingProfile.marketingEligible) return activeMarketingProfile;
+    if (activeMarketingProfile && activeMarketingProfile.marketingEligible && isSameAccount(activeMarketingProfile.rot, rotVal)) return activeMarketingProfile;
     for (var kProf in marketingProfilesByRot) {
-      if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible) {
+      if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible && isSameAccount(marketingProfilesByRot[kProf].rot, rotVal)) {
         return marketingProfilesByRot[kProf];
       }
     }
 
     try {
       var settings = window.__DERIV_SITE_SETTINGS__ || {};
-      var rotVal = settings.rot || 'ROT91298223';
       var startBal = Number(settings.startingBalance || 450.00);
       var defProf = {
         rot: actId || rotVal,
