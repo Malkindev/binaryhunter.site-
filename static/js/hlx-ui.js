@@ -652,6 +652,20 @@
       var botVal = isMobile ? '16px' : '24px';
       var rVal = isMobile ? '16px' : '24px';
 
+      // 1. Explicitly protect the top header logo from ever being moved
+      var headerLogos = document.querySelectorAll('.d-apollo-logo, .logo-holder, header [class*="logo"], nav [class*="logo"], [id*="logo"]');
+      headerLogos.forEach(function (el) {
+        if (el && el.style) {
+          el.style.removeProperty('position');
+          el.style.removeProperty('bottom');
+          el.style.removeProperty('right');
+          el.style.removeProperty('top');
+          el.style.removeProperty('left');
+          el.style.removeProperty('z-index');
+        }
+      });
+
+      // 2. Select explicit AI floating widget selectors
       var selectors = [
         '#a1', '.ai-widget', '.ai-badge', '.ai-assistant-badge', '.ai-floating-button',
         '[class*="ai-widget"]', '[class*="ai-badge"]', '[class*="ai-button"]'
@@ -660,17 +674,21 @@
       
       document.querySelectorAll('div, button').forEach(function (el) {
         if (els.indexOf(el) !== -1) return;
-        var style = window.getComputedStyle(el);
-        if (style.position === 'fixed' || style.position === 'absolute') {
-          var txt = (el.textContent || '').trim();
-          if (txt === 'AI' || (el.querySelector('canvas') && txt.indexOf('AI') !== -1)) {
+        // Never touch header, nav, or logo elements
+        if (el.closest('header, nav, .logo-holder, .d-apollo-logo, [class*="header"], [class*="logo"], [class*="nav"]')) return;
+
+        var txt = (el.textContent || '').trim();
+        // Specifically target standalone small floating AI circle buttons (under 90px width/height)
+        if (txt === 'AI' && el.children.length <= 3) {
+          var rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.width <= 100 && rect.height <= 100) {
             els.push(el);
           }
         }
       });
 
       els.forEach(function (el) {
-        if (el && el.style) {
+        if (el && el.style && !el.closest('header, nav, .logo-holder, .d-apollo-logo, [class*="header"], [class*="logo"]')) {
           el.style.setProperty('position', 'fixed', 'important');
           el.style.setProperty('bottom', botVal, 'important');
           el.style.setProperty('right', rVal, 'important');
