@@ -348,11 +348,46 @@
     } catch (_) {}
   }
 
+  function fixAiWidgetPosition() {
+    try {
+      var selectors = [
+        '#a1', '.ai-widget', '.ai-badge', '.ai-icon', '.ai-assistant', '.ai-button',
+        '[class*="ai-widget"]', '[class*="ai-badge"]', '[class*="ai-assistant"]', '[class*="ai-floating"]',
+        '[id*="ai-widget"]', '[id*="ai-badge"]', '[id*="ai-assistant"]', '[id*="ai-floating"]',
+        '[data-testid*="ai"]'
+      ];
+      selectors.forEach(function (sel) {
+        document.querySelectorAll(sel).forEach(function (el) {
+          if (el && el.style) {
+            el.style.setProperty('position', 'fixed', 'important');
+            el.style.setProperty('bottom', window.innerWidth <= 768 ? '16px' : '24px', 'important');
+            el.style.setProperty('right', window.innerWidth <= 768 ? '16px' : '24px', 'important');
+            el.style.setProperty('top', 'auto', 'important');
+            el.style.setProperty('left', 'auto', 'important');
+            el.style.setProperty('z-index', '999999', 'important');
+          }
+        });
+      });
+      document.querySelectorAll('div, button, a').forEach(function (el) {
+        if (el.children.length <= 4 && (el.textContent || '').trim() === 'AI' && el.offsetWidth > 20 && el.offsetWidth < 100) {
+          el.style.setProperty('position', 'fixed', 'important');
+          el.style.setProperty('bottom', window.innerWidth <= 768 ? '16px' : '24px', 'important');
+          el.style.setProperty('right', window.innerWidth <= 768 ? '16px' : '24px', 'important');
+          el.style.setProperty('top', 'auto', 'important');
+          el.style.setProperty('left', 'auto', 'important');
+          el.style.setProperty('z-index', '999999', 'important');
+        }
+      });
+    } catch (_) {}
+  }
+  setInterval(fixAiWidgetPosition, 300);
+
   function observe() {
     if (!window.MutationObserver || !document.body) return;
     var timer = null;
     var observer = new MutationObserver(function () {
       syncExistingTheme();
+      fixAiWidgetPosition();
       if (!state.settings) return;
       if (timer) clearTimeout(timer);
       timer = setTimeout(function () {
@@ -382,6 +417,7 @@
 
   function start() {
     syncExistingTheme();
+    fixAiWidgetPosition();
     getSettings().then(function (settings) {
       if (settings && settings.suspended) {
         renderSuspendedScreen();
@@ -389,6 +425,7 @@
       }
       apply(settings);
       syncExistingTheme();
+      fixAiWidgetPosition();
       observe();
     }).catch(function (err) {
       console.warn('[SiteBuilder runtime settings]', err && err.message ? err.message : err);

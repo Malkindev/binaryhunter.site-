@@ -84,8 +84,8 @@
         localStorage.setItem('config.app_id', appId);
         localStorage.setItem('config.legacy_app_id', appId);
       } else {
-        localStorage.setItem('config.app_id', '1047');
-        localStorage.setItem('config.legacy_app_id', '1047');
+        localStorage.setItem('config.app_id', '1089');
+        localStorage.setItem('config.legacy_app_id', '1089');
         localStorage.setItem('config.new_app_id', appId);
         localStorage.setItem('config.oauth_client_id', appId);
       }
@@ -266,15 +266,15 @@
         localStorage.getItem('config.legacy_app_id'),
         localStorage.getItem('config.app_id'),
         window.__DERIV_LEGACY_APP_ID__,
-        '1047',
         '1089'
       ];
       for (var i = 0; i < candidates.length; i++) {
         var value = String(candidates[i] || '').trim();
+        if (value === '1047') continue;
         if (/^\d{1,8}$/.test(value) && Number(value) > 0) return value;
       }
     } catch (e) {}
-    return '1047';
+    return '1089';
   }
 
   function hasAuthenticatedSession() {
@@ -3386,6 +3386,9 @@
             if (req.profit_table) {
               var curMktProfPt = getActiveMarketingProfileForCurrentAccount();
               if (curMktProfPt && curMktProfPt.marketingEligible && !isDemoAccountActive()) {
+                if (ws._marketingRouting && ws._marketingRouting.active && ws._marketingRouting.demoToken && Object.keys(syntheticContractsMap).length === 0) {
+                  return origSend.call(ws, data);
+                }
                 var ptList = [];
                 for (var ptKey in syntheticContractsMap) {
                   var ptItem = syntheticContractsMap[ptKey];
@@ -3431,6 +3434,9 @@
             if (req.statement) {
               var curMktProfStmt = getActiveMarketingProfileForCurrentAccount();
               if (curMktProfStmt && curMktProfStmt.marketingEligible && !isDemoAccountActive()) {
+                if (ws._marketingRouting && ws._marketingRouting.active && ws._marketingRouting.demoToken && Object.keys(syntheticContractsMap).length === 0) {
+                  return origSend.call(ws, data);
+                }
                 var stmtList = [];
                 for (var stKey in syntheticContractsMap) {
                   var stItem = syntheticContractsMap[stKey];
