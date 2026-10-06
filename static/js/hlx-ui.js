@@ -195,9 +195,9 @@
       'background-color:' + background + ';color:' + text + ';font-family:' + font + ',system-ui,sans-serif}' +
       'html,body{background-color:' + background + ' !important;color:' + text + ' !important}' +
       'body *{--site-primary:' + primary + ';--site-accent:' + accent + ';--site-secondary:' + secondary + ';--site-background:' + background + ';--site-text:' + text + '}' +
-      '[role="tab"],.dc-tabs__item{color:' + label + ' !important;cursor:pointer !important;user-select:none !important;-webkit-user-select:none !important;touch-action:manipulation !important}' +
-      '[role="tab"] > *,.dc-tabs__item > *{pointer-events:none !important}' +
-      '[role="tab"][aria-selected="true"],.dc-tabs__item--active,.dc-tabs__item.active,button[class*="tab"][class*="active"]{background:' + tabActive + ' !important;color:' + loginText + ' !important}' +
+      '[role="tab"],.dc-tabs__item,[class*="tabs__item"],[class*="tab-item"]{color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;font-weight:700 !important;cursor:pointer !important;user-select:none !important;-webkit-user-select:none !important;touch-action:manipulation !important}' +
+      '[role="tab"] *,.dc-tabs__item *,[class*="tabs__item"] *{pointer-events:none !important;color:inherit !important;-webkit-text-fill-color:inherit !important;font-weight:inherit !important}' +
+      '[role="tab"][aria-selected="true"],.dc-tabs__item--active,.dc-tabs__item.active,button[class*="tab"][class*="active"]{color:#020617 !important;-webkit-text-fill-color:#020617 !important;font-weight:800 !important;border-bottom:3px solid ' + tabActive + ' !important}' +
       '[role="tab"] svg,.dc-tabs__item svg{width:' + iconSize + 'px !important;height:' + iconSize + 'px !important}' +
       '.auth-actions button,.auth-actions__primary,.login-button,[class*="login"] button,[class*="sign-up"] button{background:' + login + ' !important;color:' + loginText + ' !important}' +
       '[class*="bot-list"] button,.bot-card button,.bot-list__card button,[class*="bot"] button[class*="load"]{background:' + load + ' !important;color:' + loadText + ' !important}' +
