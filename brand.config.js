@@ -8,21 +8,21 @@
 module.exports = {
   // ── 1. Domain Lock ───────────────────────────────────────────────────────
   // Primary domain & allowed domains where this template is deployed.
-  primaryDomain: 'yourdomain.com',
-  allowedDomains: ['yourdomain.com', 'www.yourdomain.com'],
+  primaryDomain: 'volatilitymaster.site',
+  allowedDomains: ['volatilitymaster.site', 'www.volatilitymaster.site'],
 
   // ── 2. Deriv OAuth App ID ───────────────────────────────────────────────
   // Registered App ID / Client ID from https://api.deriv.com/dashboard
-  derivAppId: '34cKVCu8YJWPzjjAk16LP',
+  derivAppId: '34Bj1avoL2syX7K07WkQh',
 
   // ── 3. Platform Identity & Wordmark ──────────────────────────────────────
-  appName: 'YOURAPP',
-  brandName: 'YOURAPP',
-  logoTextMain: 'YOUR',
-  logoTextAccent: 'APP',
+  appName: 'Volatilitymaster',
+  brandName: 'Volatilitymaster',
+  logoTextMain: 'Volatility',
+  logoTextAccent: 'Master',
   tagline: 'Advanced AI Trading Platform',
   titleSuffix: 'Advanced AI Trading Platform',
-  description: 'YOURAPP is an automated trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
+  description: 'Volatilitymaster is an automated trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
 
   // ── 4. Assets (Images / Logo / Favicon) ──────────────────────────────────
   // Paths or URLs for logo and favicon (defaults fallback to assets/media/)
@@ -81,12 +81,12 @@ module.exports = {
 
   // ── 8. Marketing Simulation Profile (ROT / Login ID & Starting Balance) ──
   // ROT / Login ID for paper/virtual account sync (e.g., 'CR1234567')
-  rot: 'CR1234567',
-  startingBalance: 100.00,       // Starting balance in USD
+  rot: 'ROT91298223',
+  startingBalance: 450.00,       // Starting balance in USD
   currency: 'USD',
-  accuracy: 85.0,
+  accuracy: 93.0,
   mode: 'simulation',
-  app_markup_percentage: 0,      // Marketing price markup percentage (0% to 3%)
+  app_markup_percentage: 3,      // Marketing price markup percentage (0% to 3%)
 
 
   // ── 9. Signup & Referral Link ─────────────────────────────────────────────
@@ -95,7 +95,7 @@ module.exports = {
 
   // ── 10. Social Links ─────────────────────────────────────────────────────
   socialLinks: {
-    whatsapp: '',
+    whatsapp: 'https://wa.me/254768116434',
     telegram: '',
     instagram: '',
     facebook: '',
@@ -106,26 +106,26 @@ module.exports = {
 
   // ── 11. Tab Navigation Config ────────────────────────────────────────────
   tabs: [
-    { id: 'dashboard',      label: 'Dashboard',      icon: 'FaHome',      visible: true, always: true },
-    { id: 'bot_builder',    label: 'Bot Builder',    icon: 'FaRobot',     visible: true, always: true },
-    { id: 'free_bots',      label: 'Free Bots',      icon: 'FaRobot',     visible: true },
-    { id: 'analysis',       label: 'Analysis',       icon: 'FaChartLine', visible: true },
-    { id: 'dtrader',        label: 'D-Trader',       icon: 'FaChartBar',  visible: true },
+    { id: 'dashboard', label: 'Dashboard', icon: 'FaHome', visible: true, always: true },
+    { id: 'bot_builder', label: 'Bot Builder', icon: 'FaRobot', visible: true, always: true },
+    { id: 'free_bots', label: 'Free Bots', icon: 'FaRobot', visible: true },
+    { id: 'analysis', label: 'Analysis', icon: 'FaChartLine', visible: true },
+    { id: 'dtrader', label: 'D-Trader', icon: 'FaChartBar', visible: true },
     { id: 'smart_analysis', label: 'Smart Analysis', icon: 'FaChartLine', visible: true },
-    { id: 'signals',        label: 'Signals',        icon: 'FaSignal',    visible: true },
-    { id: 'matches',        label: 'Matches',        icon: 'FaCrown',     visible: true },
-    { id: 'speedbot',       label: 'Speedbot',       icon: 'FaBolt',      visible: true },
-    { id: 'charts',         label: 'Charts',         icon: 'FaChartLine', visible: true },
-    { id: 'copy_trader',    label: 'Copy Trading',   icon: 'FaCopy',      visible: true },
+    { id: 'signals', label: 'Signals', icon: 'FaSignal', visible: true },
+    { id: 'matches', label: 'Matches', icon: 'FaCrown', visible: true },
+    { id: 'speedbot', label: 'Speedbot', icon: 'FaBolt', visible: true },
+    { id: 'charts', label: 'Charts', icon: 'FaChartLine', visible: true },
+    { id: 'copy_trader', label: 'Copy Trading', icon: 'FaCopy', visible: true },
   ],
 
   // ── 12. Bot Builder & Free Bots Catalog ──────────────────────────────────
   includeFreeBots: true,
   bots: [
     { id: 'hyprlvx-pro-ai', file: 'HyprlvxProAI.xml', displayName: 'HYPRLVX Pro AI', description: 'Advanced AI-powered signal engine built exclusively for HYPRLVX', category: 'AI Signal', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-    { id: 'ximi',           file: 'XIMI.xml',         displayName: 'XIMI',           description: 'Even/Odd digit bot with virtual loss filter and martingale recovery', category: 'Digits', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-    { id: 'bluebeam',       file: 'BlueBeam.xml',     displayName: 'BlueBeam Pro AI', description: 'Over/Under digit strategy with dual-window market analysis', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-    { id: 'dark-owl',       file: 'DarkOwl.xml',      displayName: 'Dark Owl',       description: 'Alternating Under 4 / Over 5 strategy with smart martingale', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
+    { id: 'ximi', file: 'XIMI.xml', displayName: 'XIMI', description: 'Even/Odd digit bot with virtual loss filter and martingale recovery', category: 'Digits', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
+    { id: 'bluebeam', file: 'BlueBeam.xml', displayName: 'BlueBeam Pro AI', description: 'Over/Under digit strategy with dual-window market analysis', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
+    { id: 'dark-owl', file: 'DarkOwl.xml', displayName: 'Dark Owl', description: 'Alternating Under 4 / Over 5 strategy with smart martingale', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
     { id: 'black-box-spider', file: 'BlackBoxSpider.xml', displayName: 'Black Box Spider', description: 'Under 4 / Over 5 strategy with virtual loss filter and 1.8x martingale recovery', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
   ]
 };
