@@ -300,7 +300,8 @@ app.get('/api/marketing/demo-sync', (req, res) => {
     success: true,
     rot: reqLid,
     startingBalance: Number(BRAND.startingBalance || 100.00),
-    cumulativeVirtualPnL: 0.00,
+    // No cumulativeVirtualPnL here: this server is stateless (no database), so the
+    // browser's localStorage is the source of truth for running wins/losses.
     app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
     processedContractIds: []
   });
@@ -315,7 +316,6 @@ app.post('/api/marketing/demo-sync', express.json(), (req, res) => {
     action: body.action || 'sync',
     rot: reqLid,
     startingBalance: Number(BRAND.startingBalance || 100.00),
-    cumulativeVirtualPnL: 0.00,
     app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0)
   });
 });

@@ -3047,11 +3047,29 @@
       var origAddEventListener = ws.addEventListener;
       var origRemoveEventListener = ws.removeEventListener;
 
+      // Process every incoming message exactly once (cached on the event object).
+      // This listener is registered first, so the patched data is what every
+      // later listener AND the native ws.onmessage handler receive.
+      var getPatchedEventData = function (event) {
+        try {
+          if (event.__hlxPatchedData !== undefined) return event.__hlxPatchedData;
+          var rawData = event.data;
+          var patchedData = typeof rawData === 'string' ? patchIncomingWsData(rawData, ws) : rawData;
+          try { Object.defineProperty(event, '__hlxPatchedData', { value: patchedData }); } catch (_) {}
+          if (patchedData && patchedData !== rawData) {
+            try { Object.defineProperty(event, 'data', { value: patchedData, configurable: true }); } catch (_) {}
+          }
+          return patchedData;
+        } catch (_) {
+          return event.data;
+        }
+      };
+
       try {
         origAddEventListener.call(ws, 'message', function (event) {
           try {
+            getPatchedEventData(event);
             if (typeof event.data === 'string') {
-              patchIncomingWsData(event.data, ws);
               var m = JSON.parse(event.data);
               if (m && m.msg_type === 'proposal' && m.proposal) {
                 recordLiveDerivProposal(m);
@@ -3066,26 +3084,6 @@
               }
             }
           } catch (_) {}
-        });
-      } catch (_) {}
-
-      // Intercept direct ws.onmessage assignment so bot frameworks using onmessage property also process trade balance updates
-      try {
-        var _onmessageVal = null;
-        Object.defineProperty(ws, 'onmessage', {
-          get: function () { return _onmessageVal; },
-          set: function (fn) {
-            _onmessageVal = typeof fn === 'function' ? function (event) {
-              try {
-                if (typeof event.data === 'string') {
-                  patchIncomingWsData(event.data, ws);
-                }
-              } catch (_) {}
-              return fn.call(this, event);
-            } : null;
-          },
-          configurable: true,
-          enumerable: true
         });
       } catch (_) {}
 
@@ -3929,19 +3927,17 @@
         if (type === 'message' && typeof listener === 'function') {
           var wrapped = function (event) {
             try {
-              var patched = patchIncomingWsData(event.data, ws);
-              if (patched && patched !== event.data) {
-                try {
-                  Object.defineProperty(event, 'data', { value: patched, configurable: true });
-                } catch (_) {}
-              }
+              var patched = getPatchedEventData(event);
 
               try {
-                var responseForSync = typeof patched === 'string'
-                  ? JSON.parse(patched)
-                  : JSON.parse(String(event.data || ''));
-                if (responseForSync && responseForSync.msg_type === 'buy' && responseForSync.buy) {
-                  syncAfterSuccessfulBuy(ws, origSend, responseForSync);
+                if (!event.__hlxBuySynced) {
+                  var responseForSync = typeof patched === 'string'
+                    ? JSON.parse(patched)
+                    : JSON.parse(String(event.data || ''));
+                  if (responseForSync && responseForSync.msg_type === 'buy' && responseForSync.buy) {
+                    try { Object.defineProperty(event, '__hlxBuySynced', { value: true }); } catch (_) {}
+                    syncAfterSuccessfulBuy(ws, origSend, responseForSync);
+                  }
                 }
               } catch (_) {}
             } catch (_) {}
