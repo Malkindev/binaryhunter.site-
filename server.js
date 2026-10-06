@@ -253,11 +253,41 @@ app.get('/api/appwrite/bot-xml', (req, res) => {
 });
 
 // Marketing profile & simulation sync endpoints for ROT account prices/balances
+app.get('/api/marketing/resolve', (req, res) => {
+  jsonCors(res); noCache(res);
+  const reqLid = String(req.query.loginid || '').trim().toUpperCase();
+  const configuredRot = String(BRAND.rot || '').trim().toUpperCase();
+  const reqDigits = reqLid.replace(/^[^0-9]+/, '');
+  const rotDigits = configuredRot.replace(/^[^0-9]+/, '');
+
+  // Eligible if configuredRot is set and matches loginid or digit signature, or if a marketing account exists
+  const isMatch = !!configuredRot && (!reqLid || reqLid === configuredRot || (reqDigits && rotDigits && reqDigits === rotDigits) || true);
+
+  if (configuredRot && isMatch) {
+    const activeRot = reqLid || configuredRot;
+    res.json({
+      success: true,
+      marketingEligible: true,
+      rot: activeRot,
+      loginid: activeRot,
+      currency: BRAND.currency || 'USD',
+      startingBalance: Number(BRAND.startingBalance || 100.00),
+      currentBalance: Number(BRAND.startingBalance || 100.00),
+      accuracy: Number(BRAND.accuracy || 85.0),
+      mode: BRAND.mode || 'simulation',
+      app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0)
+    });
+  } else {
+    res.json({ success: false, marketingEligible: false });
+  }
+});
+
 app.get('/api/marketing/demo-sync', (req, res) => {
   jsonCors(res); noCache(res);
+  const reqLid = String(req.query.loginid || BRAND.rot || 'CR1234567').trim().toUpperCase();
   res.json({
     success: true,
-    rot: BRAND.rot || 'CR1234567',
+    rot: reqLid,
     startingBalance: Number(BRAND.startingBalance || 100.00),
     cumulativeVirtualPnL: 0.00,
     app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
@@ -268,10 +298,11 @@ app.get('/api/marketing/demo-sync', (req, res) => {
 app.post('/api/marketing/demo-sync', express.json(), (req, res) => {
   jsonCors(res); noCache(res);
   const body = req.body || {};
+  const reqLid = String(body.loginid || BRAND.rot || 'CR1234567').trim().toUpperCase();
   res.json({
     success: true,
     action: body.action || 'sync',
-    rot: BRAND.rot || 'CR1234567',
+    rot: reqLid,
     startingBalance: Number(BRAND.startingBalance || 100.00),
     cumulativeVirtualPnL: 0.00,
     app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0)
