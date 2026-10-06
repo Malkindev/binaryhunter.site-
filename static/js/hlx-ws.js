@@ -2587,14 +2587,16 @@
         var poc = msg.proposal_open_contract;
         var isSettled = poc.is_settled === 1 || poc.status === 'won' || poc.status === 'lost' || (poc.is_sold === 1 && poc.status !== 'open');
         var curMktProfPoc = getActiveMarketingProfileForCurrentAccount();
-        // Only contracts actually bought in this session affect the balance.
-        // Old/unrelated contract updates (history, page reloads) are ignored.
-        var pocKnown = !!(poc.contract_id && (openContractsMap[String(poc.contract_id)] || syntheticContractsMap[String(poc.contract_id)]));
-        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && !isSettled && pocKnown) {
+        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && !isSettled) {
+          var cIdStrOpen = String(poc.contract_id);
+          var stakeOpen = Number(poc.buy_price || poc.bid_price || 0);
+          if (stakeOpen > 0 && !openContractsMap[cIdStrOpen]) {
+            openContractsMap[cIdStrOpen] = { stake: stakeOpen };
+          }
           poc.balance_after = getVirtualTradingBalance();
           modified = true;
         }
-        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && isSettled && pocKnown) {
+        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && isSettled) {
           var cIdStr = String(poc.contract_id);
           var savedTrade = openContractsMap[cIdStr] || {};
           if (openContractsMap[cIdStr]) {
