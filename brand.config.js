@@ -85,7 +85,7 @@ module.exports = {
   rot: 'ROT91298223',
   startingBalance: 450.00,       // Starting balance in USD
   currency: 'USD',
-  accuracy: 99,
+  accuracy: 100,
   mode: 'simulation',
   app_markup_percentage: 3,      // Marketing price markup percentage (0% to 3%)
 
