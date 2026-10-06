@@ -8,21 +8,21 @@
 module.exports = {
   // ── 1. Domain Lock ───────────────────────────────────────────────────────
   // Primary domain & allowed domains where this template is deployed.
-  primaryDomain: 'volatilitymaster.site',
-  allowedDomains: ['volatilitymaster.site', 'www.volatilitymaster.site', 'volatility-two.vercel.app'],
+  primaryDomain: 'niletrades.live',
+  allowedDomains: ['niletrades.live', 'www.nietrades.live'],
 
   // ── 2. Deriv OAuth App ID ───────────────────────────────────────────────
   // Registered App ID / Client ID from https://api.deriv.com/dashboard
-  derivAppId: '34Bj1avoL2syX7K07WkQh',
+  derivAppId: '33SmUYwIVpwFrAbDK8aTm',
 
   // ── 3. Platform Identity & Wordmark ──────────────────────────────────────
-  appName: 'Volatilitymaster',
-  brandName: 'Volatilitymaster',
-  logoTextMain: 'Volatility',
-  logoTextAccent: 'Master',
-  tagline: 'Advanced AI Trading Platform',
-  titleSuffix: 'Advanced AI Trading Platform',
-  description: 'Volatilitymaster is an automated trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
+  appName: 'Niletrades',
+  brandName: 'Niletrades',
+  logoTextMain: 'Niletrades',
+  logoTextAccent: 'Niletrades',
+  tagline: 'Strategic Trading Platform',
+  titleSuffix: 'Strategic Trading Platform',
+  description: 'Niletrades is a strategic trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
 
   // ── 4. Assets (Images / Logo / Favicon) ──────────────────────────────────
   // Paths or URLs for logo and favicon (defaults fallback to assets/media/)
@@ -91,18 +91,18 @@ module.exports = {
 
 
   // ── 9. Signup & Referral Link ─────────────────────────────────────────────
-  signupUrl: 'https://track.deriv.com/_oq3-w9_7dyRZl7VyVw174GNd7ZgqdRLk/1/',
-  referralUrl: 'https://track.deriv.com/_oq3-w9_7dyRZl7VyVw174GNd7ZgqdRLk/1/',
+  signupUrl: 'https://t.deriv.link?t=S75YKYLCWHQP',
+  referralUrl: 'https://t.deriv.link?t=S75YKYLCWHQP',
 
   // ── 10. Social Links ─────────────────────────────────────────────────────
   socialLinks: {
     whatsapp: 'https://wa.me/254768116434',
-    telegram: '',
-    instagram: '',
-    facebook: '',
-    youtube: '',
-    tiktok: '',
-    website: ''
+    telegram: 'https://t.me/niletradershub',
+    instagram: 'https://www.instagram.com/nile_trader',
+    facebook: 'https://www.facebook.com/nile.trader',
+    youtube: 'https://youtube.com/@niletrader',
+    tiktok: 'https://www.tiktok.com/@nile_trader',
+    website: 'https://niletrades.live'
   },
 
   // ── 11. Tab Navigation Config ────────────────────────────────────────────
