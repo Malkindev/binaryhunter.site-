@@ -1349,44 +1349,49 @@
 
       if (!prof) {
         try {
-          var caStr = localStorage.getItem('client.accounts') || localStorage.getItem('clientAccounts');
-          if (caStr) {
-            var caParsed = JSON.parse(caStr);
-            for (var cKey in caParsed) {
-              if (cKey && cKey.toUpperCase().indexOf('ROT') === 0) {
-                prof = resolveMarketingProfileSync(cKey);
-                if (prof && prof.marketingEligible) break;
-              }
-            }
-          }
+          var settings = window.__DERIV_SITE_SETTINGS__ || {};
+          var startBal = Number(settings.startingBalance || 450.00);
+          prof = {
+            rot: currentAct || settings.rot || 'ROT91298223',
+            marketingEligible: true,
+            startingBalance: startBal,
+            currentBalance: startBal,
+            currency: settings.currency || 'USD'
+          };
         } catch (_) {}
       }
 
-      if (!prof || !prof.marketingEligible || !prof.rot) {
-        return;
-      }
+      if (!prof || !prof.marketingEligible) return;
 
-      var mBal = Number(prof.currentBalance !== undefined ? prof.currentBalance : (prof.startingBalance !== undefined ? prof.startingBalance : 100.00));
+      var mBal = Number(prof.currentBalance !== undefined ? prof.currentBalance : (prof.startingBalance !== undefined ? prof.startingBalance : 450.00));
       if (Number.isFinite(mBal) && VIRTUAL_STARTING_BALANCE !== mBal && cumulativeVirtualPnL === 0 && getTotalOpenStakes() === 0) {
         VIRTUAL_STARTING_BALANCE = mBal;
       }
 
       var balFormatted = formatVirtualTradingBalance();
       var currency = prof.currency || 'USD';
-      var cleanRot = String(prof.rot).trim().toUpperCase();
+      var cleanRot = String(prof.rot || '').trim().toUpperCase();
       var expectedBalText = balFormatted + ' ' + currency;
 
-      // 1. Header switcher button: ONLY patch when on REAL account and active account is marketing account!
-      if (!isDemo && isSameAccount(currentAct, prof.rot)) {
-        var switcherBtn = document.querySelector('.deriv-account-switcher__button'); var dtBalEl = document.querySelector('[data-testid="dt_balance"], .acc-info__balance, .acc-info__wallets-balance'); if (dtBalEl) { var fullExp = balFormatted + ' ' + currency; if (dtBalEl.textContent !== fullExp) dtBalEl.textContent = fullExp; }
+      // 1. Header switcher button & balance elements: ALWAYS patch when on REAL account
+      if (!isDemo) {
+        var dtBalEls = document.querySelectorAll('[data-testid="dt_balance"], .acc-info__balance, .acc-info__wallets-balance, [class*="acc-info__balance" i], [class*="header__balance" i], [class*="balance__value" i], [class*="account-switcher__balance" i]');
+        dtBalEls.forEach(function (dtBalEl) {
+          if (dtBalEl) {
+            var fullExp = balFormatted + ' ' + currency;
+            if (dtBalEl.textContent !== fullExp && dtBalEl.children.length === 0) dtBalEl.textContent = fullExp;
+          }
+        });
+
+        var switcherBtn = document.querySelector('.deriv-account-switcher__button, [class*="account-switcher__button" i], button[class*="account-switcher" i]');
         if (switcherBtn) {
-          var balContainer = switcherBtn.querySelector('.deriv-account-switcher__balance');
+          var balContainer = switcherBtn.querySelector('.deriv-account-switcher__balance, [class*="balance" i]');
           if (balContainer) {
             var spans = balContainer.querySelectorAll('span');
             var expectedNum = balFormatted;
             var expectedCurr = currency;
             if (expectedNum === 'NaN' || !expectedNum || expectedNum.indexOf('NaN') !== -1) {
-              expectedNum = (Number.isFinite(VIRTUAL_STARTING_BALANCE) ? VIRTUAL_STARTING_BALANCE : 100.00).toFixed(2);
+              expectedNum = (Number.isFinite(VIRTUAL_STARTING_BALANCE) ? VIRTUAL_STARTING_BALANCE : 450.00).toFixed(2);
             }
             if (spans.length >= 1) {
               if (spans[0].textContent !== expectedNum) spans[0].textContent = expectedNum;
@@ -1399,7 +1404,7 @@
         }
       }
 
-      // 2. Dropdown items in switcher dialog: ALWAYS patch the row for prof.rot to the marketing balance!
+      // 2. Dropdown items in switcher dialog
       var switcherItems = document.querySelectorAll('.deriv-account-switcher-item, .account-switcher__item, [class*="account-switcher__item" i], [class*="account-switcher-item" i]');
       if (switcherItems && switcherItems.length) {
         switcherItems.forEach(function (item) {
@@ -1407,7 +1412,7 @@
           var loginEl = item.querySelector('.deriv-account-switcher-item__loginid, [class*="loginid" i]');
           var rowId = loginEl ? String(loginEl.textContent || '').trim().toUpperCase() : '';
 
-          var isThisMarketingRow = (rowId && isSameAccount(rowId, cleanRot)) || (!rowId && itemText.indexOf(cleanRot) !== -1);
+          var isThisMarketingRow = (rowId && isSameAccount(rowId, cleanRot)) || (!rowId && itemText.indexOf(cleanRot) !== -1) || true;
           if (isThisMarketingRow) {
             var balEl = item.querySelector('.deriv-account-switcher-item__balance, [class*="balance" i]');
             if (balEl) {
@@ -1424,6 +1429,17 @@
       }
     } catch (e) {}
   }
+
+  // Continuous 250ms balance DOM patcher loop
+  try {
+    if (!window.__BAL_PATCH_LOOP__) {
+      window.__BAL_PATCH_LOOP__ = setInterval(function () {
+        if (!isDemoAccountActive()) {
+          patchDomBalances();
+        }
+      }, 250);
+    }
+  } catch (_) {}
 
   function clearSiteSettingsForMarketing(loginid) {
     try {
@@ -1503,7 +1519,7 @@
   }
 
   function isSameAccount(id1, id2) {
-    if (!id1 || !id2) return false;
+    if (!id1 || !id2) return true;
     var a = String(id1).trim().toUpperCase();
     var b = String(id2).trim().toUpperCase();
     if (a === b) return true;
@@ -1513,63 +1529,52 @@
     var d1 = a.replace(/^[^0-9]+/, '');
     var d2 = b.replace(/^[^0-9]+/, '');
     if (d1 && d2 && d1 === d2) return true;
-    
+    if (!aDemo && !bDemo) return true;
     return false;
   }
 
   function getActiveMarketingProfileForCurrentAccount() {
     if (isDemoAccountActive()) return null;
     var actId = String(localStorage.getItem('active_loginid') || currentRealLoginId || getStoredRealLoginId() || '').trim().toUpperCase();
-    if (!actId) {
-      if (activeMarketingProfile && activeMarketingProfile.marketingEligible) return activeMarketingProfile;
-      return null;
-    }
-    if (actId.indexOf('VRTC') === 0 || actId.indexOf('VRT') === 0 || actId.indexOf('DOT') === 0 || actId.indexOf('DEM') === 0) return null;
-    if (activeMarketingProfile && activeMarketingProfile.marketingEligible && isSameAccount(actId, activeMarketingProfile.rot)) {
-      return activeMarketingProfile;
-    }
+    if (actId && (actId.indexOf('VRTC') === 0 || actId.indexOf('VRT') === 0 || actId.indexOf('DOT') === 0 || actId.indexOf('DEM') === 0)) return null;
+
+    if (activeMarketingProfile && activeMarketingProfile.marketingEligible) return activeMarketingProfile;
     for (var kProf in marketingProfilesByRot) {
-      if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible && isSameAccount(actId, marketingProfilesByRot[kProf].rot)) {
+      if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible) {
         return marketingProfilesByRot[kProf];
       }
     }
-    var resolved = resolveMarketingProfileSync(actId);
-    if (resolved && resolved.marketingEligible) {
-      return resolved;
-    }
+
+    try {
+      var settings = window.__DERIV_SITE_SETTINGS__ || {};
+      var rotVal = settings.rot || 'ROT91298223';
+      var startBal = Number(settings.startingBalance || 450.00);
+      var defProf = {
+        rot: actId || rotVal,
+        marketingEligible: true,
+        startingBalance: startBal,
+        currentBalance: startBal,
+        currency: settings.currency || 'USD',
+        mode: 'simulation'
+      };
+      activeMarketingProfile = defProf;
+      marketingProfilesByRot[rotVal] = defProf;
+      if (actId) marketingProfilesByRot[actId] = defProf;
+      return defProf;
+    } catch (_) {}
+
     return null;
   }
 
   function resolveMarketingProfileSync(loginid) {
-    if (!loginid) return null;
-    var cleanId = String(loginid).trim().toUpperCase();
-    if (cleanId.indexOf('VRTC') === 0 || cleanId.indexOf('VRT') === 0 || cleanId.indexOf('DOT') === 0 || cleanId.indexOf('DEM') === 0) return null;
+    if (isDemoAccountActive()) return null;
+    var cleanId = String(loginid || '').trim().toUpperCase();
+    if (cleanId && (cleanId.indexOf('VRTC') === 0 || cleanId.indexOf('VRT') === 0 || cleanId.indexOf('DOT') === 0 || cleanId.indexOf('DEM') === 0)) return null;
 
-    // Only return in-memory profile if verified by backend and matching
-    if (marketingProfilesByRot[cleanId] && marketingProfilesByRot[cleanId].marketingEligible && isSameAccount(cleanId, marketingProfilesByRot[cleanId].rot)) {
-      return marketingProfilesByRot[cleanId];
+    if (activeMarketingProfile && activeMarketingProfile.marketingEligible) {
+      return activeMarketingProfile;
     }
-    var digits = cleanId.replace(/^[^0-9]+/, '');
-    if (digits) {
-      var dProf = marketingProfilesByRot['ROT' + digits] || marketingProfilesByRot['CR' + digits] || marketingProfilesByRot[digits];
-      if (dProf && dProf.marketingEligible && isSameAccount(cleanId, dProf.rot)) {
-        return dProf;
-      }
-    }
-
-    // Check localStorage cache if previously confirmed eligible by backend
-    try {
-      var cachedStr = localStorage.getItem('sitebuilder_marketing_cache_' + cleanId);
-      if (cachedStr) {
-        var cachedObj = JSON.parse(cachedStr);
-        if (cachedObj && cachedObj.marketingEligible && isSameAccount(cleanId, cachedObj.rot)) {
-          marketingProfilesByRot[cleanId] = cachedObj;
-          return cachedObj;
-        }
-      }
-    } catch (_) {}
-
-    return null;
+    return getActiveMarketingProfileForCurrentAccount();
   }
 
   var warmingInFlight = {};
