@@ -1368,7 +1368,8 @@
 
       if (!prof || !prof.marketingEligible) return;
 
-      var mBal = Number(prof.currentBalance !== undefined ? prof.currentBalance : (prof.startingBalance !== undefined ? prof.startingBalance : 450.00));
+      // Base is ALWAYS the configured starting balance; trade P/L is added on top.
+      var mBal = Number(prof.startingBalance !== undefined ? prof.startingBalance : 450.00);
       if (Number.isFinite(mBal) && VIRTUAL_STARTING_BALANCE !== mBal && cumulativeVirtualPnL === 0 && getTotalOpenStakes() === 0) {
         VIRTUAL_STARTING_BALANCE = mBal;
       }
@@ -1514,7 +1515,9 @@
     var rotClean = String(profile.rot).trim().toUpperCase();
     marketingProfilesByRot[rotClean] = profile;
 
-    var mBal = Number(profile.currentBalance !== undefined ? profile.currentBalance : (profile.startingBalance !== undefined ? profile.startingBalance : 100.00));
+    // Never use currentBalance as the base: it already includes P/L, so re-applying
+    // it on every reconnect/authorize would add the P/L again (balance drifting with no trades).
+    var mBal = Number(profile.startingBalance !== undefined ? profile.startingBalance : 450.00);
     if (Number.isFinite(mBal)) {
       VIRTUAL_STARTING_BALANCE = mBal;
     }
@@ -2428,7 +2431,7 @@
         if (Array.isArray(msg.authorize.account_list)) {
           var pCheck = getActiveMarketingProfileForCurrentAccount();
           if (pCheck && pCheck.marketingEligible) {
-            var bCheck = Number(pCheck.currentBalance !== undefined ? pCheck.currentBalance : (pCheck.startingBalance !== undefined ? pCheck.startingBalance : 100.00));
+            var bCheck = getVirtualTradingBalance();
             msg.authorize.account_list.forEach(function (acc) {
               var lid = String((acc && acc.loginid) || '').toUpperCase();
               if (isSameAccount(lid, pCheck.rot)) {
@@ -2448,7 +2451,7 @@
           }
           msg.authorize.loginid = mRouting.realLoginid;
           msg.authorize.is_virtual = 0;
-          msg.authorize.balance = Number(mProfile.currentBalance !== undefined ? mProfile.currentBalance : (mProfile.startingBalance !== undefined ? mProfile.startingBalance : 100.00));
+          msg.authorize.balance = getVirtualTradingBalance();
           if (mProfile.currency) msg.authorize.currency = mProfile.currency;
           modified = true;
         }
@@ -2584,18 +2587,14 @@
         var poc = msg.proposal_open_contract;
         var isSettled = poc.is_settled === 1 || poc.status === 'won' || poc.status === 'lost' || (poc.is_sold === 1 && poc.status !== 'open');
         var curMktProfPoc = getActiveMarketingProfileForCurrentAccount();
-        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && !isSettled) {
-          var cIdStrOpen = String(poc.contract_id);
-          var stakeOpen = Number(poc.buy_price || poc.bid_price || 0);
-          if (stakeOpen > 0) {
-            openContractsMap[cIdStrOpen] = { stake: stakeOpen };
-          }
-          var curBalOpen = getVirtualTradingBalance();
-          poc.balance_after = curBalOpen;
+        // Only contracts actually bought in this session affect the balance.
+        // Old/unrelated contract updates (history, page reloads) are ignored.
+        var pocKnown = !!(poc.contract_id && (openContractsMap[String(poc.contract_id)] || syntheticContractsMap[String(poc.contract_id)]));
+        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && !isSettled && pocKnown) {
+          poc.balance_after = getVirtualTradingBalance();
           modified = true;
-          patchDomBalances();
         }
-        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && isSettled) {
+        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && isSettled && pocKnown) {
           var cIdStr = String(poc.contract_id);
           var savedTrade = openContractsMap[cIdStr] || {};
           if (openContractsMap[cIdStr]) {
@@ -3675,6 +3674,8 @@
                     if (!Number.isFinite(profitEarned)) profitEarned = isWon ? Math.max(0, payoutExpected - stakePaid) : -stakePaid;
 
                     delete openContractsMap[String(contractId)];
+                    // Mark as counted so the emitted settled update isn't counted a second time
+                    processedVirtualContractIds.add(String(contractId));
                     cumulativeVirtualPnL = Number((cumulativeVirtualPnL + profitEarned).toFixed(2));
                     if (!Number.isFinite(cumulativeVirtualPnL)) cumulativeVirtualPnL = 0.00;
                     saveVirtualTradingState();
