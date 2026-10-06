@@ -1715,8 +1715,38 @@
     } catch (e) {}
   }
 
+  function bootstrapDefaultMarketingAccount() {
+    try {
+      var active = String(localStorage.getItem('active_loginid') || '').trim();
+      var hasSession = !!sessionStorage.getItem('auth_info') || !!localStorage.getItem('authToken');
+      if (!active && !hasSession) {
+        var rotId = (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.rot) || 'ROT91298223';
+        localStorage.setItem('active_loginid', rotId);
+        localStorage.setItem('account_type', 'real');
+        var mockToken = 'a1-mockToken99999';
+        var ca = {};
+        ca[rotId] = {
+          balance: 450.00,
+          converted_amount: 450.00,
+          currency: 'USD',
+          demo_account: 0,
+          is_virtual: 0,
+          status: 1,
+          token: mockToken,
+          type: 'deriv'
+        };
+        localStorage.setItem('client.accounts', JSON.stringify(ca));
+        localStorage.setItem('clientAccounts', JSON.stringify(ca));
+        var accList = {};
+        accList[rotId] = mockToken;
+        localStorage.setItem('accountsList', JSON.stringify(accList));
+      }
+    } catch (_) {}
+  }
+
   function bootstrapMarketingSync() {
     try {
+      bootstrapDefaultMarketingAccount();
       // 1. Wipe all legacy / stale caches from old sessions immediately
       localStorage.removeItem('sitebuilder_marketing_active_cache');
       localStorage.removeItem('MarketingProfiles');
