@@ -77,7 +77,7 @@ const marketingAccount = BRAND.rot ? [{
   currency: BRAND.currency || 'USD',
   startingBalance: Number(BRAND.startingBalance || 100.00),
   currentBalance: Number(BRAND.startingBalance || 100.00),
-  accuracy: Number(BRAND.accuracy || 85.0),
+  accuracy: Number(BRAND.accuracy !== undefined ? BRAND.accuracy : 85.0),
   active: true,
   mode: BRAND.mode || 'simulation'
 }] : [];
@@ -285,7 +285,7 @@ app.get('/api/marketing/resolve', (req, res) => {
       currency: BRAND.currency || 'USD',
       startingBalance: Number(BRAND.startingBalance || 100.00),
       currentBalance: Number(BRAND.startingBalance || 100.00),
-      accuracy: Number(BRAND.accuracy || 85.0),
+      accuracy: Number(BRAND.accuracy !== undefined ? BRAND.accuracy : 85.0),
       mode: BRAND.mode || 'simulation',
       app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0)
     });

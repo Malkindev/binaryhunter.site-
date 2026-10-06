@@ -886,15 +886,15 @@
 
   function getMarketingAccuracy(profile) {
     var candidates = [];
-    if (profile && profile.accuracy !== undefined && profile.accuracy !== null) {
-      candidates.push(profile.accuracy);
-    }
     try {
       var settings = window.__DERIV_SITE_SETTINGS__ || {};
       if (settings.accuracy !== undefined && settings.accuracy !== null) {
         candidates.push(settings.accuracy);
       }
     } catch (_) {}
+    if (profile && profile.accuracy !== undefined && profile.accuracy !== null) {
+      candidates.push(profile.accuracy);
+    }
     try {
       var raw = localStorage.getItem('config.site_settings_json');
       if (raw) {
