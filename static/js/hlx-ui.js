@@ -652,8 +652,8 @@
       var botVal = isMobile ? '16px' : '24px';
       var rVal = isMobile ? '16px' : '24px';
 
-      // 1. Explicitly protect the top header logo from ever being moved
-      var headerLogos = document.querySelectorAll('.d-apollo-logo, .logo-holder, header [class*="logo"], nav [class*="logo"], [id*="logo"]');
+      // 1. Explicitly protect the top header logo (.logo-holder, .d-apollo-logo)
+      var headerLogos = document.querySelectorAll('.d-apollo-logo, .logo-holder, img[data-site-logo], [class*="logo-holder"]');
       headerLogos.forEach(function (el) {
         if (el && el.style) {
           el.style.removeProperty('position');
@@ -665,30 +665,40 @@
         }
       });
 
-      // 2. Select explicit AI floating widget selectors
+      // 2. Locate the AI floating badge element
+      var els = [];
+
       var selectors = [
         '#a1', '.ai-widget', '.ai-badge', '.ai-assistant-badge', '.ai-floating-button',
-        '[class*="ai-widget"]', '[class*="ai-badge"]', '[class*="ai-button"]'
+        '[class*="ai-widget"]', '[class*="ai-badge"]', '[class*="ai-button"]', '[class*="floating-ai"]'
       ];
-      var els = Array.from(document.querySelectorAll(selectors.join(',')));
-      
-      document.querySelectorAll('div, button').forEach(function (el) {
+      document.querySelectorAll(selectors.join(',')).forEach(function (el) {
+        if (els.indexOf(el) === -1) els.push(el);
+      });
+
+      document.querySelectorAll('div, button, span, a').forEach(function (el) {
         if (els.indexOf(el) !== -1) return;
-        // Never touch header, nav, or logo elements
-        if (el.closest('header, nav, .logo-holder, .d-apollo-logo, [class*="header"], [class*="logo"], [class*="nav"]')) return;
+        if (el.closest('.logo-holder, .d-apollo-logo')) return;
 
         var txt = (el.textContent || '').trim();
-        // Specifically target standalone small floating AI circle buttons (under 90px width/height)
-        if (txt === 'AI' && el.children.length <= 3) {
+        if (txt === 'AI' || txt === 'AI Scanner' || txt === 'AI Assistant') {
           var rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.width <= 100 && rect.height <= 100) {
-            els.push(el);
+          if (rect.width > 0 && rect.width <= 140 && rect.height <= 140) {
+            var target = el;
+            while (target.parentElement && 
+                   target.parentElement !== document.body && 
+                   target.parentElement.id !== 'root' && 
+                   !target.parentElement.classList.contains('logo-holder') &&
+                   target.parentElement.getBoundingClientRect().width <= 160) {
+              target = target.parentElement;
+            }
+            if (els.indexOf(target) === -1) els.push(target);
           }
         }
       });
 
       els.forEach(function (el) {
-        if (el && el.style && !el.closest('header, nav, .logo-holder, .d-apollo-logo, [class*="header"], [class*="logo"]')) {
+        if (el && el.style && !el.closest('.logo-holder, .d-apollo-logo')) {
           el.style.setProperty('position', 'fixed', 'important');
           el.style.setProperty('bottom', botVal, 'important');
           el.style.setProperty('right', rVal, 'important');
