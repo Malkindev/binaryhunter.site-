@@ -534,6 +534,11 @@
     cumulativeVirtualPnL = Number((cumulativeVirtualPnL + profit).toFixed(2));
     if (!Number.isFinite(cumulativeVirtualPnL)) cumulativeVirtualPnL = 0;
     cumulativeRealTradingPnL = cumulativeVirtualPnL;
+    var newTotal = getVirtualTradingBalance();
+    if (activeMarketingProfile) activeMarketingProfile.currentBalance = newTotal;
+    for (var k in marketingProfilesByRot) {
+      if (marketingProfilesByRot[k]) marketingProfilesByRot[k].currentBalance = newTotal;
+    }
     saveVirtualTradingState();
     if (!isDemoAccountActive()) patchDomBalances();
 
@@ -1674,13 +1679,7 @@
       localStorage.removeItem('marketing_profiles');
       localStorage.removeItem('sitebuilder_marketing_profiles');
 
-      // 2. Wipe orphan virtual / demo sync keys if not actively verified
-      for (var kIdx = localStorage.length - 1; kIdx >= 0; kIdx--) {
-        var kName = localStorage.key(kIdx);
-        if (kName && (kName.indexOf('sitebuilder_virtual_pnl_') === 0 || kName.indexOf('sitebuilder_demo_sync_') === 0 || kName.indexOf('sitebuilder_marketing_') === 0)) {
-          localStorage.removeItem(kName);
-        }
-      }
+      // Preserve active virtual/demo sync keys so trade wins/losses persist across page refreshes
 
       // 3. Clean config.site_settings_json initially
       try {
@@ -2585,6 +2584,17 @@
         var poc = msg.proposal_open_contract;
         var isSettled = poc.is_settled === 1 || poc.status === 'won' || poc.status === 'lost' || (poc.is_sold === 1 && poc.status !== 'open');
         var curMktProfPoc = getActiveMarketingProfileForCurrentAccount();
+        if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && !isSettled) {
+          var cIdStrOpen = String(poc.contract_id);
+          var stakeOpen = Number(poc.buy_price || poc.bid_price || 0);
+          if (stakeOpen > 0) {
+            openContractsMap[cIdStrOpen] = { stake: stakeOpen };
+          }
+          var curBalOpen = getVirtualTradingBalance();
+          poc.balance_after = curBalOpen;
+          modified = true;
+          patchDomBalances();
+        }
         if (!isDemoAccountActive() && curMktProfPoc && poc.contract_id && isSettled) {
           var cIdStr = String(poc.contract_id);
           var savedTrade = openContractsMap[cIdStr] || {};
@@ -3041,6 +3051,7 @@
         origAddEventListener.call(ws, 'message', function (event) {
           try {
             if (typeof event.data === 'string') {
+              patchIncomingWsData(event.data, ws);
               var m = JSON.parse(event.data);
               if (m && m.msg_type === 'proposal' && m.proposal) {
                 recordLiveDerivProposal(m);
@@ -3055,6 +3066,26 @@
               }
             }
           } catch (_) {}
+        });
+      } catch (_) {}
+
+      // Intercept direct ws.onmessage assignment so bot frameworks using onmessage property also process trade balance updates
+      try {
+        var _onmessageVal = null;
+        Object.defineProperty(ws, 'onmessage', {
+          get: function () { return _onmessageVal; },
+          set: function (fn) {
+            _onmessageVal = typeof fn === 'function' ? function (event) {
+              try {
+                if (typeof event.data === 'string') {
+                  patchIncomingWsData(event.data, ws);
+                }
+              } catch (_) {}
+              return fn.call(this, event);
+            } : null;
+          },
+          configurable: true,
+          enumerable: true
         });
       } catch (_) {}
 
@@ -4082,6 +4113,8 @@
         }).then(function (res) {
           var activeId = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
           if (res && res.success && res.marketingEligible) {
+            var curDynamicBal = getVirtualTradingBalance();
+            res.currentBalance = curDynamicBal;
             marketingProfilesByRot[activeId] = res;
             if (res.rot) marketingProfilesByRot[String(res.rot).toUpperCase()] = res;
             activeMarketingProfile = res;
