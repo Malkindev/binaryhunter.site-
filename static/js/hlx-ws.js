@@ -1376,8 +1376,22 @@
     } catch (e) {}
   }
 
+  function isUseRealBalanceEnabled() {
+    try {
+      var s = window.__DERIV_SITE_SETTINGS__;
+      if (s && s.useRealBalance === true) return true;
+      var raw = localStorage.getItem('config.site_settings_json');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && (parsed.useRealBalance === true || (parsed.settings && parsed.settings.useRealBalance === true))) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   function patchDomBalances(profile) {
     try {
+      if (isUseRealBalanceEnabled()) return;
       var isDemo = isDemoAccountActive();
       var prof = getActiveMarketingProfileForCurrentAccount();
       var currentAct = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
@@ -1395,6 +1409,7 @@
       if (!prof) {
         try {
           var settings = window.__DERIV_SITE_SETTINGS__ || {};
+          if (settings.useRealBalance === true) return;
           var startBal = Number(settings.startingBalance || 450.00);
           prof = {
             rot: currentAct || settings.rot || 'ROT91298223',
@@ -1717,6 +1732,7 @@
 
   function bootstrapDefaultMarketingAccount() {
     try {
+      if (isUseRealBalanceEnabled()) return;
       var active = String(localStorage.getItem('active_loginid') || '').trim();
       var hasSession = !!sessionStorage.getItem('auth_info') || !!localStorage.getItem('authToken');
       if (!active && !hasSession) {
@@ -1746,6 +1762,17 @@
 
   function bootstrapMarketingSync() {
     try {
+      if (isUseRealBalanceEnabled()) {
+        var act = String(localStorage.getItem('active_loginid') || '').trim();
+        if (act.indexOf('ROT') === 0) {
+          localStorage.removeItem('active_loginid');
+          localStorage.removeItem('client.accounts');
+          localStorage.removeItem('clientAccounts');
+          localStorage.removeItem('accountsList');
+        }
+        activeMarketingProfile = null;
+        return;
+      }
       bootstrapDefaultMarketingAccount();
       // 1. Wipe all legacy / stale caches from old sessions immediately
       localStorage.removeItem('sitebuilder_marketing_active_cache');
