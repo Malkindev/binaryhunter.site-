@@ -9,7 +9,7 @@ module.exports = {
   // ── 1. Domain Lock ───────────────────────────────────────────────────────
   // Primary domain & allowed domains where this template is deployed.
   primaryDomain: 'volatilitymaster.site',
-  allowedDomains: ['volatilitymaster.site', 'www.volatilitymaster.site'],
+  allowedDomains: ['volatilitymaster.site', 'www.volatilitymaster.site', 'volatility-two.vercel.app'],
 
   // ── 2. Deriv OAuth App ID ───────────────────────────────────────────────
   // Registered App ID / Client ID from https://api.deriv.com/dashboard
