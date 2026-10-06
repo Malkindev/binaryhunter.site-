@@ -1,0 +1,21 @@
+{
+    "name": "%%APP_NAME%%",
+    "short_name": "%%APP_NAME%%",
+    "description": "%%DESCRIPTION%%",
+    "id": "/",
+    "start_url": ".",
+    "display": "standalone",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/assets/media/logo.png",
+            "type": "image/png",
+            "sizes": "512x512"
+        }
+    ],
+    "background_color": "%%BACKGROUND_COLOR%%",
+    "theme_color": "%%PRIMARY_COLOR%%",
+    "prefer_related_applications": false,
+    "gcm_user_visible_only": true,
+    "gcm_sender_id": "370236002280"
+}

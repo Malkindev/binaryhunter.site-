@@ -1,0 +1,1442 @@
+<xml xmlns="https://developers.google.com/blockly/xml" is_dbot="true" collection="false">
+  <variables>
+    <variable id="tp_var">🎯 TAKE PROFIT</variable>
+    <variable id="sl_var">🛡️ STOP LOSS</variable>
+    <variable id="base_stake_var">💰 Base Stake</variable>
+    <variable id="martingale_var">📈 Martingale Multiplier</variable>
+    <variable id="stake_var">📊 ECO-STAKE</variable>
+    <variable id="raw_signal_var">📡 XIMI Raw Signal</variable>
+    <variable id="trade_signal_var">✅ XIMI Trade Signal</variable>
+    <variable id="last_raw_signal_var">🔁 Last Raw Signal</variable>
+    <variable id="last_trade_signal_var">🧾 Last Trade Signal</variable>
+    <variable id="run_var">🤖 Bot Running</variable>
+    <variable id="i_var">🔢 XIMI i</variable>
+    <variable id="scan_digit_var">🔍 XIMI Digit</variable>
+    <variable id="long_even_var">📈 LONG EVEN COUNT</variable>
+    <variable id="long_odd_var">📉 LONG ODD COUNT</variable>
+    <variable id="short_even_var">⏱️ SHORT EVEN COUNT</variable>
+    <variable id="short_odd_var">⏱️ SHORT ODD COUNT</variable>
+    <variable id="even_bad_var">⚠️ EVEN BAD CNT</variable>
+    <variable id="odd_bad_var">⚠️ ODD BAD CNT</variable>
+    <variable id="max_stake_var">🧢 MAX STAKE</variable>
+    <variable id="virtual_loss_var">👻 VIRTUAL LOSS CNT</variable>
+    <variable id="virtual_target_var">🎯 VIRTUAL LOSS TARGET</variable>
+  </variables>
+  <block type="trade_definition" id="ximi_trade_definition" deletable="false" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="ximi_market">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="ximi_trade_type">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">evenodd</field>
+            <next>
+              <block type="trade_definition_contracttype" id="ximi_contract_type">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="ximi_candle">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="ximi_restart_buysell">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="ximi_restart_error">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <statement name="INITIALIZATION">
+      <block type="variables_set" id="variables_set_42">
+        <field name="VAR" id="tp_var">🎯 TAKE PROFIT</field>
+        <value name="VALUE">
+          <block type="text_prompt_ext" id="ximi_prompt_take_profit">
+            <field name="TYPE">NUMBER</field>
+            <value name="TEXT">
+              <shadow type="text" id="ximi_prompt_take_profit_text">
+                <field name="TEXT">🎯 XIMI: Enter take profit amount. Enter 0 to disable TP</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <next>
+          <block type="variables_set" id="variables_set_41">
+            <field name="VAR" id="sl_var">🛡️ STOP LOSS</field>
+            <value name="VALUE">
+              <block type="text_prompt_ext" id="ximi_prompt_stop_loss">
+                <field name="TYPE">NUMBER</field>
+                <value name="TEXT">
+                  <shadow type="text" id="ximi_prompt_stop_loss_text">
+                    <field name="TEXT">🛡️ XIMI: Enter stop loss amount. Enter 0 to disable SL</field>
+                  </shadow>
+                </value>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="variables_set_40">
+                <field name="VAR" id="base_stake_var">💰 Base Stake</field>
+                <value name="VALUE">
+                  <block type="text_prompt_ext" id="ximi_prompt_base_stake">
+                    <field name="TYPE">NUMBER</field>
+                    <value name="TEXT">
+                      <shadow type="text" id="ximi_prompt_base_stake_text">
+                        <field name="TEXT">💰 XIMI: Enter base stake amount</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="ximi_init_martingale">
+                    <field name="VAR" id="martingale_var">📈 Martingale Multiplier</field>
+                    <value name="VALUE">
+                      <block type="text_prompt_ext" id="ximi_prompt_martingale">
+                        <field name="TYPE">NUMBER</field>
+                        <value name="TEXT">
+                          <shadow type="text" id="ximi_prompt_martingale_text">
+                            <field name="TEXT">📈 XIMI: Enter martingale multiplier after loss e.g. 1.5</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="variables_set_39">
+                        <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                    <value name="VALUE">
+                      <block type="variables_get" id="variables_get_19">
+                        <field name="VAR" id="base_stake_var">💰 Base Stake</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="variables_set_38">
+                        <field name="VAR" id="run_var">🤖 Bot Running</field>
+                        <value name="VALUE">
+                          <block type="logic_boolean" id="logic_boolean_18">
+                            <field name="BOOL">TRUE</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="variables_set_37">
+                            <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                            <value name="VALUE">
+                              <block type="math_number" id="math_number_17">
+                                <field name="NUM">0</field>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="variables_set_36">
+                                <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                <value name="VALUE">
+                                  <block type="math_number" id="math_number_16">
+                                    <field name="NUM">0</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="variables_set_35">
+                                    <field name="VAR" id="last_raw_signal_var">🔁 Last Raw Signal</field>
+                                    <value name="VALUE">
+                                      <block type="math_number" id="math_number_15">
+                                        <field name="NUM">0</field>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="variables_set" id="variables_set_34">
+                                        <field name="VAR" id="last_trade_signal_var">🧾 Last Trade Signal</field>
+                                        <value name="VALUE">
+                                          <block type="math_number" id="math_number_14">
+                                            <field name="NUM">0</field>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="variables_set" id="variables_set_33">
+                                            <field name="VAR" id="long_even_var">📈 LONG EVEN COUNT</field>
+                                            <value name="VALUE">
+                                              <block type="math_number" id="math_number_13">
+                                                <field name="NUM">0</field>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="variables_set" id="variables_set_32">
+                                                <field name="VAR" id="long_odd_var">📉 LONG ODD COUNT</field>
+                                                <value name="VALUE">
+                                                  <block type="math_number" id="math_number_12">
+                                                    <field name="NUM">0</field>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="variables_set" id="variables_set_31">
+                                                    <field name="VAR" id="short_even_var">⏱️ SHORT EVEN COUNT</field>
+                                                    <value name="VALUE">
+                                                      <block type="math_number" id="math_number_11">
+                                                        <field name="NUM">0</field>
+                                                      </block>
+                                                    </value>
+                                                    <next>
+                                                      <block type="variables_set" id="variables_set_30">
+                                                        <field name="VAR" id="short_odd_var">⏱️ SHORT ODD COUNT</field>
+                                                        <value name="VALUE">
+                                                          <block type="math_number" id="math_number_10">
+                                                            <field name="NUM">0</field>
+                                                          </block>
+                                                        </value>
+                                                        <next>
+                                                          <block type="variables_set" id="variables_set_29">
+                                                            <field name="VAR" id="even_bad_var">⚠️ EVEN BAD CNT</field>
+                                                            <value name="VALUE">
+                                                              <block type="math_number" id="math_number_9">
+                                                                <field name="NUM">0</field>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="variables_set" id="variables_set_28">
+                                                                <field name="VAR" id="odd_bad_var">⚠️ ODD BAD CNT</field>
+                                                                <value name="VALUE">
+                                                                  <block type="math_number" id="math_number_8">
+                                                                    <field name="NUM">0</field>
+                                                                  </block>
+                                                                </value>
+                                                                <next>
+                                                                  <block type="variables_set" id="variables_set_25">
+                                                                            <field name="VAR" id="max_stake_var">🧢 MAX STAKE</field>
+                                                                            <value name="VALUE">
+                                                                              <block type="text_prompt_ext" id="ximi_prompt_max_stake"><field name="TYPE">NUMBER</field><value name="TEXT"><shadow type="text" id="ximi_prompt_max_stake_text"><field name="TEXT">🧢 XIMI: Enter maximum stake amount. Enter 0 for no max stake limit</field></shadow></value></block></value>
+                                                                            <next>
+                                                                              <block type="variables_set" id="variables_set_24">
+                                                                                <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="math_number" id="math_number_4">
+                                                                                    <field name="NUM">0</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <next>
+                                                                                  <block type="variables_set" id="variables_set_23">
+                                                                                    <field name="VAR" id="virtual_target_var">🎯 VIRTUAL LOSS TARGET</field>
+                                                                                    <value name="VALUE">
+                                                                                      <block type="math_number" id="math_number_3">
+                                                                                        <field name="NUM">2</field>
+                                                                                      </block>
+                                                                                    </value>
+                                                                                    <next>
+                                                                                      <block type="text_print" id="text_print_2">
+                                                                                        <value name="TEXT">
+                                                                                          <shadow type="text" id="text_1">
+                                                                                            <field name="TEXT">🟢 XIMI ONLINE ⚡
+✅ SYSTEM LOADED
+🤖 READY TO TRADE</field>
+                                                                                          </shadow>
+                                                                                        </value>
+                                                                                      </block>
+                                                                                    </next>
+                                                                                  </block>
+                                                                                </next>
+                                                                              </block>
+                                                                            </next>
+                                                                          </block>
+                                                                        </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+    </statement>
+    <statement name="SUBMARKET">
+      <block type="controls_if" id="ximi_choose_trade_options">
+        <mutation elseif="1" else="0" />
+        <value name="IF0">
+          <block type="logic_compare" id="logic_compare_45">
+            <field name="OP">EQ</field>
+            <value name="A">
+              <block type="variables_get" id="variables_get_43">
+                <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+              </block>
+            </value>
+            <value name="B">
+              <block type="math_number" id="math_number_44">
+                <field name="NUM">1</field>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="trade_definition_tradeoptions" id="ximi_trade_options_even">
+            <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false" />
+            <field name="DURATIONTYPE_LIST">t</field>
+            <value name="DURATION">
+              <shadow type="math_number" id="ximi_even_duration">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <value name="AMOUNT">
+              <shadow type="math_number" id="ximi_even_amount_shadow">
+                <field name="NUM">1</field>
+              </shadow>
+              <block type="variables_get" id="ximi_even_get_stake">
+                <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+              </block>
+            </value>
+          </block>
+        </statement>
+        <value name="IF1">
+          <block type="logic_compare" id="logic_compare_48">
+            <field name="OP">EQ</field>
+            <value name="A">
+              <block type="variables_get" id="variables_get_46">
+                <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+              </block>
+            </value>
+            <value name="B">
+              <block type="math_number" id="math_number_47">
+                <field name="NUM">2</field>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO1">
+          <block type="trade_definition_tradeoptions" id="ximi_trade_options_odd">
+            <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="false" />
+            <field name="DURATIONTYPE_LIST">t</field>
+            <value name="DURATION">
+              <shadow type="math_number" id="ximi_odd_duration">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <value name="AMOUNT">
+              <shadow type="math_number" id="ximi_odd_amount_shadow">
+                <field name="NUM">1</field>
+              </shadow>
+              <block type="variables_get" id="ximi_odd_get_stake">
+                <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+              </block>
+            </value>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+  <block type="tick_analysis" id="ximi_tick_analysis" x="0" y="1500">
+    <statement name="TICKANALYSIS_STACK">
+      <block type="variables_set" id="variables_set_212">
+        <field name="VAR" id="long_even_var">📈 LONG EVEN COUNT</field>
+        <value name="VALUE">
+          <block type="math_number" id="math_number_211">
+            <field name="NUM">0</field>
+          </block>
+        </value>
+        <next>
+          <block type="variables_set" id="variables_set_210">
+            <field name="VAR" id="long_odd_var">📉 LONG ODD COUNT</field>
+            <value name="VALUE">
+              <block type="math_number" id="math_number_209">
+                <field name="NUM">0</field>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="variables_set_208">
+                <field name="VAR" id="short_even_var">⏱️ SHORT EVEN COUNT</field>
+                <value name="VALUE">
+                  <block type="math_number" id="math_number_207">
+                    <field name="NUM">0</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="variables_set_206">
+                    <field name="VAR" id="short_odd_var">⏱️ SHORT ODD COUNT</field>
+                    <value name="VALUE">
+                      <block type="math_number" id="math_number_205">
+                        <field name="NUM">0</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="variables_set_204">
+                        <field name="VAR" id="even_bad_var">⚠️ EVEN BAD CNT</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="math_number_203">
+                            <field name="NUM">0</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="variables_set_202">
+                            <field name="VAR" id="odd_bad_var">⚠️ ODD BAD CNT</field>
+                            <value name="VALUE">
+                              <block type="math_number" id="math_number_201">
+                                <field name="NUM">0</field>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="variables_set_200">
+                                <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                <value name="VALUE">
+                                  <block type="math_number" id="math_number_199">
+                                    <field name="NUM">0</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="variables_set_198">
+                                    <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                    <value name="VALUE">
+                                      <block type="math_number" id="math_number_197">
+                                        <field name="NUM">0</field>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="controls_for" id="ximi_long_loop">
+                                        <field name="VAR" id="i_var">🔢 XIMI i</field>
+                                        <value name="FROM">
+                                          <block type="math_number" id="math_number_60">
+                                            <field name="NUM">1</field>
+                                          </block>
+                                        </value>
+                                        <value name="TO">
+                                          <block type="math_number" id="math_number_61">
+                                            <field name="NUM">60</field>
+                                          </block>
+                                        </value>
+                                        <value name="BY">
+                                          <block type="math_number" id="math_number_62">
+                                            <field name="NUM">1</field>
+                                          </block>
+                                        </value>
+                                        <statement name="DO">
+                                          <block type="variables_set" id="variables_set_59">
+                                            <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                            <value name="VALUE">
+                                              <block type="lists_getIndex" id="lists_getIndex_51">
+                                                <mutation statement="false" at="true" />
+                                                <field name="MODE">GET</field>
+                                                <field name="WHERE">FROM_END</field>
+                                                <value name="VALUE">
+                                                  <block type="lastDigitList" id="lastDigit_50" />
+                                                </value>
+                                                <value name="AT">
+                                                  <block type="variables_get" id="variables_get_49">
+                                                    <field name="VAR" id="i_var">🔢 XIMI i</field>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="controls_if" id="controls_if_58">
+                                                <mutation elseif="0" else="1" />
+                                                <value name="IF0">
+                                                  <block type="math_number_property" id="math_number_property_53">
+                                                    <mutation divisor_input="false" />
+                                                    <field name="PROPERTY">EVEN</field>
+                                                    <value name="NUMBER_TO_CHECK">
+                                                      <block type="variables_get" id="variables_get_52">
+                                                        <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <statement name="DO0">
+                                                  <block type="math_change" id="math_change_55">
+                                                    <field name="VAR" id="long_even_var">📈 LONG EVEN COUNT</field>
+                                                    <value name="DELTA">
+                                                      <shadow type="math_number" id="shadownum_54">
+                                                        <field name="NUM">1</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </statement>
+                                                <statement name="ELSE">
+                                                  <block type="math_change" id="math_change_57">
+                                                    <field name="VAR" id="long_odd_var">📉 LONG ODD COUNT</field>
+                                                    <value name="DELTA">
+                                                      <shadow type="math_number" id="shadownum_56">
+                                                        <field name="NUM">1</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </statement>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                        <next>
+                                          <block type="controls_for" id="ximi_short_loop">
+                                            <field name="VAR" id="i_var">🔢 XIMI i</field>
+                                            <value name="FROM">
+                                              <block type="math_number" id="math_number_74">
+                                                <field name="NUM">1</field>
+                                              </block>
+                                            </value>
+                                            <value name="TO">
+                                              <block type="math_number" id="math_number_75">
+                                                <field name="NUM">15</field>
+                                              </block>
+                                            </value>
+                                            <value name="BY">
+                                              <block type="math_number" id="math_number_76">
+                                                <field name="NUM">1</field>
+                                              </block>
+                                            </value>
+                                            <statement name="DO">
+                                              <block type="variables_set" id="variables_set_73">
+                                                <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                <value name="VALUE">
+                                                  <block type="lists_getIndex" id="lists_getIndex_65">
+                                                    <mutation statement="false" at="true" />
+                                                    <field name="MODE">GET</field>
+                                                    <field name="WHERE">FROM_END</field>
+                                                    <value name="VALUE">
+                                                      <block type="lastDigitList" id="lastDigit_64" />
+                                                    </value>
+                                                    <value name="AT">
+                                                      <block type="variables_get" id="variables_get_63">
+                                                        <field name="VAR" id="i_var">🔢 XIMI i</field>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="controls_if" id="controls_if_72">
+                                                    <mutation elseif="0" else="1" />
+                                                    <value name="IF0">
+                                                      <block type="math_number_property" id="math_number_property_67">
+                                                        <mutation divisor_input="false" />
+                                                        <field name="PROPERTY">EVEN</field>
+                                                        <value name="NUMBER_TO_CHECK">
+                                                          <block type="variables_get" id="variables_get_66">
+                                                            <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                    <statement name="DO0">
+                                                      <block type="math_change" id="math_change_69">
+                                                        <field name="VAR" id="short_even_var">⏱️ SHORT EVEN COUNT</field>
+                                                        <value name="DELTA">
+                                                          <shadow type="math_number" id="shadownum_68">
+                                                            <field name="NUM">1</field>
+                                                          </shadow>
+                                                        </value>
+                                                      </block>
+                                                    </statement>
+                                                    <statement name="ELSE">
+                                                      <block type="math_change" id="math_change_71">
+                                                        <field name="VAR" id="short_odd_var">⏱️ SHORT ODD COUNT</field>
+                                                        <value name="DELTA">
+                                                          <shadow type="math_number" id="shadownum_70">
+                                                            <field name="NUM">1</field>
+                                                          </shadow>
+                                                        </value>
+                                                      </block>
+                                                    </statement>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </statement>
+                                            <next>
+                                              <block type="controls_for" id="ximi_bad_loop">
+                                                <field name="VAR" id="i_var">🔢 XIMI i</field>
+                                                <value name="FROM">
+                                                  <block type="math_number" id="math_number_88">
+                                                    <field name="NUM">1</field>
+                                                  </block>
+                                                </value>
+                                                <value name="TO">
+                                                  <block type="math_number" id="math_number_89">
+                                                    <field name="NUM">5</field>
+                                                  </block>
+                                                </value>
+                                                <value name="BY">
+                                                  <block type="math_number" id="math_number_90">
+                                                    <field name="NUM">1</field>
+                                                  </block>
+                                                </value>
+                                                <statement name="DO">
+                                                  <block type="variables_set" id="variables_set_87">
+                                                    <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                    <value name="VALUE">
+                                                      <block type="lists_getIndex" id="lists_getIndex_79">
+                                                        <mutation statement="false" at="true" />
+                                                        <field name="MODE">GET</field>
+                                                        <field name="WHERE">FROM_END</field>
+                                                        <value name="VALUE">
+                                                          <block type="lastDigitList" id="lastDigit_78" />
+                                                        </value>
+                                                        <value name="AT">
+                                                          <block type="variables_get" id="variables_get_77">
+                                                            <field name="VAR" id="i_var">🔢 XIMI i</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                    <next>
+                                                      <block type="controls_if" id="controls_if_86">
+                                                        <mutation elseif="0" else="1" />
+                                                        <value name="IF0">
+                                                          <block type="math_number_property" id="math_number_property_81">
+                                                            <mutation divisor_input="false" />
+                                                            <field name="PROPERTY">EVEN</field>
+                                                            <value name="NUMBER_TO_CHECK">
+                                                              <block type="variables_get" id="variables_get_80">
+                                                                <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                        <statement name="DO0">
+                                                          <block type="math_change" id="math_change_83">
+                                                            <field name="VAR" id="odd_bad_var">⚠️ ODD BAD CNT</field>
+                                                            <value name="DELTA">
+                                                              <shadow type="math_number" id="shadownum_82">
+                                                                <field name="NUM">1</field>
+                                                              </shadow>
+                                                            </value>
+                                                          </block>
+                                                        </statement>
+                                                        <statement name="ELSE">
+                                                          <block type="math_change" id="math_change_85">
+                                                            <field name="VAR" id="even_bad_var">⚠️ EVEN BAD CNT</field>
+                                                            <value name="DELTA">
+                                                              <shadow type="math_number" id="shadownum_84">
+                                                                <field name="NUM">1</field>
+                                                              </shadow>
+                                                            </value>
+                                                          </block>
+                                                        </statement>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </statement>
+                                                <next>
+                                                  <block type="controls_if" id="ximi_set_raw_signal">
+                                                    <mutation elseif="1" else="1" />
+                                                    <value name="IF0">
+                                                      <block type="logic_operation" id="logic_operation_108">
+                                                            <field name="OP">AND</field>
+                                                            <value name="A">
+                                                              <block type="logic_operation" id="logic_operation_107">
+                                                                <field name="OP">AND</field>
+                                                                <value name="A">
+                                                                  <block type="logic_compare" id="logic_compare_95">
+                                                                    <field name="OP">GTE</field>
+                                                                    <value name="A">
+                                                                      <block type="math_arithmetic" id="math_arithmetic_93">
+                                                                        <field name="OP">MINUS</field>
+                                                                        <value name="A">
+                                                                          <block type="variables_get" id="variables_get_91">
+                                                                            <field name="VAR" id="long_even_var">📈 LONG EVEN COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="B">
+                                                                          <block type="variables_get" id="variables_get_92">
+                                                                            <field name="VAR" id="long_odd_var">📉 LONG ODD COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="math_number_94">
+                                                                        <field name="NUM">4</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="B">
+                                                                  <block type="logic_compare" id="logic_compare_100">
+                                                                    <field name="OP">GTE</field>
+                                                                    <value name="A">
+                                                                      <block type="math_arithmetic" id="math_arithmetic_98">
+                                                                        <field name="OP">MINUS</field>
+                                                                        <value name="A">
+                                                                          <block type="variables_get" id="variables_get_96">
+                                                                            <field name="VAR" id="short_even_var">⏱️ SHORT EVEN COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="B">
+                                                                          <block type="variables_get" id="variables_get_97">
+                                                                            <field name="VAR" id="short_odd_var">⏱️ SHORT ODD COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="math_number_99">
+                                                                        <field name="NUM">1</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                            <value name="B">
+                                                              <block type="logic_compare" id="logic_compare_103">
+                                                                <field name="OP">LT</field>
+                                                                <value name="A">
+                                                                  <block type="variables_get" id="variables_get_101">
+                                                                    <field name="VAR" id="even_bad_var">⚠️ EVEN BAD CNT</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="B">
+                                                                  <block type="math_number" id="math_number_102">
+                                                                    <field name="NUM">4</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                    <statement name="DO0">
+                                                      <block type="variables_set" id="variables_set_130">
+                                                        <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                        <value name="VALUE">
+                                                          <block type="math_number" id="math_number_129">
+                                                            <field name="NUM">1</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </statement>
+                                                    <value name="IF1">
+                                                      <block type="logic_operation" id="logic_operation_127">
+                                                            <field name="OP">AND</field>
+                                                            <value name="A">
+                                                              <block type="logic_operation" id="logic_operation_126">
+                                                                <field name="OP">AND</field>
+                                                                <value name="A">
+                                                                  <block type="logic_compare" id="logic_compare_114">
+                                                                    <field name="OP">GTE</field>
+                                                                    <value name="A">
+                                                                      <block type="math_arithmetic" id="math_arithmetic_112">
+                                                                        <field name="OP">MINUS</field>
+                                                                        <value name="A">
+                                                                          <block type="variables_get" id="variables_get_110">
+                                                                            <field name="VAR" id="long_odd_var">📉 LONG ODD COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="B">
+                                                                          <block type="variables_get" id="variables_get_111">
+                                                                            <field name="VAR" id="long_even_var">📈 LONG EVEN COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="math_number_113">
+                                                                        <field name="NUM">4</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="B">
+                                                                  <block type="logic_compare" id="logic_compare_119">
+                                                                    <field name="OP">GTE</field>
+                                                                    <value name="A">
+                                                                      <block type="math_arithmetic" id="math_arithmetic_117">
+                                                                        <field name="OP">MINUS</field>
+                                                                        <value name="A">
+                                                                          <block type="variables_get" id="variables_get_115">
+                                                                            <field name="VAR" id="short_odd_var">⏱️ SHORT ODD COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="B">
+                                                                          <block type="variables_get" id="variables_get_116">
+                                                                            <field name="VAR" id="short_even_var">⏱️ SHORT EVEN COUNT</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="math_number_118">
+                                                                        <field name="NUM">1</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                            <value name="B">
+                                                              <block type="logic_compare" id="logic_compare_122">
+                                                                <field name="OP">LT</field>
+                                                                <value name="A">
+                                                                  <block type="variables_get" id="variables_get_120">
+                                                                    <field name="VAR" id="odd_bad_var">⚠️ ODD BAD CNT</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="B">
+                                                                  <block type="math_number" id="math_number_121">
+                                                                    <field name="NUM">4</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                    <statement name="DO1">
+                                                      <block type="variables_set" id="variables_set_132">
+                                                        <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                        <value name="VALUE">
+                                                          <block type="math_number" id="math_number_131">
+                                                            <field name="NUM">2</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </statement>
+                                                    <statement name="ELSE">
+                                                      <block type="variables_set" id="variables_set_134">
+                                                        <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                        <value name="VALUE">
+                                                          <block type="math_number" id="math_number_133">
+                                                            <field name="NUM">0</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </statement>
+                                                    <next>
+                                                      <block type="controls_if" id="ximi_reset_on_raw_change">
+                                                        <value name="IF0">
+                                                          <block type="logic_compare" id="logic_compare_137">
+                                                            <field name="OP">NEQ</field>
+                                                            <value name="A">
+                                                              <block type="variables_get" id="variables_get_135">
+                                                                <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                              </block>
+                                                            </value>
+                                                            <value name="B">
+                                                              <block type="variables_get" id="variables_get_136">
+                                                                <field name="VAR" id="last_raw_signal_var">🔁 Last Raw Signal</field>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                        <statement name="DO0">
+                                                          <block type="variables_set" id="variables_set_141">
+                                                            <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                                                            <value name="VALUE">
+                                                              <block type="math_number" id="math_number_138">
+                                                                <field name="NUM">0</field>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="variables_set" id="variables_set_140">
+                                                                <field name="VAR" id="last_raw_signal_var">🔁 Last Raw Signal</field>
+                                                                <value name="VALUE">
+                                                                  <block type="variables_get" id="variables_get_139">
+                                                                    <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </statement>
+                                                        <next>
+                                                          <block type="variables_set" id="variables_set_196">
+                                                            <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                            <value name="VALUE">
+                                                              <block type="lists_getIndex" id="lists_getIndex_195">
+                                                                <mutation statement="false" at="true" />
+                                                                <field name="MODE">GET</field>
+                                                                <field name="WHERE">FROM_END</field>
+                                                                <value name="VALUE">
+                                                                  <block type="lastDigitList" id="lastDigit_194" />
+                                                                </value>
+                                                                <value name="AT">
+                                                                  <block type="math_number" id="math_number_193">
+                                                                    <field name="NUM">1</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="controls_if" id="ximi_virtual_loss_gate">
+                                                                <mutation elseif="2" else="0" />
+                                                                <value name="IF0">
+                                                                  <block type="logic_compare" id="logic_compare_186">
+                                                                    <field name="OP">EQ</field>
+                                                                    <value name="A">
+                                                                      <block type="variables_get" id="variables_get_184">
+                                                                        <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="math_number_185">
+                                                                        <field name="NUM">0</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <statement name="DO0">
+                                                                  <block type="variables_set" id="variables_set_149">
+                                                                    <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                    <value name="VALUE">
+                                                                      <block type="math_number" id="math_number_146">
+                                                                        <field name="NUM">0</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <next>
+                                                                      <block type="variables_set" id="variables_set_148">
+                                                                        <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                                                                        <value name="VALUE">
+                                                                          <block type="math_number" id="math_number_147">
+                                                                            <field name="NUM">0</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </next>
+                                                                  </block>
+                                                                </statement>
+                                                                <value name="IF1">
+                                                                  <block type="logic_compare" id="logic_compare_189">
+                                                                    <field name="OP">EQ</field>
+                                                                    <value name="A">
+                                                                      <block type="variables_get" id="variables_get_187">
+                                                                        <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="math_number_188">
+                                                                        <field name="NUM">1</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <statement name="DO1">
+                                                                  <block type="controls_if" id="controls_if_166">
+                                                                    <mutation elseif="0" else="1" />
+                                                                    <value name="IF0">
+                                                                      <block type="math_number_property" id="math_number_property_151">
+                                                                        <mutation divisor_input="false" />
+                                                                        <field name="PROPERTY">EVEN</field>
+                                                                        <value name="NUMBER_TO_CHECK">
+                                                                          <block type="variables_get" id="variables_get_150">
+                                                                            <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <statement name="DO0">
+                                                                      <block type="variables_set" id="variables_set_155">
+                                                                        <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                        <value name="VALUE">
+                                                                          <block type="math_number" id="math_number_152">
+                                                                            <field name="NUM">0</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <next>
+                                                                          <block type="variables_set" id="variables_set_154">
+                                                                            <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                            <value name="VALUE">
+                                                                              <block type="math_number" id="math_number_153">
+                                                                                <field name="NUM">0</field>
+                                                                              </block>
+                                                                            </value>
+                                                                          </block>
+                                                                        </next>
+                                                                      </block>
+                                                                    </statement>
+                                                                    <statement name="ELSE">
+                                                                      <block type="math_change" id="math_change_165">
+                                                                        <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                                                                        <value name="DELTA">
+                                                                          <shadow type="math_number" id="shadownum_164">
+                                                                            <field name="NUM">1</field>
+                                                                          </shadow>
+                                                                        </value>
+                                                                        <next>
+                                                                          <block type="controls_if" id="controls_if_163">
+                                                                            <mutation elseif="0" else="1" />
+                                                                            <value name="IF0">
+                                                                              <block type="logic_compare" id="logic_compare_158">
+                                                                                <field name="OP">GTE</field>
+                                                                                <value name="A">
+                                                                                  <block type="variables_get" id="variables_get_156">
+                                                                                    <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <value name="B">
+                                                                                  <block type="variables_get" id="variables_get_157">
+                                                                                    <field name="VAR" id="virtual_target_var">🎯 VIRTUAL LOSS TARGET</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </value>
+                                                                            <statement name="DO0">
+                                                                              <block type="variables_set" id="variables_set_160">
+                                                                                <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="math_number" id="math_number_159">
+                                                                                    <field name="NUM">1</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </statement>
+                                                                            <statement name="ELSE">
+                                                                              <block type="variables_set" id="variables_set_162">
+                                                                                <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="math_number" id="math_number_161">
+                                                                                    <field name="NUM">0</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </statement>
+                                                                          </block>
+                                                                        </next>
+                                                                      </block>
+                                                                    </statement>
+                                                                  </block>
+                                                                </statement>
+                                                                <value name="IF2">
+                                                                  <block type="logic_compare" id="logic_compare_192">
+                                                                    <field name="OP">EQ</field>
+                                                                    <value name="A">
+                                                                      <block type="variables_get" id="variables_get_190">
+                                                                        <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="math_number_191">
+                                                                        <field name="NUM">2</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <statement name="DO2">
+                                                                  <block type="controls_if" id="controls_if_183">
+                                                                    <mutation elseif="0" else="1" />
+                                                                    <value name="IF0">
+                                                                      <block type="math_number_property" id="math_number_property_168">
+                                                                        <mutation divisor_input="false" />
+                                                                        <field name="PROPERTY">EVEN</field>
+                                                                        <value name="NUMBER_TO_CHECK">
+                                                                          <block type="variables_get" id="variables_get_167">
+                                                                            <field name="VAR" id="scan_digit_var">🔍 XIMI Digit</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <statement name="DO0">
+                                                                      <block type="math_change" id="math_change_178">
+                                                                        <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                                                                        <value name="DELTA">
+                                                                          <shadow type="math_number" id="shadownum_177">
+                                                                            <field name="NUM">1</field>
+                                                                          </shadow>
+                                                                        </value>
+                                                                        <next>
+                                                                          <block type="controls_if" id="controls_if_176">
+                                                                            <mutation elseif="0" else="1" />
+                                                                            <value name="IF0">
+                                                                              <block type="logic_compare" id="logic_compare_171">
+                                                                                <field name="OP">GTE</field>
+                                                                                <value name="A">
+                                                                                  <block type="variables_get" id="variables_get_169">
+                                                                                    <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <value name="B">
+                                                                                  <block type="variables_get" id="variables_get_170">
+                                                                                    <field name="VAR" id="virtual_target_var">🎯 VIRTUAL LOSS TARGET</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </value>
+                                                                            <statement name="DO0">
+                                                                              <block type="variables_set" id="variables_set_173">
+                                                                                <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="math_number" id="math_number_172">
+                                                                                    <field name="NUM">2</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </statement>
+                                                                            <statement name="ELSE">
+                                                                              <block type="variables_set" id="variables_set_175">
+                                                                                <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="math_number" id="math_number_174">
+                                                                                    <field name="NUM">0</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </statement>
+                                                                          </block>
+                                                                        </next>
+                                                                      </block>
+                                                                    </statement>
+                                                                    <statement name="ELSE">
+                                                                      <block type="variables_set" id="variables_set_182">
+                                                                        <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                        <value name="VALUE">
+                                                                          <block type="math_number" id="math_number_179">
+                                                                            <field name="NUM">0</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <next>
+                                                                          <block type="variables_set" id="variables_set_181">
+                                                                            <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                                                            <value name="VALUE">
+                                                                              <block type="math_number" id="math_number_180">
+                                                                                <field name="NUM">0</field>
+                                                                              </block>
+                                                                            </value>
+                                                                          </block>
+                                                                        </next>
+                                                                      </block>
+                                                                    </statement>
+                                                                  </block>
+                                                                </statement>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="before_purchase" id="ximi_before_purchase" deletable="false" x="0" y="3000">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="controls_if" id="ximi_before_running">
+        <mutation elseif="0" else="1" />
+        <value name="IF0">
+          <block type="variables_get" id="variables_get_223">
+            <field name="VAR" id="run_var">🤖 Bot Running</field>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="controls_if" id="ximi_purchase_by_signal">
+            <mutation elseif="1" else="0" />
+            <value name="IF0">
+              <block type="logic_compare" id="logic_compare_219">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="variables_get" id="variables_get_217">
+                    <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="math_number_218">
+                    <field name="NUM">1</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="variables_set_214">
+                <field name="VAR" id="last_trade_signal_var">🧾 Last Trade Signal</field>
+                <value name="VALUE">
+                  <block type="math_number" id="math_number_213">
+                    <field name="NUM">1</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="purchase" id="ximi_purchase_even">
+                    <field name="PURCHASE_LIST">DIGITEVEN</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <value name="IF1">
+              <block type="logic_compare" id="logic_compare_222">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="variables_get" id="variables_get_220">
+                    <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="math_number_221">
+                    <field name="NUM">2</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO1">
+              <block type="variables_set" id="variables_set_216">
+                <field name="VAR" id="last_trade_signal_var">🧾 Last Trade Signal</field>
+                <value name="VALUE">
+                  <block type="math_number" id="math_number_215">
+                    <field name="NUM">2</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="purchase" id="ximi_purchase_odd">
+                    <field name="PURCHASE_LIST">DIGITODD</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="text_print" id="text_print_225">
+            <value name="TEXT">
+              <shadow type="text" id="text_224">
+                <field name="TEXT">🛑 XIMI STOPPED</field>
+              </shadow>
+            </value>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+  <block type="after_purchase" id="ximi_after_purchase" x="720" y="3000">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="ximi_after_tp_sl">
+        <mutation elseif="1" else="1" />
+        <value name="IF0">
+          <block type="logic_operation" id="ximi_tp_enabled_and_hit">
+            <field name="OP">AND</field>
+            <value name="A">
+              <block type="logic_compare" id="ximi_tp_greater_than_zero">
+                <field name="OP">GT</field>
+                <value name="A">
+                  <block type="variables_get" id="ximi_get_tp_enabled">
+                    <field name="VAR" id="tp_var">🎯 TAKE PROFIT</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="ximi_tp_zero_check">
+                    <field name="NUM">0</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <value name="B">
+              <block type="logic_compare" id="logic_compare_303">
+                <field name="OP">GTE</field>
+                <value name="A">
+                  <block type="total_profit" id="total_profit_301" />
+                </value>
+                <value name="B">
+                  <block type="variables_get" id="variables_get_302">
+                    <field name="VAR" id="tp_var">🎯 TAKE PROFIT</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set" id="variables_set_296">
+            <field name="VAR" id="run_var">🤖 Bot Running</field>
+            <value name="VALUE">
+              <block type="logic_boolean" id="logic_boolean_293">
+                <field name="BOOL">FALSE</field>
+              </block>
+            </value>
+            <next>
+              <block type="text_print" id="text_print_295">
+                <value name="TEXT">
+                  <shadow type="text" id="text_294">
+                    <field name="TEXT">🏆 XIMI TAKE PROFIT REACHED
+✅ SESSION SECURED</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <value name="IF1">
+          <block type="logic_operation" id="ximi_sl_enabled_and_hit">
+            <field name="OP">AND</field>
+            <value name="A">
+              <block type="logic_compare" id="ximi_sl_greater_than_zero">
+                <field name="OP">GT</field>
+                <value name="A">
+                  <block type="variables_get" id="ximi_get_sl_enabled">
+                    <field name="VAR" id="sl_var">🛡️ STOP LOSS</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="ximi_sl_zero_check">
+                    <field name="NUM">0</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <value name="B">
+              <block type="logic_compare" id="logic_compare_308">
+                <field name="OP">LTE</field>
+                <value name="A">
+                  <block type="total_profit" id="total_profit_304" />
+                </value>
+                <value name="B">
+                  <block type="math_arithmetic" id="math_arithmetic_307">
+                    <field name="OP">MULTIPLY</field>
+                    <value name="A">
+                      <block type="variables_get" id="variables_get_305">
+                        <field name="VAR" id="sl_var">🛡️ STOP LOSS</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="math_number" id="math_number_306">
+                        <field name="NUM">-1</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO1">
+          <block type="variables_set" id="variables_set_300">
+            <field name="VAR" id="run_var">🤖 Bot Running</field>
+            <value name="VALUE">
+              <block type="logic_boolean" id="logic_boolean_297">
+                <field name="BOOL">FALSE</field>
+              </block>
+            </value>
+            <next>
+              <block type="text_print" id="text_print_299">
+                <value name="TEXT">
+                  <shadow type="text" id="text_298">
+                    <field name="TEXT">🛑 XIMI STOP LOSS REACHED
+⚠️ SESSION CLOSED</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="controls_if" id="ximi_win_loss">
+            <mutation elseif="0" else="1" />
+            <value name="IF0">
+              <block type="contract_check_result" id="contract_check_result_292">
+                <field name="CHECK_RESULT">win</field>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="variables_set_239">
+                <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                <value name="VALUE">
+                  <block type="variables_get" id="variables_get_232">
+                    <field name="VAR" id="base_stake_var">💰 Base Stake</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="variables_set_236">
+                            <field name="VAR" id="virtual_loss_var">👻 VIRTUAL LOSS CNT</field>
+                            <value name="VALUE">
+                              <block type="math_number" id="math_number_229">
+                                <field name="NUM">0</field>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="variables_set_235">
+                                <field name="VAR" id="raw_signal_var">📡 XIMI Raw Signal</field>
+                                <value name="VALUE">
+                                  <block type="math_number" id="math_number_228">
+                                    <field name="NUM">0</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="variables_set_234">
+                                    <field name="VAR" id="trade_signal_var">✅ XIMI Trade Signal</field>
+                                    <value name="VALUE">
+                                      <block type="math_number" id="math_number_227">
+                                        <field name="NUM">0</field>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="variables_set" id="variables_set_233">
+                                        <field name="VAR" id="last_trade_signal_var">🧾 Last Trade Signal</field>
+                                        <value name="VALUE">
+                                          <block type="math_number" id="math_number_226">
+                                            <field name="NUM">0</field>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="trade_again" id="ximi_trade_again_win" />
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="variables_set" id="variables_set_291">
+                <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                <value name="VALUE">
+                  <block type="math_arithmetic" id="math_arithmetic_290">
+                    <field name="OP">MULTIPLY</field>
+                    <value name="A">
+                      <block type="variables_get" id="variables_get_288">
+                        <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="variables_get" id="ximi_get_martingale_loss">
+                        <field name="VAR" id="martingale_var">📈 Martingale Multiplier</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="controls_if" id="ximi_max_stake_check_after_loss"><mutation elseif="0" else="1" /><value name="IF0"><block type="logic_operation" id="ximi_max_stake_enabled_and_reached"><field name="OP">AND</field><value name="A"><block type="logic_compare" id="ximi_max_stake_gt_zero"><field name="OP">GT</field><value name="A"><block type="variables_get" id="ximi_get_max_stake_enabled"><field name="VAR" id="max_stake_var">🧢 MAX STAKE</field></block></value><value name="B"><block type="math_number" id="ximi_max_stake_zero_check"><field name="NUM">0</field></block></value></block></value><value name="B"><block type="logic_compare" id="ximi_stake_gte_max_stake"><field name="OP">GTE</field><value name="A"><block type="variables_get" id="ximi_get_stake_for_max_check"><field name="VAR" id="stake_var">📊 ECO-STAKE</field></block></value><value name="B"><block type="variables_get" id="ximi_get_max_stake_for_check"><field name="VAR" id="max_stake_var">🧢 MAX STAKE</field></block></value></block></value></block></value><statement name="DO0"><block type="variables_set" id="ximi_stop_max_stake"><field name="VAR" id="run_var">🤖 Bot Running</field><value name="VALUE"><block type="logic_boolean" id="ximi_max_stake_false"><field name="BOOL">FALSE</field></block></value><next><block type="text_print" id="ximi_max_stake_print"><value name="TEXT"><shadow type="text" id="ximi_max_stake_text"><field name="TEXT">🛑 XIMI MAX STAKE REACHED
+⚠️ SESSION CLOSED</field></shadow></value></block></next></block></statement><statement name="ELSE"><block type="trade_again" id="ximi_trade_again_loss" /></statement></block></next>
+              </block>
+            </statement>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>

@@ -1,0 +1,123 @@
+====================================================================
+ HOSTING THIS APP — RAILWAY / VERCEL / RENDER / A VPS
+====================================================================
+
+This is a plain Node.js + Express app (server.js, `npm start` runs
+it). It has no database and no build step — the frontend is already
+built and just gets served as static files. That makes it deployable
+almost anywhere that runs Node. Pick whichever host you already use;
+they all follow the same shape:
+
+  1. Put this folder in a Git repository (GitHub/GitLab/Bitbucket) —
+     most hosts deploy by connecting to a repo.
+  2. Point the host at this repo.
+  3. Host runs `npm install` then `npm start` (or its Vercel-specific
+     serverless equivalent — see below).
+  4. Add your custom domain on the host, then add that SAME domain
+     to `allowedDomains` / `primaryDomain` in brand.config.js (commit
+     and redeploy) — otherwise the built-in domain lock will refuse
+     to run there. See HOW_TO_CUSTOMIZE.txt STEP 2 for why.
+  5. In your Deriv app registration (api.deriv.com/dashboard), set
+     the redirect URL to match your live domain exactly
+     (https://yourdomain.com/), or login will fail.
+
+
+--------------------------------------------------------------------
+GIT SETUP (do this once, before any host)
+--------------------------------------------------------------------
+    cd "DERIV THIRD PARTY TEMPLATE"
+    git init
+    git add .
+    git commit -m "Initial commit"
+
+Then create an empty repo on GitHub and push:
+    git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+    git branch -M main
+    git push -u origin main
+
+(node_modules is already excluded via .gitignore — don't commit it.)
+
+
+--------------------------------------------------------------------
+OPTION A — RAILWAY (simplest for a plain Node server)
+--------------------------------------------------------------------
+1. Go to https://railway.app and sign in (GitHub login is easiest).
+2. New Project → Deploy from GitHub repo → pick your repo.
+3. Railway auto-detects Node, runs `npm install` then `npm start`.
+   Nothing else to configure — server.js already reads PORT from
+   process.env.PORT, which Railway sets automatically.
+4. Once deployed, go to Settings → Networking → Generate Domain (for
+   a free railway.app subdomain) or add a Custom Domain you own.
+5. Update brand.config.js's allowedDomains/primaryDomain to match,
+   commit, push (Railway redeploys automatically on push).
+A .railwayignore is already included to keep docs/PDFs out of the
+deploy bundle.
+
+
+--------------------------------------------------------------------
+OPTION B — VERCEL (serverless)
+--------------------------------------------------------------------
+A vercel.json is already included — it tells Vercel to run server.js
+as a serverless function (note the `if (!process.env.VERCEL)` guard
+in server.js: on Vercel the app never calls `.listen()`, Vercel
+invokes the exported Express app directly per-request instead).
+
+1. Go to https://vercel.com and sign in.
+2. Add New Project → import your Git repo.
+3. Framework preset: "Other" (it will pick up vercel.json
+   automatically). Leave build command empty — there is no build
+   step for this app.
+4. Deploy. Vercel gives you a *.vercel.app URL immediately.
+5. Project Settings → Domains → add your own domain if you have one.
+6. Update brand.config.js's allowedDomains/primaryDomain to match,
+   commit, push.
+
+Note: Vercel's free tier serverless functions have a request timeout
+(10s on Hobby) — fine for this app's normal traffic, but be aware if
+you add anything slow later.
+
+
+--------------------------------------------------------------------
+OPTION C — RENDER
+--------------------------------------------------------------------
+1. Go to https://render.com and sign in.
+2. New → Web Service → connect your Git repo.
+3. Environment: Node. Build command: `npm install`. Start command:
+   `npm start`.
+4. Render assigns a *.onrender.com URL; add a custom domain under
+   Settings → Custom Domains if you have one.
+5. Update brand.config.js's allowedDomains/primaryDomain to match.
+
+(Render's free tier spins the service down when idle — the first
+request after idle time will be slow to wake it up. Fine for testing,
+consider a paid instance for a live product.)
+
+
+--------------------------------------------------------------------
+OPTION D — YOUR OWN VPS (DigitalOcean, Hetzner, EC2, etc.)
+--------------------------------------------------------------------
+1. SSH into the server, install Node.js (v18+ recommended).
+2. Clone your repo, `cd` into it, run `npm install`.
+3. Run it under a process manager so it survives reboots/crashes:
+       npm install -g pm2
+       pm2 start server.js --name deriv-app
+       pm2 save
+       pm2 startup      (follow the printed instructions)
+4. Put Nginx (or Caddy) in front for HTTPS + your domain:
+   - point your domain's DNS A record at the server's IP
+   - reverse-proxy port 80/443 to the app's port (default 3001, or
+     whatever PORT you set)
+   - use certbot (Let's Encrypt) for a free SSL certificate
+5. Update brand.config.js's allowedDomains/primaryDomain to match.
+
+
+--------------------------------------------------------------------
+WHICHEVER HOST YOU PICK — DON'T FORGET
+--------------------------------------------------------------------
+[ ] brand.config.js allowedDomains / primaryDomain match the live URL
+[ ] Deriv app's redirect URL (api.deriv.com/dashboard) matches the
+    live URL exactly, including https:// and trailing slash
+[ ] derivAppId in brand.config.js is YOUR real Deriv App ID, not the
+    placeholder
+[ ] The 3 image files in assets/media/ are your own artwork
+====================================================================

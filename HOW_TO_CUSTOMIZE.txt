@@ -1,0 +1,127 @@
+====================================================================
+ DERIV THIRD PARTY TEMPLATE — HOW TO MAKE THIS YOUR OWN APP
+====================================================================
+
+This folder is a complete, self-contained white-label Deriv trading app.
+It is a Node/Express server that serves a rebranded Deriv trading-bot
+frontend (bots, charts, D-Trader, smart analysis, signals, dashboard, etc.)
+under YOUR domain, YOUR name, YOUR colors, and YOUR own Deriv OAuth App ID.
+
+Everything you need to change lives in ONE master config file:
+    `brand.config.js`
+plus your artwork in `assets/media/`.
+
+
+--------------------------------------------------------------------
+STEP 1 — Edit brand.config.js
+--------------------------------------------------------------------
+Open `brand.config.js` in the root of this folder. The file is cleanly
+organized into 12 configuration sections:
+
+  1. Domain Lock
+     - primaryDomain: The main domain, e.g. "yourdomain.com"
+     - allowedDomains: List of allowed domains, e.g. ["yourdomain.com", "www.yourdomain.com"]
+
+  2. Deriv OAuth App ID
+     - derivAppId: Your registered Deriv App ID / Client ID
+
+  3. Platform Identity & Wordmark
+     - appName: Your app's full name, e.g. "MYTRADING"
+     - brandName: Display brand name, e.g. "MYTRADING"
+     - logoTextMain: Main wordmark text, e.g. "MY"
+     - logoTextAccent: Accent wordmark text, e.g. "TRADING"
+     - tagline: Tagline shown under the app name
+     - titleSuffix: Browser tab title suffix
+     - description: Platform description for SEO & social previews
+
+  4. Assets (Images / Logo / Favicon / Loader Background)
+     - logo: Path or URL to app logo (default: '/assets/media/logo.png')
+     - favicon: Path or URL to browser tab icon (default: '/assets/media/favicon.png')
+     - loaderBackgroundImage: Optional loader background image URL
+
+  5. Theme Colors & Visual Styles
+     - primaryColor: Main brand color (hex), e.g. "#9D0698"
+     - accentColor: Highlight tone, e.g. "#FF00FF"
+     - secondaryColor: Surface background dark tone, e.g. "#0B0F19"
+     - backgroundColor: Page background, e.g. "#0A0713"
+     - tabActiveColor: Active tab indicator color, e.g. "#FF00FF"
+     - loginButtonColor: Login/Sign Up button background color
+     - loginTextColor: Login/Sign Up text color
+     - loadBotButtonColor: Load Bot button background color
+     - loadBotButtonTextColor: Load Bot button text color
+     - tabIconSize: Icon size in pixels (default: 24)
+     - tabLabelColor: Tab text label color
+     - tabIconColor: Tab icon color
+     - activeLabelColor: Active tab label color
+     - botCardStyle: Choice of card layout ('gradient' | 'card' | 'minimal' | 'compact')
+     - tabNavigationStyle: Tab bar style ('solid' | 'underline' | 'pill' | 'stacked')
+
+  6. Typography
+     - fontFamily: CSS font family name, e.g. 'Inter'
+     - fontGoogleParam: Google Fonts family parameter
+
+  7. Loader Configuration
+     - loaderStyle: Loader animation style ('orbit_terminal' | 'signal_grid' |
+                    'pulse_deck' | 'spinner' | 'pulse' | 'bars' | 'wave' |
+                    'cube_3d' | 'logo_spin' | 'typing' | 'progress_bar' |
+                    'bounce' | 'trade_rings' | 'glass_meter' | 'basic')
+     - loaderPrimaryColor: Primary spinner/glow color
+     - loaderAccentColor: Accent loader color
+     - loaderHighlightColor: Highlight loader color
+     - loaderTextColor: Loader text color
+
+  8. Marketing Simulation Profile (ROT / Login ID & Starting Balance)
+     - rot: Simulation account ID or ROT token, e.g. "CR1234567"
+     - startingBalance: Initial demo/virtual balance in USD, e.g. 100.00 or 10000.00
+     - currency: Account currency, e.g. "USD"
+     - accuracy: Simulation win rate percentage, e.g. 85.0
+
+  9. Signup & Referral Link
+     - signupUrl: Your Deriv affiliate or partner registration link
+     - referralUrl: Referral link alias
+
+  10. Social Links
+     - socialLinks: Object with whatsapp, telegram, instagram, facebook, youtube, tiktok, website URLs
+
+  11. Tab Navigation Config
+     - tabs: Array of tab objects ({ id, label, icon, visible, always })
+             to enable, disable, reorder, or rename navigation sections.
+
+  12. Bot Builder & Free Bots Catalog
+     - includeFreeBots: true / false
+     - bots: Array of XML bot objects ({ id, file, displayName, description, category, folderId, folderName })
+
+
+--------------------------------------------------------------------
+STEP 2 — Get your own Deriv App ID
+--------------------------------------------------------------------
+1. Go to https://api.deriv.com/dashboard (log in with your Deriv account).
+2. Register a new application.
+3. Set its redirect URL to your domain, e.g. https://yourdomain.com/
+4. Copy the app_id / client_id.
+5. Paste it into `brand.config.js` as `derivAppId`.
+
+
+--------------------------------------------------------------------
+STEP 3 — Replace artwork in assets/media/
+--------------------------------------------------------------------
+Replace these files in `assets/media/`:
+  - logo.png (Square logo/icon, 512x512px transparent PNG)
+  - favicon.png (Browser tab icon, 256x256px transparent PNG)
+  - loader.png (Splash loader image)
+
+
+--------------------------------------------------------------------
+STEP 4 — Run & Deploy
+--------------------------------------------------------------------
+Run locally:
+    npm install
+    npm start
+
+Then open http://localhost:3001.
+
+To deploy on Vercel, Render, Railway, or VPS:
+  - Add your live domain to `allowedDomains` and `primaryDomain` in `brand.config.js`.
+  - Point your DNS records to your deployment host.
+====================================================================
+

@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Block common site-archival / offline-cloning tools
+User-agent: ia_archiver
+Disallow: /
+
+User-agent: HTTrack
+Disallow: /
+
+User-agent: wget
+Disallow: /
+
+User-agent: SiteSucker
+Disallow: /
+
+User-agent: Wayback
+Disallow: /

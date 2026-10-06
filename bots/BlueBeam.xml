@@ -1,0 +1,835 @@
+<xml xmlns="https://developers.google.com/blockly/xml" is_dbot="true" collection="false">
+  <variables>
+    <variable id="tp_var">🎯 TAKE PROFIT</variable>
+    <variable id="sl_var">🛡️ STOP LOSS</variable>
+    <variable id="base_stake_var">💰 Base Stake</variable>
+    <variable id="stake_var">📊 ECO-STAKE</variable>
+    <variable id="un_barrier_var">🔵 UN BARRIER</variable>
+    <variable id="ov_barrier_var">🟣 OV BARRIER</variable>
+    <variable id="signal_var">📡 BB Signal</variable>
+    <variable id="i_var">🔢 BB i</variable>
+    <variable id="run_var">🤖 Bot Running</variable>
+    <variable id="long_un_var">📈 LONG UN COUNT</variable>
+    <variable id="long_ov_var">📉 LONG OV COUNT</variable>
+    <variable id="long_mid_var">⚖️ LONG MID COUNT</variable>
+    <variable id="short_un_var">⏱️ SHORT UN COUNT</variable>
+    <variable id="short_ov_var">⏱️ SHORT OV COUNT</variable>
+    <variable id="short_mid_var">⏱️ SHORT MID COUNT</variable>
+    <variable id="un_loss_var">❌ UN LOSS CNT</variable>
+    <variable id="ov_loss_var">❌ OV LOSS CNT</variable>
+    <variable id="max_loss_var">🚫 MAX LOSS</variable>
+    <variable id="un_bad_var">⚠️ UN BAD CNT</variable>
+    <variable id="ov_bad_var">⚠️ OV BAD CNT</variable>
+    <variable id="scan_digit_var">🔍 BB Digit</variable>
+  </variables>
+
+  <block type="trade_definition" id="bb_ai_trade_definition" deletable="false" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="bb_ai_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="bb_ai_trade_type" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">overunder</field>
+            <next>
+              <block type="trade_definition_contracttype" id="bb_ai_contract_type" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="bb_ai_candle" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="bb_ai_restart_buysell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="bb_ai_restart_error" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="INITIALIZATION">
+      <block type="variables_set" id="bb_init_tp">
+        <field name="VAR" id="tp_var">🎯 TAKE PROFIT</field>
+        <value name="VALUE"><block type="math_number" id="bb_tp_10"><field name="NUM">10</field></block></value>
+        <next>
+          <block type="variables_set" id="bb_init_sl">
+            <field name="VAR" id="sl_var">🛡️ STOP LOSS</field>
+            <value name="VALUE"><block type="math_number" id="bb_sl_10"><field name="NUM">10</field></block></value>
+            <next>
+              <block type="variables_set" id="bb_init_base_stake">
+                <field name="VAR" id="base_stake_var">💰 Base Stake</field>
+                <value name="VALUE"><block type="math_number" id="bb_base_stake_035"><field name="NUM">0.35</field></block></value>
+                <next>
+                  <block type="variables_set" id="bb_init_eco_stake">
+                    <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                    <value name="VALUE"><block type="variables_get" id="bb_get_base_stake_init"><field name="VAR" id="base_stake_var">💰 Base Stake</field></block></value>
+                    <next>
+                      <block type="variables_set" id="bb_init_un_barrier">
+                        <field name="VAR" id="un_barrier_var">🔵 UN BARRIER</field>
+                        <value name="VALUE"><block type="math_number" id="bb_un_barrier_3"><field name="NUM">3</field></block></value>
+                        <next>
+                          <block type="variables_set" id="bb_init_ov_barrier">
+                            <field name="VAR" id="ov_barrier_var">🟣 OV BARRIER</field>
+                            <value name="VALUE"><block type="math_number" id="bb_ov_barrier_6"><field name="NUM">6</field></block></value>
+                            <next>
+                              <block type="variables_set" id="bb_init_signal">
+                                <field name="VAR" id="signal_var">📡 BB Signal</field>
+                                <value name="VALUE"><block type="math_number" id="bb_signal_zero"><field name="NUM">0</field></block></value>
+                                <next>
+                                  <block type="variables_set" id="bb_init_run">
+                                    <field name="VAR" id="run_var">🤖 Bot Running</field>
+                                    <value name="VALUE"><block type="logic_boolean" id="bb_run_true"><field name="BOOL">TRUE</field></block></value>
+                                    <next>
+                                      <block type="variables_set" id="bb_init_max_loss">
+                                        <field name="VAR" id="max_loss_var">🚫 MAX LOSS</field>
+                                        <value name="VALUE"><block type="math_number" id="bb_max_loss_3"><field name="NUM">3</field></block></value>
+                                        <next>
+                                          <block type="variables_set" id="bb_init_un_loss">
+                                            <field name="VAR" id="un_loss_var">❌ UN LOSS CNT</field>
+                                            <value name="VALUE"><block type="math_number" id="bb_un_loss_0"><field name="NUM">0</field></block></value>
+                                            <next>
+                                              <block type="variables_set" id="bb_init_ov_loss">
+                                                <field name="VAR" id="ov_loss_var">❌ OV LOSS CNT</field>
+                                                <value name="VALUE"><block type="math_number" id="bb_ov_loss_0"><field name="NUM">0</field></block></value>
+                                                <next>
+                                                  <block type="variables_set" id="bb_init_long_un">
+                                                    <field name="VAR" id="long_un_var">📈 LONG UN COUNT</field>
+                                                    <value name="VALUE"><block type="math_number" id="bb_long_un_0"><field name="NUM">0</field></block></value>
+                                                    <next>
+                                                      <block type="variables_set" id="bb_init_long_ov">
+                                                        <field name="VAR" id="long_ov_var">📉 LONG OV COUNT</field>
+                                                        <value name="VALUE"><block type="math_number" id="bb_long_ov_0"><field name="NUM">0</field></block></value>
+                                                        <next>
+                                                          <block type="variables_set" id="bb_init_long_mid">
+                                                            <field name="VAR" id="long_mid_var">⚖️ LONG MID COUNT</field>
+                                                            <value name="VALUE"><block type="math_number" id="bb_long_mid_0"><field name="NUM">0</field></block></value>
+                                                            <next>
+                                                              <block type="variables_set" id="bb_init_short_un">
+                                                                <field name="VAR" id="short_un_var">⏱️ SHORT UN COUNT</field>
+                                                                <value name="VALUE"><block type="math_number" id="bb_short_un_0"><field name="NUM">0</field></block></value>
+                                                                <next>
+                                                                  <block type="variables_set" id="bb_init_short_ov">
+                                                                    <field name="VAR" id="short_ov_var">⏱️ SHORT OV COUNT</field>
+                                                                    <value name="VALUE"><block type="math_number" id="bb_short_ov_0"><field name="NUM">0</field></block></value>
+                                                                    <next>
+                                                                      <block type="variables_set" id="bb_init_short_mid">
+                                                                        <field name="VAR" id="short_mid_var">⏱️ SHORT MID COUNT</field>
+                                                                        <value name="VALUE"><block type="math_number" id="bb_short_mid_0"><field name="NUM">0</field></block></value>
+                                                                        <next>
+                                                                          <block type="variables_set" id="bb_init_un_bad">
+                                                                            <field name="VAR" id="un_bad_var">⚠️ UN BAD CNT</field>
+                                                                            <value name="VALUE"><block type="math_number" id="bb_un_bad_0"><field name="NUM">0</field></block></value>
+                                                                            <next>
+                                                                              <block type="variables_set" id="bb_init_ov_bad">
+                                                                                <field name="VAR" id="ov_bad_var">⚠️ OV BAD CNT</field>
+                                                                                <value name="VALUE"><block type="math_number" id="bb_ov_bad_0"><field name="NUM">0</field></block></value>
+                                                                                <next>
+                                                                                  <block type="text_print" id="bb_welcome_print">
+                                                                                    <value name="TEXT"><shadow type="text" id="bb_welcome_text"><field name="TEXT">🔵 BLUEBEAM PRO AI ONLINE 🛰️
+✅ SYSTEM LOADED
+📊 FETCHING MARKET HISTORY...
+🎯 UNDER 3 | OVER 6
+🤖 READY TO TRADE</field></shadow></value>
+                                                                                  </block>
+                                                                                </next>
+                                                                              </block>
+                                                                            </next>
+                                                                          </block>
+                                                                        </next>
+                                                                      </block>
+                                                                    </next>
+                                                                  </block>
+                                                                </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="SUBMARKET">
+      <block type="controls_if" id="bb_choose_trade_options">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1" else="0"></mutation>
+        <value name="IF0">
+          <block type="logic_compare" id="bb_signal_is_un">
+            <field name="OP">EQ</field>
+            <value name="A"><block type="variables_get" id="bb_get_signal_un"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+            <value name="B"><block type="math_number" id="bb_signal_one_trade_options"><field name="NUM">1</field></block></value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="trade_definition_tradeoptions" id="bb_trade_options_un">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+            <field name="DURATIONTYPE_LIST">t</field>
+            <value name="DURATION"><shadow type="math_number" id="bb_un_duration"><field name="NUM">1</field></shadow></value>
+            <value name="AMOUNT"><shadow type="math_number" id="bb_un_amount_shadow"><field name="NUM">1</field></shadow><block type="variables_get" id="bb_un_get_stake"><field name="VAR" id="stake_var">📊 ECO-STAKE</field></block></value>
+            <value name="PREDICTION"><shadow type="math_number_positive" id="bb_un_prediction_shadow"><field name="NUM">3</field></shadow><block type="variables_get" id="bb_get_un_barrier"><field name="VAR" id="un_barrier_var">🔵 UN BARRIER</field></block></value>
+          </block>
+        </statement>
+        <value name="IF1">
+          <block type="logic_compare" id="bb_signal_is_ov">
+            <field name="OP">EQ</field>
+            <value name="A"><block type="variables_get" id="bb_get_signal_ov"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+            <value name="B"><block type="math_number" id="bb_signal_two_trade_options"><field name="NUM">2</field></block></value>
+          </block>
+        </value>
+        <statement name="DO1">
+          <block type="trade_definition_tradeoptions" id="bb_trade_options_ov">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+            <field name="DURATIONTYPE_LIST">t</field>
+            <value name="DURATION"><shadow type="math_number" id="bb_ov_duration"><field name="NUM">1</field></shadow></value>
+            <value name="AMOUNT"><shadow type="math_number" id="bb_ov_amount_shadow"><field name="NUM">1</field></shadow><block type="variables_get" id="bb_ov_get_stake"><field name="VAR" id="stake_var">📊 ECO-STAKE</field></block></value>
+            <value name="PREDICTION"><shadow type="math_number_positive" id="bb_ov_prediction_shadow"><field name="NUM">6</field></shadow><block type="variables_get" id="bb_get_ov_barrier"><field name="VAR" id="ov_barrier_var">🟣 OV BARRIER</field></block></value>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+
+  <block type="tick_analysis" id="bb_tick_analysis" x="0" y="1500">
+    <statement name="TICKANALYSIS_STACK">
+      <block type="variables_set" id="bb_reset_long_un">
+        <field name="VAR" id="long_un_var">📈 LONG UN COUNT</field>
+        <value name="VALUE"><block type="math_number" id="bb_long_un_zero"><field name="NUM">0</field></block></value>
+        <next>
+          <block type="variables_set" id="bb_reset_long_ov">
+            <field name="VAR" id="long_ov_var">📉 LONG OV COUNT</field>
+            <value name="VALUE"><block type="math_number" id="bb_long_ov_zero"><field name="NUM">0</field></block></value>
+            <next>
+              <block type="variables_set" id="bb_reset_long_mid">
+                <field name="VAR" id="long_mid_var">⚖️ LONG MID COUNT</field>
+                <value name="VALUE"><block type="math_number" id="bb_long_mid_zero"><field name="NUM">0</field></block></value>
+                <next>
+                  <block type="variables_set" id="bb_reset_short_un">
+                    <field name="VAR" id="short_un_var">⏱️ SHORT UN COUNT</field>
+                    <value name="VALUE"><block type="math_number" id="bb_short_un_zero"><field name="NUM">0</field></block></value>
+                    <next>
+                      <block type="variables_set" id="bb_reset_short_ov">
+                        <field name="VAR" id="short_ov_var">⏱️ SHORT OV COUNT</field>
+                        <value name="VALUE"><block type="math_number" id="bb_short_ov_zero"><field name="NUM">0</field></block></value>
+                        <next>
+                          <block type="variables_set" id="bb_reset_short_mid">
+                            <field name="VAR" id="short_mid_var">⏱️ SHORT MID COUNT</field>
+                            <value name="VALUE"><block type="math_number" id="bb_short_mid_zero"><field name="NUM">0</field></block></value>
+                            <next>
+                              <block type="variables_set" id="bb_reset_un_bad">
+                                <field name="VAR" id="un_bad_var">⚠️ UN BAD CNT</field>
+                                <value name="VALUE"><block type="math_number" id="bb_un_bad_zero"><field name="NUM">0</field></block></value>
+                                <next>
+                                  <block type="variables_set" id="bb_reset_ov_bad">
+                                    <field name="VAR" id="ov_bad_var">⚠️ OV BAD CNT</field>
+                                    <value name="VALUE"><block type="math_number" id="bb_ov_bad_zero"><field name="NUM">0</field></block></value>
+                                    <next>
+                                      <block type="variables_set" id="bb_reset_signal">
+                                        <field name="VAR" id="signal_var">📡 BB Signal</field>
+                                        <value name="VALUE"><block type="math_number" id="bb_signal_zero_tick"><field name="NUM">0</field></block></value>
+                                        <next>
+                                          <block type="controls_for" id="bb_long_loop">
+                                            <field name="VAR" id="i_var">🔢 BB i</field>
+                                            <value name="FROM"><block type="math_number" id="bb_long_from"><field name="NUM">1</field></block></value>
+                                            <value name="TO"><block type="math_number" id="bb_long_to"><field name="NUM">90</field></block></value>
+                                            <value name="BY"><block type="math_number" id="bb_long_by"><field name="NUM">1</field></block></value>
+                                            <statement name="DO">
+                                              <block type="variables_set" id="bb_set_digit_long">
+                                                <field name="VAR" id="scan_digit_var">🔍 BB Digit</field>
+                                                <value name="VALUE">
+                                                  <block type="lists_getIndex" id="bb_get_digit_long">
+                                                    <mutation xmlns="http://www.w3.org/1999/xhtml" statement="false" at="true"></mutation>
+                                                    <field name="MODE">GET</field>
+                                                    <field name="WHERE">FROM_END</field>
+                                                    <value name="VALUE"><block type="lastDigitList" id="bb_last_digit_long"></block></value>
+                                                    <value name="AT"><block type="variables_get" id="bb_get_i_long"><field name="VAR" id="i_var">🔢 BB i</field></block></value>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="controls_if" id="bb_long_count">
+                                                    <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1" else="1"></mutation>
+                                                    <value name="IF0">
+                                                      <block type="logic_compare" id="bb_digit_lt_3_long">
+                                                        <field name="OP">LT</field>
+                                                        <value name="A"><block type="variables_get" id="bb_get_digit_lt_3_long"><field name="VAR" id="scan_digit_var">🔍 BB Digit</field></block></value>
+                                                        <value name="B"><block type="math_number" id="bb_three_long"><field name="NUM">3</field></block></value>
+                                                      </block>
+                                                    </value>
+                                                    <statement name="DO0">
+                                                      <block type="math_change" id="bb_add_long_un">
+                                                        <field name="VAR" id="long_un_var">📈 LONG UN COUNT</field>
+                                                        <value name="DELTA"><shadow type="math_number" id="bb_un_delta_long"><field name="NUM">1</field></shadow></value>
+                                                      </block>
+                                                    </statement>
+                                                    <value name="IF1">
+                                                      <block type="logic_compare" id="bb_digit_gt_6_long">
+                                                        <field name="OP">GT</field>
+                                                        <value name="A"><block type="variables_get" id="bb_get_digit_gt_6_long"><field name="VAR" id="scan_digit_var">🔍 BB Digit</field></block></value>
+                                                        <value name="B"><block type="math_number" id="bb_six_long"><field name="NUM">6</field></block></value>
+                                                      </block>
+                                                    </value>
+                                                    <statement name="DO1">
+                                                      <block type="math_change" id="bb_add_long_ov">
+                                                        <field name="VAR" id="long_ov_var">📉 LONG OV COUNT</field>
+                                                        <value name="DELTA"><shadow type="math_number" id="bb_ov_delta_long"><field name="NUM">1</field></shadow></value>
+                                                      </block>
+                                                    </statement>
+                                                    <statement name="ELSE">
+                                                      <block type="math_change" id="bb_add_long_mid">
+                                                        <field name="VAR" id="long_mid_var">⚖️ LONG MID COUNT</field>
+                                                        <value name="DELTA"><shadow type="math_number" id="bb_mid_delta_long"><field name="NUM">1</field></shadow></value>
+                                                      </block>
+                                                    </statement>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </statement>
+                                            <next>
+                                              <block type="controls_for" id="bb_short_loop">
+                                                <field name="VAR" id="i_var">🔢 BB i</field>
+                                                <value name="FROM"><block type="math_number" id="bb_short_from"><field name="NUM">1</field></block></value>
+                                                <value name="TO"><block type="math_number" id="bb_short_to"><field name="NUM">21</field></block></value>
+                                                <value name="BY"><block type="math_number" id="bb_short_by"><field name="NUM">1</field></block></value>
+                                                <statement name="DO">
+                                                  <block type="variables_set" id="bb_set_digit_short">
+                                                    <field name="VAR" id="scan_digit_var">🔍 BB Digit</field>
+                                                    <value name="VALUE">
+                                                      <block type="lists_getIndex" id="bb_get_digit_short">
+                                                        <mutation xmlns="http://www.w3.org/1999/xhtml" statement="false" at="true"></mutation>
+                                                        <field name="MODE">GET</field>
+                                                        <field name="WHERE">FROM_END</field>
+                                                        <value name="VALUE"><block type="lastDigitList" id="bb_last_digit_short"></block></value>
+                                                        <value name="AT"><block type="variables_get" id="bb_get_i_short"><field name="VAR" id="i_var">🔢 BB i</field></block></value>
+                                                      </block>
+                                                    </value>
+                                                    <next>
+                                                      <block type="controls_if" id="bb_short_count">
+                                                        <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1" else="1"></mutation>
+                                                        <value name="IF0">
+                                                          <block type="logic_compare" id="bb_digit_lt_3_short">
+                                                            <field name="OP">LT</field>
+                                                            <value name="A"><block type="variables_get" id="bb_get_digit_lt_3_short"><field name="VAR" id="scan_digit_var">🔍 BB Digit</field></block></value>
+                                                            <value name="B"><block type="math_number" id="bb_three_short"><field name="NUM">3</field></block></value>
+                                                          </block>
+                                                        </value>
+                                                        <statement name="DO0">
+                                                          <block type="math_change" id="bb_add_short_un">
+                                                            <field name="VAR" id="short_un_var">⏱️ SHORT UN COUNT</field>
+                                                            <value name="DELTA"><shadow type="math_number" id="bb_un_delta_short"><field name="NUM">1</field></shadow></value>
+                                                          </block>
+                                                        </statement>
+                                                        <value name="IF1">
+                                                          <block type="logic_compare" id="bb_digit_gt_6_short">
+                                                            <field name="OP">GT</field>
+                                                            <value name="A"><block type="variables_get" id="bb_get_digit_gt_6_short"><field name="VAR" id="scan_digit_var">🔍 BB Digit</field></block></value>
+                                                            <value name="B"><block type="math_number" id="bb_six_short"><field name="NUM">6</field></block></value>
+                                                          </block>
+                                                        </value>
+                                                        <statement name="DO1">
+                                                          <block type="math_change" id="bb_add_short_ov">
+                                                            <field name="VAR" id="short_ov_var">⏱️ SHORT OV COUNT</field>
+                                                            <value name="DELTA"><shadow type="math_number" id="bb_ov_delta_short"><field name="NUM">1</field></shadow></value>
+                                                          </block>
+                                                        </statement>
+                                                        <statement name="ELSE">
+                                                          <block type="math_change" id="bb_add_short_mid">
+                                                            <field name="VAR" id="short_mid_var">⏱️ SHORT MID COUNT</field>
+                                                            <value name="DELTA"><shadow type="math_number" id="bb_mid_delta_short"><field name="NUM">1</field></shadow></value>
+                                                          </block>
+                                                        </statement>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </statement>
+                                                <next>
+                                                  <block type="controls_for" id="bb_bad_loop">
+                                                    <field name="VAR" id="i_var">🔢 BB i</field>
+                                                    <value name="FROM"><block type="math_number" id="bb_bad_from"><field name="NUM">1</field></block></value>
+                                                    <value name="TO"><block type="math_number" id="bb_bad_to"><field name="NUM">5</field></block></value>
+                                                    <value name="BY"><block type="math_number" id="bb_bad_by"><field name="NUM">1</field></block></value>
+                                                    <statement name="DO">
+                                                      <block type="variables_set" id="bb_set_digit_bad">
+                                                        <field name="VAR" id="scan_digit_var">🔍 BB Digit</field>
+                                                        <value name="VALUE">
+                                                          <block type="lists_getIndex" id="bb_get_digit_bad">
+                                                            <mutation xmlns="http://www.w3.org/1999/xhtml" statement="false" at="true"></mutation>
+                                                            <field name="MODE">GET</field>
+                                                            <field name="WHERE">FROM_END</field>
+                                                            <value name="VALUE"><block type="lastDigitList" id="bb_last_digit_bad"></block></value>
+                                                            <value name="AT"><block type="variables_get" id="bb_get_i_bad"><field name="VAR" id="i_var">🔢 BB i</field></block></value>
+                                                          </block>
+                                                        </value>
+                                                        <next>
+                                                          <block type="controls_if" id="bb_bad_count_ov">
+                                                            <value name="IF0">
+                                                              <block type="logic_compare" id="bb_digit_gt_6_bad_ov">
+                                                                <field name="OP">GT</field>
+                                                                <value name="A"><block type="variables_get" id="bb_get_digit_gt_6_bad_ov"><field name="VAR" id="scan_digit_var">🔍 BB Digit</field></block></value>
+                                                                <value name="B"><block type="math_number" id="bb_six_bad_ov"><field name="NUM">6</field></block></value>
+                                                              </block>
+                                                            </value>
+                                                            <statement name="DO0">
+                                                              <block type="math_change" id="bb_add_un_bad">
+                                                                <field name="VAR" id="un_bad_var">⚠️ UN BAD CNT</field>
+                                                                <value name="DELTA"><shadow type="math_number" id="bb_un_bad_delta"><field name="NUM">1</field></shadow></value>
+                                                              </block>
+                                                            </statement>
+                                                            <next>
+                                                              <block type="controls_if" id="bb_bad_count_un">
+                                                                <value name="IF0">
+                                                                  <block type="logic_compare" id="bb_digit_lt_3_bad_un">
+                                                                    <field name="OP">LT</field>
+                                                                    <value name="A"><block type="variables_get" id="bb_get_digit_lt_3_bad_un"><field name="VAR" id="scan_digit_var">🔍 BB Digit</field></block></value>
+                                                                    <value name="B"><block type="math_number" id="bb_three_bad_un"><field name="NUM">3</field></block></value>
+                                                                  </block>
+                                                                </value>
+                                                                <statement name="DO0">
+                                                                  <block type="math_change" id="bb_add_ov_bad">
+                                                                    <field name="VAR" id="ov_bad_var">⚠️ OV BAD CNT</field>
+                                                                    <value name="DELTA"><shadow type="math_number" id="bb_ov_bad_delta"><field name="NUM">1</field></shadow></value>
+                                                                  </block>
+                                                                </statement>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </statement>
+                                                    <next>
+                                                      <block type="controls_if" id="bb_un_signal_check">
+                                                        <value name="IF0">
+                                                          <block type="logic_compare" id="bb_long_diff_un_gte_7">
+                                                            <field name="OP">GTE</field>
+                                                            <value name="A">
+                                                              <block type="math_arithmetic" id="bb_long_diff_un">
+                                                                <field name="OP">MINUS</field>
+                                                                <value name="A"><block type="variables_get" id="bb_get_long_un_diff"><field name="VAR" id="long_un_var">📈 LONG UN COUNT</field></block></value>
+                                                                <value name="B"><block type="variables_get" id="bb_get_long_ov_diff"><field name="VAR" id="long_ov_var">📉 LONG OV COUNT</field></block></value>
+                                                              </block>
+                                                            </value>
+                                                            <value name="B"><block type="math_number" id="bb_seven_un"><field name="NUM">7</field></block></value>
+                                                          </block>
+                                                        </value>
+                                                        <statement name="DO0">
+                                                          <block type="controls_if" id="bb_un_signal_short">
+                                                            <value name="IF0">
+                                                              <block type="logic_compare" id="bb_short_diff_un_gte_2">
+                                                                <field name="OP">GTE</field>
+                                                                <value name="A">
+                                                                  <block type="math_arithmetic" id="bb_short_diff_un">
+                                                                    <field name="OP">MINUS</field>
+                                                                    <value name="A"><block type="variables_get" id="bb_get_short_un_diff"><field name="VAR" id="short_un_var">⏱️ SHORT UN COUNT</field></block></value>
+                                                                    <value name="B"><block type="variables_get" id="bb_get_short_ov_diff"><field name="VAR" id="short_ov_var">⏱️ SHORT OV COUNT</field></block></value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="B"><block type="math_number" id="bb_two_un"><field name="NUM">2</field></block></value>
+                                                              </block>
+                                                            </value>
+                                                            <statement name="DO0">
+                                                              <block type="controls_if" id="bb_un_signal_mid">
+                                                                <value name="IF0">
+                                                                  <block type="logic_compare" id="bb_long_mid_lte_48_un">
+                                                                    <field name="OP">LTE</field>
+                                                                    <value name="A"><block type="variables_get" id="bb_get_long_mid_un"><field name="VAR" id="long_mid_var">⚖️ LONG MID COUNT</field></block></value>
+                                                                    <value name="B"><block type="math_number" id="bb_fortyeight_un"><field name="NUM">48</field></block></value>
+                                                                  </block>
+                                                                </value>
+                                                                <statement name="DO0">
+                                                                  <block type="controls_if" id="bb_un_signal_bad">
+                                                                    <value name="IF0">
+                                                                      <block type="logic_compare" id="bb_un_bad_lt_3">
+                                                                        <field name="OP">LT</field>
+                                                                        <value name="A"><block type="variables_get" id="bb_get_un_bad"><field name="VAR" id="un_bad_var">⚠️ UN BAD CNT</field></block></value>
+                                                                        <value name="B"><block type="math_number" id="bb_three_un_bad"><field name="NUM">3</field></block></value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <statement name="DO0">
+                                                                      <block type="controls_if" id="bb_un_signal_loss">
+                                                                        <value name="IF0">
+                                                                          <block type="logic_compare" id="bb_un_loss_lt_max">
+                                                                            <field name="OP">LT</field>
+                                                                            <value name="A"><block type="variables_get" id="bb_get_un_loss"><field name="VAR" id="un_loss_var">❌ UN LOSS CNT</field></block></value>
+                                                                            <value name="B"><block type="variables_get" id="bb_get_max_loss_un"><field name="VAR" id="max_loss_var">🚫 MAX LOSS</field></block></value>
+                                                                          </block>
+                                                                        </value>
+                                                                        <statement name="DO0">
+                                                                          <block type="variables_set" id="bb_set_signal_un">
+                                                                            <field name="VAR" id="signal_var">📡 BB Signal</field>
+                                                                            <value name="VALUE"><block type="math_number" id="bb_signal_one"><field name="NUM">1</field></block></value>
+                                                                          </block>
+                                                                        </statement>
+                                                                      </block>
+                                                                    </statement>
+                                                                  </block>
+                                                                </statement>
+                                                              </block>
+                                                            </statement>
+                                                          </block>
+                                                        </statement>
+                                                        <next>
+                                                          <block type="controls_if" id="bb_ov_signal_check">
+                                                            <value name="IF0">
+                                                              <block type="logic_compare" id="bb_long_diff_ov_gte_7">
+                                                                <field name="OP">GTE</field>
+                                                                <value name="A">
+                                                                  <block type="math_arithmetic" id="bb_long_diff_ov">
+                                                                    <field name="OP">MINUS</field>
+                                                                    <value name="A"><block type="variables_get" id="bb_get_long_ov_diff_ov"><field name="VAR" id="long_ov_var">📉 LONG OV COUNT</field></block></value>
+                                                                    <value name="B"><block type="variables_get" id="bb_get_long_un_diff_ov"><field name="VAR" id="long_un_var">📈 LONG UN COUNT</field></block></value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="B"><block type="math_number" id="bb_seven_ov"><field name="NUM">7</field></block></value>
+                                                              </block>
+                                                            </value>
+                                                            <statement name="DO0">
+                                                              <block type="controls_if" id="bb_ov_signal_short">
+                                                                <value name="IF0">
+                                                                  <block type="logic_compare" id="bb_short_diff_ov_gte_2">
+                                                                    <field name="OP">GTE</field>
+                                                                    <value name="A">
+                                                                      <block type="math_arithmetic" id="bb_short_diff_ov">
+                                                                        <field name="OP">MINUS</field>
+                                                                        <value name="A"><block type="variables_get" id="bb_get_short_ov_diff_ov"><field name="VAR" id="short_ov_var">⏱️ SHORT OV COUNT</field></block></value>
+                                                                        <value name="B"><block type="variables_get" id="bb_get_short_un_diff_ov"><field name="VAR" id="short_un_var">⏱️ SHORT UN COUNT</field></block></value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B"><block type="math_number" id="bb_two_ov"><field name="NUM">2</field></block></value>
+                                                                  </block>
+                                                                </value>
+                                                                <statement name="DO0">
+                                                                  <block type="controls_if" id="bb_ov_signal_mid">
+                                                                    <value name="IF0">
+                                                                      <block type="logic_compare" id="bb_long_mid_lte_48_ov">
+                                                                        <field name="OP">LTE</field>
+                                                                        <value name="A"><block type="variables_get" id="bb_get_long_mid_ov"><field name="VAR" id="long_mid_var">⚖️ LONG MID COUNT</field></block></value>
+                                                                        <value name="B"><block type="math_number" id="bb_fortyeight_ov"><field name="NUM">48</field></block></value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <statement name="DO0">
+                                                                      <block type="controls_if" id="bb_ov_signal_bad">
+                                                                        <value name="IF0">
+                                                                          <block type="logic_compare" id="bb_ov_bad_lt_3">
+                                                                            <field name="OP">LT</field>
+                                                                            <value name="A"><block type="variables_get" id="bb_get_ov_bad"><field name="VAR" id="ov_bad_var">⚠️ OV BAD CNT</field></block></value>
+                                                                            <value name="B"><block type="math_number" id="bb_three_ov_bad"><field name="NUM">3</field></block></value>
+                                                                          </block>
+                                                                        </value>
+                                                                        <statement name="DO0">
+                                                                          <block type="controls_if" id="bb_ov_signal_loss">
+                                                                            <value name="IF0">
+                                                                              <block type="logic_compare" id="bb_ov_loss_lt_max">
+                                                                                <field name="OP">LT</field>
+                                                                                <value name="A"><block type="variables_get" id="bb_get_ov_loss"><field name="VAR" id="ov_loss_var">❌ OV LOSS CNT</field></block></value>
+                                                                                <value name="B"><block type="variables_get" id="bb_get_max_loss_ov"><field name="VAR" id="max_loss_var">🚫 MAX LOSS</field></block></value>
+                                                                              </block>
+                                                                            </value>
+                                                                            <statement name="DO0">
+                                                                              <block type="controls_if" id="bb_ov_signal_no_un">
+                                                                                <value name="IF0">
+                                                                                  <block type="logic_compare" id="bb_signal_not_un">
+                                                                                    <field name="OP">NEQ</field>
+                                                                                    <value name="A"><block type="variables_get" id="bb_get_signal_neq_un"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+                                                                                    <value name="B"><block type="math_number" id="bb_signal_one_neq"><field name="NUM">1</field></block></value>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <statement name="DO0">
+                                                                                  <block type="variables_set" id="bb_set_signal_ov">
+                                                                                    <field name="VAR" id="signal_var">📡 BB Signal</field>
+                                                                                    <value name="VALUE"><block type="math_number" id="bb_signal_two"><field name="NUM">2</field></block></value>
+                                                                                  </block>
+                                                                                </statement>
+                                                                              </block>
+                                                                            </statement>
+                                                                          </block>
+                                                                        </statement>
+                                                                      </block>
+                                                                    </statement>
+                                                                  </block>
+                                                                </statement>
+                                                              </block>
+                                                            </statement>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+
+  <block type="before_purchase" id="bb_before_purchase" x="0" y="2500">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="controls_if" id="bb_before_running">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+        <value name="IF0"><block type="variables_get" id="bb_before_get_running"><field name="VAR" id="run_var">🤖 Bot Running</field></block></value>
+        <statement name="DO0">
+          <block type="controls_if" id="bb_purchase_by_signal">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1" else="0"></mutation>
+            <value name="IF0">
+              <block type="logic_compare" id="bb_before_signal_un">
+                <field name="OP">EQ</field>
+                <value name="A"><block type="variables_get" id="bb_before_get_signal_un"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+                <value name="B"><block type="math_number" id="bb_before_one"><field name="NUM">1</field></block></value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="purchase" id="bb_purchase_un"><field name="PURCHASE_LIST">DIGITUNDER</field></block>
+            </statement>
+            <value name="IF1">
+              <block type="logic_compare" id="bb_before_signal_ov">
+                <field name="OP">EQ</field>
+                <value name="A"><block type="variables_get" id="bb_before_get_signal_ov"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+                <value name="B"><block type="math_number" id="bb_before_two"><field name="NUM">2</field></block></value>
+              </block>
+            </value>
+            <statement name="DO1">
+              <block type="purchase" id="bb_purchase_ov"><field name="PURCHASE_LIST">DIGITOVER</field></block>
+            </statement>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="text_print" id="bb_stopped_print"><value name="TEXT"><shadow type="text" id="bb_stopped_text"><field name="TEXT">🛑 BLUEBEAM PRO AI STOPPED
+⏸️ BOT PAUSED - NO ACTIVE SIGNAL</field></shadow></value></block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+
+  <block type="after_purchase" id="bb_after_purchase" x="720" y="2500">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="bb_after_tp_sl">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1" else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_compare" id="bb_tp_check">
+            <field name="OP">GTE</field>
+            <value name="A"><block type="total_profit" id="bb_tp_total_profit"></block></value>
+            <value name="B"><block type="variables_get" id="bb_tp_get"><field name="VAR" id="tp_var">🎯 TAKE PROFIT</field></block></value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set" id="bb_stop_tp">
+            <field name="VAR" id="run_var">🤖 Bot Running</field>
+            <value name="VALUE"><block type="logic_boolean" id="bb_tp_false"><field name="BOOL">FALSE</field></block></value>
+            <next><block type="text_print" id="bb_tp_print"><value name="TEXT"><shadow type="text" id="bb_tp_text"><field name="TEXT">🏆 BLUEBEAM PRO AI TAKE PROFIT REACHED
+💰 SESSION SECURED ✅
+🎉 PROFITS BOOKED</field></shadow></value></block></next>
+          </block>
+        </statement>
+        <value name="IF1">
+          <block type="logic_compare" id="bb_sl_check">
+            <field name="OP">LTE</field>
+            <value name="A"><block type="total_profit" id="bb_sl_total_profit"></block></value>
+            <value name="B">
+              <block type="math_arithmetic" id="bb_negative_sl">
+                <field name="OP">MULTIPLY</field>
+                <value name="A"><block type="variables_get" id="bb_sl_get"><field name="VAR" id="sl_var">🛡️ STOP LOSS</field></block></value>
+                <value name="B"><block type="math_number" id="bb_minus_1"><field name="NUM">-1</field></block></value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO1">
+          <block type="variables_set" id="bb_stop_sl">
+            <field name="VAR" id="run_var">🤖 Bot Running</field>
+            <value name="VALUE"><block type="logic_boolean" id="bb_sl_false"><field name="BOOL">FALSE</field></block></value>
+            <next><block type="text_print" id="bb_sl_print"><value name="TEXT"><shadow type="text" id="bb_sl_text"><field name="TEXT">🛑 BLUEBEAM PRO AI STOP LOSS REACHED
+⚠️ SESSION CLOSED
+🛡️ CAPITAL PROTECTED</field></shadow></value></block></next>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="controls_if" id="bb_win_loss_marti">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+            <value name="IF0"><block type="contract_check_result" id="bb_check_win"><field name="CHECK_RESULT">win</field></block></value>
+            <statement name="DO0">
+              <block type="variables_set" id="bb_reset_stake_win">
+                <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                <value name="VALUE"><block type="variables_get" id="bb_get_base_stake_win"><field name="VAR" id="base_stake_var">💰 Base Stake</field></block></value>
+                <next>
+                  <block type="variables_set" id="bb_reset_un_loss_win">
+                    <field name="VAR" id="un_loss_var">❌ UN LOSS CNT</field>
+                    <value name="VALUE"><block type="math_number" id="bb_un_loss_win_zero"><field name="NUM">0</field></block></value>
+                    <next>
+                      <block type="variables_set" id="bb_reset_ov_loss_win">
+                        <field name="VAR" id="ov_loss_var">❌ OV LOSS CNT</field>
+                        <value name="VALUE"><block type="math_number" id="bb_ov_loss_win_zero"><field name="NUM">0</field></block></value>
+                        <next><block type="trade_again" id="bb_trade_again_win"></block></next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="variables_set" id="bb_marti_stake_loss">
+                <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                <value name="VALUE">
+                  <block type="math_arithmetic" id="bb_stake_times_1_5">
+                    <field name="OP">MULTIPLY</field>
+                    <value name="A"><block type="variables_get" id="bb_get_stake_loss"><field name="VAR" id="stake_var">📊 ECO-STAKE</field></block></value>
+                    <value name="B"><block type="math_number" id="bb_martingale_1_5"><field name="NUM">1.5</field></block></value>
+                  </block>
+                </value>
+                <next>
+                  <block type="controls_if" id="bb_inc_un_loss">
+                    <value name="IF0">
+                      <block type="logic_compare" id="bb_signal_is_un_loss">
+                        <field name="OP">EQ</field>
+                        <value name="A"><block type="variables_get" id="bb_get_signal_un_loss"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+                        <value name="B"><block type="math_number" id="bb_signal_one_loss"><field name="NUM">1</field></block></value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="math_change" id="bb_add_un_loss">
+                        <field name="VAR" id="un_loss_var">❌ UN LOSS CNT</field>
+                        <value name="DELTA"><shadow type="math_number" id="bb_un_loss_delta"><field name="NUM">1</field></shadow></value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="controls_if" id="bb_inc_ov_loss">
+                        <value name="IF0">
+                          <block type="logic_compare" id="bb_signal_is_ov_loss">
+                            <field name="OP">EQ</field>
+                            <value name="A"><block type="variables_get" id="bb_get_signal_ov_loss"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+                            <value name="B"><block type="math_number" id="bb_signal_two_loss"><field name="NUM">2</field></block></value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="math_change" id="bb_add_ov_loss">
+                            <field name="VAR" id="ov_loss_var">❌ OV LOSS CNT</field>
+                            <value name="DELTA"><shadow type="math_number" id="bb_ov_loss_delta"><field name="NUM">1</field></shadow></value>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="controls_if" id="bb_max_loss_un_reset">
+                            <value name="IF0">
+                              <block type="logic_compare" id="bb_signal_un_and_max">
+                                <field name="OP">EQ</field>
+                                <value name="A"><block type="variables_get" id="bb_get_signal_un_max"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+                                <value name="B"><block type="math_number" id="bb_signal_one_max"><field name="NUM">1</field></block></value>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="controls_if" id="bb_un_loss_gte_max">
+                                <value name="IF0">
+                                  <block type="logic_compare" id="bb_un_loss_gte_max_check">
+                                    <field name="OP">GTE</field>
+                                    <value name="A"><block type="variables_get" id="bb_get_un_loss_max"><field name="VAR" id="un_loss_var">❌ UN LOSS CNT</field></block></value>
+                                    <value name="B"><block type="variables_get" id="bb_get_max_loss_un_reset"><field name="VAR" id="max_loss_var">🚫 MAX LOSS</field></block></value>
+                                  </block>
+                                </value>
+                                <statement name="DO0">
+                                  <block type="variables_set" id="bb_reset_stake_un_max">
+                                    <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                                    <value name="VALUE"><block type="variables_get" id="bb_get_base_stake_un_max"><field name="VAR" id="base_stake_var">💰 Base Stake</field></block></value>
+                                    <next>
+                                      <block type="variables_set" id="bb_reset_un_loss_max">
+                                        <field name="VAR" id="un_loss_var">❌ UN LOSS CNT</field>
+                                        <value name="VALUE"><block type="math_number" id="bb_un_loss_max_zero"><field name="NUM">0</field></block></value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </statement>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="controls_if" id="bb_max_loss_ov_reset">
+                                <value name="IF0">
+                                  <block type="logic_compare" id="bb_signal_ov_and_max">
+                                    <field name="OP">EQ</field>
+                                    <value name="A"><block type="variables_get" id="bb_get_signal_ov_max"><field name="VAR" id="signal_var">📡 BB Signal</field></block></value>
+                                    <value name="B"><block type="math_number" id="bb_signal_two_max"><field name="NUM">2</field></block></value>
+                                  </block>
+                                </value>
+                                <statement name="DO0">
+                                  <block type="controls_if" id="bb_ov_loss_gte_max">
+                                    <value name="IF0">
+                                      <block type="logic_compare" id="bb_ov_loss_gte_max_check">
+                                        <field name="OP">GTE</field>
+                                        <value name="A"><block type="variables_get" id="bb_get_ov_loss_max"><field name="VAR" id="ov_loss_var">❌ OV LOSS CNT</field></block></value>
+                                        <value name="B"><block type="variables_get" id="bb_get_max_loss_ov_reset"><field name="VAR" id="max_loss_var">🚫 MAX LOSS</field></block></value>
+                                      </block>
+                                    </value>
+                                    <statement name="DO0">
+                                      <block type="variables_set" id="bb_reset_stake_ov_max">
+                                        <field name="VAR" id="stake_var">📊 ECO-STAKE</field>
+                                        <value name="VALUE"><block type="variables_get" id="bb_get_base_stake_ov_max"><field name="VAR" id="base_stake_var">💰 Base Stake</field></block></value>
+                                        <next>
+                                          <block type="variables_set" id="bb_reset_ov_loss_max">
+                                            <field name="VAR" id="ov_loss_var">❌ OV LOSS CNT</field>
+                                            <value name="VALUE"><block type="math_number" id="bb_ov_loss_max_zero"><field name="NUM">0</field></block></value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                  </block>
+                                </statement>
+                                <next><block type="trade_again" id="bb_trade_again_loss"></block></next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>

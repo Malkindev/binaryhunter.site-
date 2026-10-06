@@ -1,0 +1,398 @@
+<xml xmlns="https://developers.google.com/blockly/xml" is_dbot="true" collection="false">
+  <variables>
+    <variable id="tp_var">TAKE PROFIT</variable>
+    <variable id="sl_var">STOP LOSS</variable>
+    <variable id="base_stake_var">Stake</variable>
+    <variable id="stake_var">ECO-STAKE</variable>
+    <variable id="ub_var">UB</variable>
+    <variable id="ob_var">OB</variable>
+    <variable id="next_trade_var">Next Trade</variable>
+    <variable id="run_var">Bot Running</variable>
+  </variables>
+
+  <block type="trade_definition" id="dark_owl_trade_definition" deletable="false" x="0" y="0">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="dark_owl_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="dark_owl_trade_type" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">overunder</field>
+            <next>
+              <block type="trade_definition_contracttype" id="dark_owl_contract_type" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="dark_owl_candle" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="dark_owl_restart_buysell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="dark_owl_restart_error" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="INITIALIZATION">
+      <block type="variables_set" id="init_tp">
+        <field name="VAR" id="tp_var">TAKE PROFIT</field>
+        <value name="VALUE">
+          <block type="math_number" id="tp_10"><field name="NUM">10</field></block>
+        </value>
+        <next>
+          <block type="variables_set" id="init_sl">
+            <field name="VAR" id="sl_var">STOP LOSS</field>
+            <value name="VALUE">
+              <block type="math_number" id="sl_10"><field name="NUM">10</field></block>
+            </value>
+            <next>
+              <block type="variables_set" id="init_base_stake">
+                <field name="VAR" id="base_stake_var">Stake</field>
+                <value name="VALUE">
+                  <block type="math_number" id="base_stake_035"><field name="NUM">0.35</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="init_eco_stake">
+                    <field name="VAR" id="stake_var">ECO-STAKE</field>
+                    <value name="VALUE">
+                      <block type="variables_get" id="get_base_stake_init">
+                        <field name="VAR" id="base_stake_var">Stake</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="init_ub">
+                        <field name="VAR" id="ub_var">UB</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="ub_4"><field name="NUM">4</field></block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="init_ob">
+                            <field name="VAR" id="ob_var">OB</field>
+                            <value name="VALUE">
+                              <block type="math_number" id="ob_5"><field name="NUM">5</field></block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="init_next_trade">
+                                <field name="VAR" id="next_trade_var">Next Trade</field>
+                                <value name="VALUE">
+                                  <block type="math_number" id="next_under_zero"><field name="NUM">0</field></block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="init_run">
+                                    <field name="VAR" id="run_var">Bot Running</field>
+                                    <value name="VALUE">
+                                      <block type="logic_boolean" id="run_true"><field name="BOOL">TRUE</field></block>
+                                    </value>
+                                    <next>
+                                      <block type="text_print" id="print_dark_owl_name">
+                                        <value name="TEXT">
+                                          <shadow type="text" id="dark_owl_name_text">
+                                            <field name="TEXT">Dark Owl</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="dark_owl_trade_options">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <value name="DURATION">
+          <shadow type="math_number" id="duration_1"><field name="NUM">1</field></shadow>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number" id="amount_shadow"><field name="NUM">1</field></shadow>
+          <block type="variables_get" id="get_stake_trade">
+            <field name="VAR" id="stake_var">ECO-STAKE</field>
+          </block>
+        </value>
+        <value name="PREDICTION">
+          <shadow type="math_number_positive" id="prediction_shadow"><field name="NUM">4</field></shadow>
+          <block type="logic_ternary" id="choose_prediction_from_next_trade">
+            <value name="IF">
+              <block type="logic_compare" id="prediction_if_under">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="variables_get" id="prediction_get_next_trade">
+                    <field name="VAR" id="next_trade_var">Next Trade</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="prediction_under_zero"><field name="NUM">0</field></block>
+                </value>
+              </block>
+            </value>
+            <value name="THEN">
+              <block type="variables_get" id="prediction_get_ub">
+                <field name="VAR" id="ub_var">UB</field>
+              </block>
+            </value>
+            <value name="ELSE">
+              <block type="variables_get" id="prediction_get_ob">
+                <field name="VAR" id="ob_var">OB</field>
+              </block>
+            </value>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+
+  <block type="before_purchase" id="dark_owl_before_purchase" x="0" y="760">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="controls_if" id="if_dark_owl_running">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+        <value name="IF0">
+          <block type="variables_get" id="get_running_before">
+            <field name="VAR" id="run_var">Bot Running</field>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="controls_if" id="zigzag_choose_contract">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+            <value name="IF0">
+              <block type="logic_compare" id="before_if_under">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="variables_get" id="before_get_next_trade">
+                    <field name="VAR" id="next_trade_var">Next Trade</field>
+                  </block>
+                </value>
+                <value name="B">
+                  <block type="math_number" id="before_under_zero"><field name="NUM">0</field></block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="notify" id="notify_under_4">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="under_4_msg"><field name="TEXT">Dark Owl UNDER 4</field></shadow>
+                </value>
+                <next>
+                  <block type="purchase" id="purchase_under_4">
+                    <field name="PURCHASE_LIST">DIGITUNDER</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="notify" id="notify_over_5">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="over_5_msg"><field name="TEXT">Dark Owl OVER 5</field></shadow>
+                </value>
+                <next>
+                  <block type="purchase" id="purchase_over_5">
+                    <field name="PURCHASE_LIST">DIGITOVER</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="text_print" id="print_stopped_before">
+            <value name="TEXT">
+              <shadow type="text" id="stopped_before_text"><field name="TEXT">Dark Owl stopped</field></shadow>
+            </value>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+
+  <block type="after_purchase" id="dark_owl_after_purchase" x="720" y="760">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="after_tp_sl_marti">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1" else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_compare" id="tp_check">
+            <field name="OP">GTE</field>
+            <value name="A"><block type="total_profit" id="tp_total_profit"></block></value>
+            <value name="B">
+              <block type="variables_get" id="get_tp_after">
+                <field name="VAR" id="tp_var">TAKE PROFIT</field>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set" id="stop_tp">
+            <field name="VAR" id="run_var">Bot Running</field>
+            <value name="VALUE"><block type="logic_boolean" id="false_tp"><field name="BOOL">FALSE</field></block></value>
+            <next>
+              <block type="notify" id="notify_tp">
+                <field name="NOTIFICATION_TYPE">success</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="tp_msg"><field name="TEXT">Dark Owl TP reached</field></shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <value name="IF1">
+          <block type="logic_compare" id="sl_check">
+            <field name="OP">LTE</field>
+            <value name="A"><block type="total_profit" id="sl_total_profit"></block></value>
+            <value name="B">
+              <block type="math_arithmetic" id="negative_sl">
+                <field name="OP">MULTIPLY</field>
+                <value name="A">
+                  <block type="variables_get" id="get_sl_after">
+                    <field name="VAR" id="sl_var">STOP LOSS</field>
+                  </block>
+                </value>
+                <value name="B"><block type="math_number" id="minus_1"><field name="NUM">-1</field></block></value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO1">
+          <block type="variables_set" id="stop_sl">
+            <field name="VAR" id="run_var">Bot Running</field>
+            <value name="VALUE"><block type="logic_boolean" id="false_sl"><field name="BOOL">FALSE</field></block></value>
+            <next>
+              <block type="notify" id="notify_sl">
+                <field name="NOTIFICATION_TYPE">error</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <shadow type="text" id="sl_msg"><field name="TEXT">Dark Owl SL reached</field></shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="controls_if" id="win_or_loss_martingale">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+            <value name="IF0">
+              <block type="contract_check_result" id="check_win">
+                <field name="CHECK_RESULT">win</field>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="reset_stake_win">
+                <field name="VAR" id="stake_var">ECO-STAKE</field>
+                <value name="VALUE">
+                  <block type="variables_get" id="get_base_stake_win">
+                    <field name="VAR" id="base_stake_var">Stake</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="controls_if" id="toggle_after_win">
+                    <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+                    <value name="IF0">
+                      <block type="logic_compare" id="toggle_win_if_under">
+                        <field name="OP">EQ</field>
+                        <value name="A">
+                          <block type="variables_get" id="toggle_win_get_next">
+                            <field name="VAR" id="next_trade_var">Next Trade</field>
+                          </block>
+                        </value>
+                        <value name="B"><block type="math_number" id="toggle_win_zero"><field name="NUM">0</field></block></value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="variables_set" id="toggle_win_to_over">
+                        <field name="VAR" id="next_trade_var">Next Trade</field>
+                        <value name="VALUE"><block type="math_number" id="win_to_over_1"><field name="NUM">1</field></block></value>
+                      </block>
+                    </statement>
+                    <statement name="ELSE">
+                      <block type="variables_set" id="toggle_win_to_under">
+                        <field name="VAR" id="next_trade_var">Next Trade</field>
+                        <value name="VALUE"><block type="math_number" id="win_to_under_0"><field name="NUM">0</field></block></value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="trade_again" id="trade_again_win"></block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="variables_set" id="double_stake_loss">
+                <field name="VAR" id="stake_var">ECO-STAKE</field>
+                <value name="VALUE">
+                  <block type="math_arithmetic" id="stake_times_2">
+                    <field name="OP">MULTIPLY</field>
+                    <value name="A">
+                      <block type="variables_get" id="get_stake_loss">
+                        <field name="VAR" id="stake_var">ECO-STAKE</field>
+                      </block>
+                    </value>
+                    <value name="B"><block type="math_number" id="martingale_2"><field name="NUM">2</field></block></value>
+                  </block>
+                </value>
+                <next>
+                  <block type="controls_if" id="toggle_after_loss">
+                    <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+                    <value name="IF0">
+                      <block type="logic_compare" id="toggle_loss_if_under">
+                        <field name="OP">EQ</field>
+                        <value name="A">
+                          <block type="variables_get" id="toggle_loss_get_next">
+                            <field name="VAR" id="next_trade_var">Next Trade</field>
+                          </block>
+                        </value>
+                        <value name="B"><block type="math_number" id="toggle_loss_zero"><field name="NUM">0</field></block></value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="variables_set" id="toggle_loss_to_over">
+                        <field name="VAR" id="next_trade_var">Next Trade</field>
+                        <value name="VALUE"><block type="math_number" id="loss_to_over_1"><field name="NUM">1</field></block></value>
+                      </block>
+                    </statement>
+                    <statement name="ELSE">
+                      <block type="variables_set" id="toggle_loss_to_under">
+                        <field name="VAR" id="next_trade_var">Next Trade</field>
+                        <value name="VALUE"><block type="math_number" id="loss_to_under_0"><field name="NUM">0</field></block></value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="trade_again" id="trade_again_loss"></block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>
