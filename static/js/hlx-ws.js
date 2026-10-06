@@ -3903,18 +3903,7 @@
               }
             }
 
-            // 4. Forget request
-            if (req.forget) {
-              setTimeout(function () {
-                emitWsMessage(ws, {
-                  echo_req: req,
-                  msg_type: 'forget',
-                  forget: req.forget || 1,
-                  req_id: req.req_id
-                });
-              }, 20);
-              return;
-            }
+            // Allow native forget / forget_all requests to pass to Deriv WebSocket
           } catch (e) {}
         }
         return origSend.call(ws, data);
