@@ -217,11 +217,12 @@ try { if (localStorage.getItem('theme') === 'dark') { document.documentElement.c
         [role="tab"]:hover, .dc-tabs__item:hover { filter: drop-shadow(0 0 6px rgba(139,92,246,.5)); }
 
         /* animated purple aura behind the header for depth */
-        /* ── FLOATING AI ASSISTANT WIDGET ──
-           Pin floating AI icons/badges strictly to bottom-right on Desktop and Mobile. */
-        #a1, .ai-widget, .ai-badge, .ai-icon, .ai-assistant, .ai-button,
-        [class*="ai-widget"], [class*="ai-badge"], [class*="ai-assistant"], [class*="ai-floating"],
-        [id*="ai-widget"], [id*="ai-badge"], [id*="ai-assistant"], [id*="ai-floating"] {
+        /* ── FLOATING AI ASSISTANT & SCANNER WIDGET ──
+           Pin all floating AI icons/badges/scanners strictly to bottom-right on Desktop and Mobile. */
+        #a1, .ai-widget, .ai-badge, .ai-icon, .ai-assistant, .ai-button, .ai-scanner, .ai-loader, .ai-chat,
+        [class*="ai-widget"], [class*="ai-badge"], [class*="ai-assistant"], [class*="ai-floating"], [class*="ai-scanner"],
+        [id*="ai-widget"], [id*="ai-badge"], [id*="ai-assistant"], [id*="ai-floating"], [id*="ai-scanner"],
+        [data-testid*="ai"] {
             position: fixed !important;
             bottom: 24px !important;
             right: 24px !important;
@@ -232,15 +233,18 @@ try { if (localStorage.getItem('theme') === 'dark') { document.documentElement.c
             transform: none !important;
         }
         @media (max-width: 768px) {
-            #a1, .ai-widget, .ai-badge, .ai-icon, .ai-assistant, .ai-button,
-            [class*="ai-widget"], [class*="ai-badge"], [class*="ai-assistant"], [class*="ai-floating"],
-            [id*="ai-widget"], [id*="ai-badge"], [id*="ai-assistant"], [id*="ai-floating"] {
+            #a1, .ai-widget, .ai-badge, .ai-icon, .ai-assistant, .ai-button, .ai-scanner, .ai-loader, .ai-chat,
+            [class*="ai-widget"], [class*="ai-badge"], [class*="ai-assistant"], [class*="ai-floating"], [class*="ai-scanner"],
+            [id*="ai-widget"], [id*="ai-badge"], [id*="ai-assistant"], [id*="ai-floating"], [id*="ai-scanner"],
+            [data-testid*="ai"] {
                 position: fixed !important;
                 bottom: 16px !important;
                 right: 16px !important;
                 top: auto !important;
                 left: auto !important;
                 z-index: 999999 !important;
+                margin: 0 !important;
+                transform: none !important;
             }
         }
     </style>
