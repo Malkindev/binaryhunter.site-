@@ -348,75 +348,11 @@
     } catch (_) {}
   }
 
-  function fixAiWidgetPosition() {
-    try {
-      var isMobile = window.innerWidth <= 768;
-      var bVal = isMobile ? '16px' : '24px';
-      var rVal = isMobile ? '16px' : '24px';
-
-      var moveFixed = function (el) {
-        if (!el || !el.style) return;
-        var tag = el.tagName ? el.tagName.toUpperCase() : '';
-        if (tag === 'BODY' || tag === 'HTML' || tag === 'HEADER' || tag === 'NAV' || el.id === 'root') return;
-        var txt = (el.textContent || '').trim();
-        if (txt.indexOf('Smart Analysis') !== -1 || txt.indexOf('Signals') !== -1 || txt.indexOf('Bot Builder') !== -1 || txt.indexOf('Dashboard') !== -1 || txt.indexOf('D-Trader') !== -1) return;
-
-        el.style.setProperty('position', 'fixed', 'important');
-        el.style.setProperty('bottom', bVal, 'important');
-        el.style.setProperty('right', rVal, 'important');
-        el.style.setProperty('top', 'auto', 'important');
-        el.style.setProperty('left', 'auto', 'important');
-        el.style.setProperty('z-index', '999999', 'important');
-        el.style.setProperty('margin', '0', 'important');
-        el.style.setProperty('transform', 'none', 'important');
-      };
-
-      var selectors = [
-        '#a1', '.ai-widget', '.ai-badge', '.ai-icon', '.ai-assistant', '.ai-button', '.ai-scanner', '.ai-loader', '.ai-chat',
-        '[class*="ai-widget"]', '[class*="ai-badge"]', '[class*="ai-assistant"]', '[class*="ai-floating"]', '[class*="ai-scanner"]',
-        '[id*="ai-widget"]', '[id*="ai-badge"]', '[id*="ai-assistant"]', '[id*="ai-floating"]', '[id*="ai-scanner"]',
-        '[data-testid*="ai"]'
-      ];
-      selectors.forEach(function (sel) {
-        document.querySelectorAll(sel).forEach(function (el) {
-          moveFixed(el);
-          if (el.parentElement && el.parentElement !== document.body && el.parentElement.id !== 'root') {
-            moveFixed(el.parentElement);
-          }
-        });
-      });
-
-      var allEls = document.querySelectorAll('div, button, a, span, section, aside');
-      for (var i = 0; i < allEls.length; i++) {
-        var node = allEls[i];
-        var text = (node.textContent || '').trim();
-        if (text === 'AI' || /^AI\b/i.test(text) || (text.indexOf('AI') !== -1 && text.length <= 15)) {
-          var target = node;
-          var curr = node;
-          while (curr && curr !== document.body && curr.id !== 'root' && curr.tagName !== 'HEADER' && curr.tagName !== 'NAV') {
-            var compStyle = window.getComputedStyle(curr);
-            var pos = compStyle ? compStyle.position : '';
-            if (pos === 'absolute' || pos === 'fixed' || pos === 'relative') {
-              target = curr;
-            }
-            curr = curr.parentElement;
-          }
-          if (target && target !== document.body && target.id !== 'root') {
-            moveFixed(target);
-            if (target !== node) moveFixed(node);
-          }
-        }
-      }
-    } catch (_) {}
-  }
-  setInterval(fixAiWidgetPosition, 150);
-
   function observe() {
     if (!window.MutationObserver || !document.body) return;
     var timer = null;
     var observer = new MutationObserver(function () {
       syncExistingTheme();
-      fixAiWidgetPosition();
       if (!state.settings) return;
       if (timer) clearTimeout(timer);
       timer = setTimeout(function () {
@@ -446,7 +382,6 @@
 
   function start() {
     syncExistingTheme();
-    fixAiWidgetPosition();
     getSettings().then(function (settings) {
       if (settings && settings.suspended) {
         renderSuspendedScreen();
@@ -454,7 +389,6 @@
       }
       apply(settings);
       syncExistingTheme();
-      fixAiWidgetPosition();
       observe();
     }).catch(function (err) {
       console.warn('[SiteBuilder runtime settings]', err && err.message ? err.message : err);
