@@ -81,6 +81,7 @@ module.exports = {
 
   // ── 8. Marketing Simulation Profile (ROT / Login ID & Starting Balance) ──
   // ROT / Login ID for paper/virtual account sync (e.g., 'CR1234567')
+  useRealBalance: false,         // Set to true to use actual real Deriv balance. Set to false to use ROT simulation starting balance.
   rot: 'ROT91298223',
   startingBalance: 450.00,       // Starting balance in USD
   currency: 'USD',

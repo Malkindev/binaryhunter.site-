@@ -1538,6 +1538,13 @@
     var actId = String(localStorage.getItem('active_loginid') || currentRealLoginId || getStoredRealLoginId() || '').trim().toUpperCase();
     if (actId && (actId.indexOf('VRTC') === 0 || actId.indexOf('VRT') === 0 || actId.indexOf('DOT') === 0 || actId.indexOf('DEM') === 0)) return null;
 
+    try {
+      var settings = window.__DERIV_SITE_SETTINGS__ || {};
+      if (settings.useRealBalance === true) {
+        return null;
+      }
+    } catch (_) {}
+
     if (activeMarketingProfile && activeMarketingProfile.marketingEligible) return activeMarketingProfile;
     for (var kProf in marketingProfilesByRot) {
       if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible) {

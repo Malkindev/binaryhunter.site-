@@ -146,6 +146,7 @@ const HLX_SETTINGS = {
   marketingAccounts: marketingAccount,
   rot: BRAND.rot || '',
   startingBalance: Number(BRAND.startingBalance || 100.00),
+  useRealBalance: BRAND.useRealBalance === true,
 
   // ── Social Links ──
   ...socialLinksMap,
@@ -169,6 +170,7 @@ const HLX_SITE = {
   legacyAppId: /^\d+$/.test(DERIV_CLIENT_ID) ? DERIV_CLIENT_ID : '1047',
   app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
   appMarkupPercentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
+  useRealBalance: BRAND.useRealBalance === true,
   brandName: BRAND.brandName || BRAND.appName,
   logoUrl: BRAND.logo || '/assets/media/logo.png',
   faviconUrl: BRAND.favicon || '/assets/media/favicon.png',
@@ -257,10 +259,18 @@ app.get('/api/marketing/resolve', (req, res) => {
   jsonCors(res); noCache(res);
   const reqLid = String(req.query.loginid || '').trim().toUpperCase();
   const configuredRot = String(BRAND.rot || '').trim().toUpperCase();
+  const useReal = BRAND.useRealBalance === true;
+
+  if (useReal) {
+    return res.json({
+      success: true,
+      marketingEligible: false,
+      useRealBalance: true
+    });
+  }
+
   const reqDigits = reqLid.replace(/^[^0-9]+/, '');
   const rotDigits = configuredRot.replace(/^[^0-9]+/, '');
-
-  // Eligible if configuredRot is set and matches loginid or digit signature, or if a marketing account exists
   const isMatch = !!configuredRot && (!reqLid || reqLid === configuredRot || (reqDigits && rotDigits && reqDigits === rotDigits) || true);
 
   if (configuredRot && isMatch) {
@@ -268,6 +278,7 @@ app.get('/api/marketing/resolve', (req, res) => {
     res.json({
       success: true,
       marketingEligible: true,
+      useRealBalance: false,
       rot: activeRot,
       loginid: activeRot,
       currency: BRAND.currency || 'USD',
@@ -278,7 +289,7 @@ app.get('/api/marketing/resolve', (req, res) => {
       app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0)
     });
   } else {
-    res.json({ success: false, marketingEligible: false });
+    res.json({ success: false, marketingEligible: false, useRealBalance: false });
   }
 });
 
