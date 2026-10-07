@@ -72,7 +72,7 @@ module.exports = {
   //   'typing'         — Typing indicator dots
   //   'bounce'         — Bouncing ball indicator
   //   'basic'          — Classic minimalist circular spinner ring
-  loaderStyle: 'signal_grid',
+  loaderStyle: 'orbit_terminal',
   loaderPrimaryColor: '#00FF66',
   loaderAccentColor: '#FF5577',
   loaderHighlightColor: '#22FF88',
