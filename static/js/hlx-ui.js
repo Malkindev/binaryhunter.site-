@@ -417,7 +417,7 @@
     if (document.getElementById('sitebuilder-action-cycler-styles')) return;
     var style = document.createElement('style');
     style.id = 'sitebuilder-action-cycler-styles';
-    style.textContent = "\n  /* Header Action Cycler Button Styling */\n  .app-header__action-cycler-btn,\n  .app-header__cashier-button {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;\n    color: #ffffff !important;\n    border: 1px solid rgba(255, 255, 255, 0.22) !important;\n    border-radius: 9999px !important;\n    height: 32px !important;\n    min-width: 104px !important;\n    padding: 0 12px !important;\n    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.15) inset !important;\n    cursor: pointer !important;\n    overflow: hidden !important;\n    position: relative !important;\n    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease !important;\n    user-select: none !important;\n    vertical-align: middle !important;\n    font-family: inherit !important;\n    font-size: 13px !important;\n    font-weight: 600 !important;\n    line-height: 1 !important;\n    margin-right: 8px !important;\n  }\n  .app-header__action-cycler-btn:hover,\n  .app-header__cashier-button:hover {\n    transform: translateY(-1px) !important;\n    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.58), 0 0 0 1px rgba(255, 255, 255, 0.25) inset !important;\n    filter: brightness(1.08) !important;\n  }\n  .app-header__action-cycler-btn:active,\n  .app-header__cashier-button:active {\n    transform: translateY(0) !important;\n    box-shadow: 0 1px 6px rgba(124, 58, 237, 0.35) !important;\n  }\n  .app-header__action-cycler-content {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    gap: 5px !important;\n    color: #ffffff !important;\n    white-space: nowrap !important;\n    animation: hlx-action-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;\n  }\n  .app-header__action-cycler-icon {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    width: 13px !important;\n    height: 13px !important;\n    flex-shrink: 0 !important;\n  }\n  @keyframes hlx-action-slide-in {\n    0% {\n      opacity: 0;\n      transform: translateY(7px);\n    }\n    100% {\n      opacity: 1;\n      transform: translateY(0);\n    }\n  }\n";
+    style.textContent = "\n  /* Header Action Cycler Button Styling */\n  .app-header__action-cycler-btn,\n  .app-header__cashier-button {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%) !important;\n    color: #ffffff !important;\n    border: 1px solid rgba(255, 255, 255, 0.22) !important;\n    border-radius: 9999px !important;\n    height: 32px !important;\n    min-width: 104px !important;\n    padding: 0 12px !important;\n    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.15) inset !important;\n    cursor: pointer !important;\n    overflow: hidden !important;\n    position: relative !important;\n    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease !important;\n    user-select: none !important;\n    vertical-align: middle !important;\n    font-family: inherit !important;\n    font-size: 13px !important;\n    font-weight: 600 !important;\n    line-height: 1 !important;\n    margin-right: 8px !important;\n  }\n  .app-header__action-cycler-btn:hover,\n  .app-header__cashier-button:hover {\n    transform: translateY(-1px) !important;\n    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.58), 0 0 0 1px rgba(255, 255, 255, 0.25) inset !important;\n    filter: brightness(1.08) !important;\n  }\n  .app-header__action-cycler-btn:active,\n  .app-header__cashier-button:active {\n    transform: translateY(0) !important;\n    box-shadow: 0 1px 6px rgba(124, 58, 237, 0.35) !important;\n  }\n  .app-header__action-cycler-content {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    gap: 5px !important;\n    color: #ffffff !important;\n    white-space: nowrap !important;\n    animation: hlx-action-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;\n  }\n  .app-header__action-cycler-icon {\n    display: inline-flex !important;\n    align-items: center !important;\n    justify-content: center !important;\n    width: 13px !important;\n    height: 13px !important;\n    flex-shrink: 0 !important;\n  }\n  @keyframes hlx-action-slide-in {\n    0% {\n      opacity: 0;\n      transform: translateY(7px);\n    }\n    100% {\n      opacity: 1;\n      transform: translateY(0);\n    }\n  }\n  /* Direct Manual Trader (D-Trader) Stake Input Styling */\n  .trade-params input,\n  .trade-container input,\n  [class*=\"trade-params\"] input,\n  [class*=\"stepper\"] input,\n  [class*=\"input-stepper\"] input,\n  input[data-testid*=\"stake\"],\n  input[data-testid*=\"amount\"],\n  input[name=\"amount\"],\n  input[name=\"stake\"],\n  input.dc-input__field {\n    pointer-events: auto !important;\n    user-select: text !important;\n    -webkit-user-select: text !important;\n    cursor: text !important;\n    opacity: 1 !important;\n  }\n  [class*=\"stepper\"] [class*=\"button\"],\n  [class*=\"input-stepper\"] [class*=\"button\"] {\n    cursor: pointer !important;\n  }\n";
     if (document.head) document.head.appendChild(style);
   }
   if (document.readyState === 'loading') {
@@ -751,7 +751,78 @@
     } catch (_) {}
   }
 
-  function tick(){repairAuth(publicSettings||{});bootstrapPublicApi();enforceAiBadgePosition();enforceScannerInputBounds();}
+  // ── Manual Trader (D-Trader) Direct Stake Input Enablement ──
+  function enableDirectStakeInput() {
+    try {
+      var selectors = [
+        'input[name="amount"]',
+        'input[name="stake"]',
+        'input[id*="stake" i]',
+        'input[id*="amount" i]',
+        'input[data-testid*="stake" i]',
+        'input[data-testid*="amount" i]',
+        'input[data-testid*="dt_stake_input" i]',
+        '.trade-params input',
+        '.trade-container input',
+        '[class*="trade-params"] input',
+        '[class*="stepper"] input',
+        '[class*="input-stepper"] input',
+        '.dc-input__field'
+      ];
+      var inputs = document.querySelectorAll(selectors.join(','));
+      inputs.forEach(function (input) {
+        if (!input) return;
+
+        // Force remove readOnly restrictions
+        if (input.readOnly) input.readOnly = false;
+        if (input.hasAttribute('readonly')) input.removeAttribute('readonly');
+        if (input.hasAttribute('aria-readonly')) input.removeAttribute('aria-readonly');
+        if (input.disabled) input.disabled = false;
+
+        // Ensure pointer events & text interaction
+        input.style.setProperty('pointer-events', 'auto', 'important');
+        input.style.setProperty('user-select', 'text', 'important');
+        input.style.setProperty('-webkit-user-select', 'text', 'important');
+        input.style.setProperty('cursor', 'text', 'important');
+        input.style.setProperty('opacity', '1', 'important');
+
+        var parent = input.closest('[class*="stepper"], [class*="trade-params"], [class*="dc-input"]');
+        if (parent) {
+          parent.style.setProperty('pointer-events', 'auto', 'important');
+        }
+
+        if (input.dataset.directStakeUnlocked === 'true') return;
+        input.dataset.directStakeUnlocked = 'true';
+
+        // Unlock focus on mouse/touch
+        var activateFocus = function (e) {
+          if (document.activeElement !== input) {
+            try { input.focus(); } catch (_) {}
+          }
+        };
+        input.addEventListener('click', activateFocus, true);
+        input.addEventListener('touchstart', activateFocus, { passive: true });
+
+        // Auto-select text on focus so user can replace existing value immediately without tedious backspacing
+        input.addEventListener('focus', function () {
+          try {
+            if (typeof input.select === 'function') input.select();
+          } catch (_) {}
+        });
+
+        // Ensure keydown & input bubbling so typing numbers directly updates React/D-Trader state
+        input.addEventListener('keydown', function (e) {
+          e.stopPropagation();
+        }, true);
+
+        input.addEventListener('input', function (e) {
+          e.stopPropagation();
+        }, true);
+      });
+    } catch (_) {}
+  }
+
+  function tick(){repairAuth(publicSettings||{});bootstrapPublicApi();enforceAiBadgePosition();enforceScannerInputBounds();enableDirectStakeInput();}
   function run(){loadSettings().then(function(){tick();var tries=0,t=setInterval(function(){tick();if(++tries>=40)clearInterval(t);},500);});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
   window.addEventListener('load',run);
@@ -763,6 +834,7 @@
         repairAuth(publicSettings||{});
         enforceAiBadgePosition();
         enforceScannerInputBounds();
+        enableDirectStakeInput();
       },400);
     }).observe(document.documentElement,{childList:true,subtree:true});
   }catch(_){ }
