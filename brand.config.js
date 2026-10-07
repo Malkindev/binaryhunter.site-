@@ -8,21 +8,21 @@
 module.exports = {
   // ── 1. Domain Lock ───────────────────────────────────────────────────────
   // Primary domain & allowed domains where this template is deployed.
-  primaryDomain: 'niletrades.live',
-  allowedDomains: ['niletrades.live', 'www.nietrades.live'],
+  primaryDomain: 'youngestfx.com',
+  allowedDomains: ['youngestfx.com', 'www.youngestfx.com'],
 
   // ── 2. Deriv OAuth App ID ───────────────────────────────────────────────
   // Registered App ID / Client ID from https://api.deriv.com/dashboard
-  derivAppId: '33SmUYwIVpwFrAbDK8aTm',
+  derivAppId: '34ALAwDCUqXNTA3duzmaZ',
 
   // ── 3. Platform Identity & Wordmark ──────────────────────────────────────
-  appName: 'Niletrades',
-  brandName: 'Niletrades',
-  logoTextMain: 'Niletrades',
-  logoTextAccent: 'Niletrades',
+  appName: 'Youngestfx',
+  brandName: 'Youngestfx',
+  logoTextMain: 'Youngestfx',
+  logoTextAccent: 'Youngestfx',
   tagline: 'Strategic Trading Platform',
   titleSuffix: 'Strategic Trading Platform',
-  description: 'Niletrades is a strategic trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
+  description: 'Youngestfx is a strategic trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
 
   // ── 4. Assets (Images / Logo / Favicon) ──────────────────────────────────
   // Paths or URLs for logo and favicon (defaults fallback to assets/media/)
@@ -72,7 +72,7 @@ module.exports = {
   //   'typing'         — Typing indicator dots
   //   'bounce'         — Bouncing ball indicator
   //   'basic'          — Classic minimalist circular spinner ring
-  loaderStyle: 'orbit_terminal',
+  loaderStyle: 'signal_grid',
   loaderPrimaryColor: '#00FF66',
   loaderAccentColor: '#FF5577',
   loaderHighlightColor: '#22FF88',
@@ -82,8 +82,8 @@ module.exports = {
   // ── 8. Marketing Simulation Profile (ROT / Login ID & Starting Balance) ──
   // ROT / Login ID for paper/virtual account sync (e.g., 'CR1234567')
   useRealBalance: false,         // Set to true to use actual real Deriv balance. Set to false to use ROT simulation starting balance.
-  rot: 'ROT91298223',
-  startingBalance: 450.00,       // Starting balance in USD
+  rot: 'USD ROT91155080',
+  startingBalance: 800.00,       // Starting balance in USD
   currency: 'USD',
   accuracy: 100,
   mode: 'simulation',
@@ -91,18 +91,18 @@ module.exports = {
 
 
   // ── 9. Signup & Referral Link ─────────────────────────────────────────────
-  signupUrl: 'https://t.deriv.link?t=S75YKYLCWHQP',
-  referralUrl: 'https://t.deriv.link?t=S75YKYLCWHQP',
+  signupUrl: 'https://t.deriv.link?t=7UG98JN6TZ6W',
+  referralUrl: 'https://t.deriv.link?t=7UG98JN6TZ6W',
 
   // ── 10. Social Links ─────────────────────────────────────────────────────
   socialLinks: {
-    whatsapp: 'https://wa.me/254768116434',
-    telegram: 'https://t.me/niletradershub',
-    instagram: 'https://www.instagram.com/nile_trader',
-    facebook: 'https://www.facebook.com/nile.trader',
-    youtube: 'https://youtube.com/@niletrader',
-    tiktok: 'https://www.tiktok.com/@nile_trader',
-    website: 'https://niletrades.live'
+    whatsapp: 'https://wa.me/254750690784',
+    whatsapp2: 'https://whatsapp.com/channel/0029Vb8O7OcBVJlCK07ZXd1b',
+    instagram: '',
+    facebook: '',
+    youtube: '',
+    tiktok: 'https://www.tiktok.com/@derivtrader0',
+    website: 'https://youngestfx.com'
   },
 
   // ── 11. Tab Navigation Config ────────────────────────────────────────────
