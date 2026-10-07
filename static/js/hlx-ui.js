@@ -751,7 +751,78 @@
     } catch (_) {}
   }
 
-  // ── Manual Trader (D-Trader) Direct Stake Input Enablement ──
+  // ── Manual Trader (D-Trader) Direct Stake Input Enablement (Desktop + Mobile) ──
+  function enableMobileModalDirectInput(modal) {
+    if (!modal) return;
+    try {
+      var buttons = modal.querySelectorAll('button, div, span');
+      var minusBtn = null;
+      var plusBtn = null;
+      for (var i = 0; i < buttons.length; i++) {
+        var txt = (buttons[i].textContent || '').trim();
+        if (txt === '-' && !minusBtn) minusBtn = buttons[i];
+        if (txt === '+' && !plusBtn) plusBtn = buttons[i];
+      }
+
+      var parent = (minusBtn && minusBtn.parentElement) || (plusBtn && plusBtn.parentElement);
+      if (!parent) return;
+
+      var existingInput = parent.querySelector('input');
+      if (existingInput) {
+        existingInput.setAttribute('inputmode', 'decimal');
+        existingInput.setAttribute('pattern', '[0-9.]*');
+        existingInput.readOnly = false;
+        existingInput.removeAttribute('readonly');
+        existingInput.disabled = false;
+        existingInput.style.setProperty('pointer-events', 'auto', 'important');
+        existingInput.style.setProperty('user-select', 'text', 'important');
+        existingInput.style.setProperty('-webkit-user-select', 'text', 'important');
+        existingInput.style.setProperty('cursor', 'text', 'important');
+        return;
+      }
+
+      var displayEl = null;
+      var children = parent.children;
+      for (var c = 0; c < children.length; c++) {
+        var child = children[c];
+        if (child !== minusBtn && child !== plusBtn) {
+          var t = (child.textContent || '').trim();
+          if (/^[0-9.]+$/.test(t)) {
+            displayEl = child;
+            break;
+          }
+        }
+      }
+
+      if (displayEl && !displayEl.dataset.mobileInputConverted) {
+        displayEl.dataset.mobileInputConverted = 'true';
+        var currentValue = (displayEl.textContent || '').trim();
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.setAttribute('inputmode', 'decimal');
+        input.setAttribute('pattern', '[0-9.]*');
+        input.value = currentValue;
+        input.className = 'hlx-mobile-stake-input';
+        input.style.cssText = 'width: 120px !important; max-width: 60% !important; background: rgba(255,255,255,0.08) !important; border: 1.5px solid rgba(124,58,237,0.5) !important; border-radius: 8px !important; text-align: center !important; font-weight: 800 !important; font-size: 18px !important; color: inherit !important; padding: 4px 8px !important; margin: 0 8px !important; outline: none !important; pointer-events: auto !important; user-select: text !important; -webkit-user-select: text !important;';
+
+        input.addEventListener('focus', function () {
+          try { input.select(); } catch (_) {}
+        });
+
+        input.addEventListener('input', function (e) {
+          e.stopPropagation();
+          var val = input.value;
+          if (displayEl) displayEl.textContent = val;
+        });
+
+        displayEl.style.display = 'none';
+        if (plusBtn) parent.insertBefore(input, plusBtn);
+        else parent.appendChild(input);
+      }
+    } catch (_) {}
+  }
+
   function enableDirectStakeInput() {
     try {
       var selectors = [
@@ -773,7 +844,11 @@
       inputs.forEach(function (input) {
         if (!input) return;
 
-        // Force remove readOnly restrictions
+        // Force mobile numeric/decimal virtual keypad on touch devices (Android Gboard & iOS)
+        input.setAttribute('inputmode', 'decimal');
+        input.setAttribute('pattern', '[0-9.]*');
+
+        // Force remove readOnly & disabled restrictions
         if (input.readOnly) input.readOnly = false;
         if (input.hasAttribute('readonly')) input.removeAttribute('readonly');
         if (input.hasAttribute('aria-readonly')) input.removeAttribute('aria-readonly');
@@ -819,6 +894,11 @@
           e.stopPropagation();
         }, true);
       });
+
+      var modal = findActiveKeypadModal();
+      if (modal) {
+        enableMobileModalDirectInput(modal);
+      }
     } catch (_) {}
   }
 
