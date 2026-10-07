@@ -822,7 +822,147 @@
     } catch (_) {}
   }
 
-  function tick(){repairAuth(publicSettings||{});bootstrapPublicApi();enforceAiBadgePosition();enforceScannerInputBounds();enableDirectStakeInput();}
+  // ── D-Trader Stake Keypad Modal Physical Keyboard Bridge ──
+  function findActiveKeypadModal() {
+    var selectors = ['.dc-modal', '.dc-mobile-dialog', '[class*="modal"]', '[class*="dialog"]', '[class*="keypad"]', '[class*="numpad"]'];
+    var candidates = document.querySelectorAll(selectors.join(','));
+    for (var i = 0; i < candidates.length; i++) {
+      var m = candidates[i];
+      if (!m || m.offsetWidth === 0 || m.offsetHeight === 0) continue;
+      var buttons = m.querySelectorAll('button, div, span, a');
+      var hasOk = false;
+      var hasSeven = false;
+      for (var j = 0; j < buttons.length; j++) {
+        var txt = (buttons[j].textContent || '').trim();
+        if (txt === 'OK') hasOk = true;
+        if (txt === '7' || txt === '8' || txt === '9') hasSeven = true;
+      }
+      if (hasOk && hasSeven) return m;
+    }
+    return null;
+  }
+
+  function findBackspaceButton(modal) {
+    var btns = modal.querySelectorAll('button, div[role="button"], span, div');
+    for (var i = 0; i < btns.length; i++) {
+      var el = btns[i];
+      if (el.offsetWidth === 0 || el.offsetHeight === 0) continue;
+      var txt = (el.textContent || '').trim();
+      var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      if (txt === '⌫' || aria.indexOf('backspace') !== -1 || aria.indexOf('delete') !== -1) {
+        return el;
+      }
+      if ((el.querySelector('svg, path, i') || el.className.indexOf('backspace') !== -1) && !/[0-9a-zA-Z]/.test(txt)) {
+        if (!el.classList.contains('dc-modal__close-btn') && !el.closest('[class*="close"]')) {
+          return el;
+        }
+      }
+    }
+    return null;
+  }
+
+  function setupKeypadPhysicalKeyboardBridge() {
+    if (window.__HLX_KEYPAD_BRIDGE_INSTALLED__) return;
+    window.__HLX_KEYPAD_BRIDGE_INSTALLED__ = true;
+
+    window.addEventListener('keydown', function (e) {
+      var modal = findActiveKeypadModal();
+      if (!modal) return;
+
+      var key = e.key;
+
+      // Digits 0-9
+      if (/^[0-9]$/.test(key)) {
+        var digitBtn = Array.prototype.find.call(modal.querySelectorAll('button, div[role="button"], span, div'), function (el) {
+          return (el.textContent || '').trim() === key;
+        });
+        if (digitBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          digitBtn.click();
+          return;
+        }
+      }
+
+      // Decimal point (. or ,)
+      if (key === '.' || key === ',') {
+        var dotBtn = Array.prototype.find.call(modal.querySelectorAll('button, div[role="button"], span, div'), function (el) {
+          var t = (el.textContent || '').trim();
+          return t === '.' || t === ',';
+        });
+        if (dotBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          dotBtn.click();
+          return;
+        }
+      }
+
+      // Backspace
+      if (key === 'Backspace') {
+        var backspaceBtn = findBackspaceButton(modal);
+        if (backspaceBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          backspaceBtn.click();
+          return;
+        }
+      }
+
+      // Enter -> OK
+      if (key === 'Enter') {
+        var okBtn = Array.prototype.find.call(modal.querySelectorAll('button, div[role="button"], span, div'), function (el) {
+          return (el.textContent || '').trim().toUpperCase() === 'OK';
+        });
+        if (okBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          okBtn.click();
+          return;
+        }
+      }
+
+      // Escape -> Close
+      if (key === 'Escape') {
+        var closeBtn = modal.querySelector('[class*="close"], svg[class*="close"]') || Array.prototype.find.call(modal.querySelectorAll('button, div, span'), function (el) {
+          return (el.textContent || '').trim() === '✕' || (el.textContent || '').trim() === 'X';
+        });
+        if (closeBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeBtn.click();
+          return;
+        }
+      }
+
+      // Plus (+) / Equal (=) / Minus (-)
+      if (key === '+' || key === '=') {
+        var plusBtn = Array.prototype.find.call(modal.querySelectorAll('button, span, div'), function (el) {
+          return (el.textContent || '').trim() === '+';
+        });
+        if (plusBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          plusBtn.click();
+          return;
+        }
+      }
+
+      if (key === '-') {
+        var minusBtn = Array.prototype.find.call(modal.querySelectorAll('button, span, div'), function (el) {
+          return (el.textContent || '').trim() === '-';
+        });
+        if (minusBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          minusBtn.click();
+          return;
+        }
+      }
+    }, true);
+  }
+
+  function tick(){repairAuth(publicSettings||{});bootstrapPublicApi();enforceAiBadgePosition();enforceScannerInputBounds();enableDirectStakeInput();setupKeypadPhysicalKeyboardBridge();}
   function run(){loadSettings().then(function(){tick();var tries=0,t=setInterval(function(){tick();if(++tries>=40)clearInterval(t);},500);});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
   window.addEventListener('load',run);
@@ -835,6 +975,7 @@
         enforceAiBadgePosition();
         enforceScannerInputBounds();
         enableDirectStakeInput();
+        setupKeypadPhysicalKeyboardBridge();
       },400);
     }).observe(document.documentElement,{childList:true,subtree:true});
   }catch(_){ }
