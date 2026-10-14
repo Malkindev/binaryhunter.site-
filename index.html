@@ -17,7 +17,11 @@
 
     <!-- Customer sites use the existing Deriv account currency (USD); disable the optional KSH display before the app initializes. -->
     <script>try { localStorage.setItem('show_ksh_currency', 'false'); } catch (_) {}
-try { if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.remove('theme--light'); document.documentElement.classList.add('theme--dark'); } } catch (_) {}</script>
+try { if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.remove('theme--light'); document.documentElement.classList.add('theme--dark'); } } catch (_) {}
+window.__DERIV_APP_ID__ = '%%DERIV_APP_ID%%';
+window.__DERIV_NEW_APP_ID__ = '%%DERIV_APP_ID%%';
+window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
+</script>
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />

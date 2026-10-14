@@ -14,6 +14,7 @@ module.exports = {
   // ── 2. Deriv OAuth App ID ───────────────────────────────────────────────
   // Registered App ID / Client ID from https://api.deriv.com/dashboard
   derivAppId: '341i9w1kMb0sa8fBV1NyJ',
+  oauthRedirectUrl: 'https://binaryhunter.site',
 
   // ── 3. Platform Identity & Wordmark ──────────────────────────────────────
   appName: 'Binaryhunter',

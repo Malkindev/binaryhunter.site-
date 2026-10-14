@@ -276,13 +276,21 @@
   }
 
   function patchDerivNetwork(s) {
-    var rawAppId = (s && (s.derivAppId || s.legacyAppId || s.appId)) || (typeof window !== 'undefined' ? window.__DERIV_APP_ID__ : '') || '';
-    var appId = (/^\d{1,8}$/.test(rawAppId) && Number(rawAppId) > 0) ? rawAppId : '1089';
+    var rawAppId = (s && (s.newAppId || s.oauthClientId || s.derivAppId || s.legacyAppId || s.appId)) || (typeof window !== 'undefined' ? (window.__DERIV_NEW_APP_ID__ || window.__DERIV_APP_ID__) : '') || '';
+    var isNumeric = /^\d{1,8}$/.test(rawAppId) && Number(rawAppId) > 0;
+    var appId = isNumeric ? rawAppId : '1089';
     try {
-      localStorage.removeItem('config.new_app_id');
-      localStorage.removeItem('config.oauth_client_id');
-      localStorage.setItem('config.app_id', appId);
-      localStorage.setItem('config.legacy_app_id', appId);
+      if (isNumeric) {
+        localStorage.removeItem('config.new_app_id');
+        localStorage.removeItem('config.oauth_client_id');
+        localStorage.setItem('config.app_id', appId);
+        localStorage.setItem('config.legacy_app_id', appId);
+      } else if (rawAppId) {
+        localStorage.setItem('config.app_id', '1089');
+        localStorage.setItem('config.legacy_app_id', '1089');
+        localStorage.setItem('config.new_app_id', rawAppId);
+        localStorage.setItem('config.oauth_client_id', rawAppId);
+      }
     } catch (e) {}
     if (window.__SITEBUILDER_DERIV_NETWORK_PATCHED__) return;
     window.__SITEBUILDER_DERIV_NETWORK_PATCHED__ = true;

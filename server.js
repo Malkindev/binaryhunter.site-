@@ -32,6 +32,8 @@ const TOKENS = {
   '%%BACKGROUND_COLOR%%': BRAND.backgroundColor,
   '%%FONT_FAMILY%%': `'${BRAND.fontFamily}'`,
   '%%FONT_GOOGLE_PARAM%%': BRAND.fontGoogleParam,
+  '%%DERIV_APP_ID%%': BRAND.derivAppId,
+  '%%OAUTH_REDIRECT_URI%%': (BRAND.oauthRedirectUrl || BRAND.oauthRedirectUri || `https://${BRAND.primaryDomain}`).replace(/\/+$/, ''),
 };
 function renderTemplate(filePath) {
   let s = fs.readFileSync(filePath, 'utf8');
@@ -97,6 +99,8 @@ const HLX_SETTINGS = {
   appId: /^\d+$/.test(DERIV_CLIENT_ID) ? DERIV_CLIENT_ID : '1089',
   derivAppId: DERIV_CLIENT_ID,
   legacyAppId: /^\d+$/.test(DERIV_CLIENT_ID) ? DERIV_CLIENT_ID : '1089',
+  oauthRedirectUrl: (BRAND.oauthRedirectUrl || BRAND.oauthRedirectUri || `https://${BRAND.primaryDomain}`).replace(/\/+$/, ''),
+  redirectUri: (BRAND.oauthRedirectUrl || BRAND.oauthRedirectUri || `https://${BRAND.primaryDomain}`).replace(/\/+$/, ''),
   app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
   appMarkupPercentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
   accuracy: Number(BRAND.accuracy !== undefined ? BRAND.accuracy : 85.0),
@@ -169,6 +173,8 @@ const HLX_SITE = {
   newAppId: DERIV_CLIENT_ID,
   oauthClientId: DERIV_CLIENT_ID,
   legacyAppId: /^\d+$/.test(DERIV_CLIENT_ID) ? DERIV_CLIENT_ID : '1089',
+  oauthRedirectUrl: (BRAND.oauthRedirectUrl || BRAND.oauthRedirectUri || `https://${BRAND.primaryDomain}`).replace(/\/+$/, ''),
+  redirectUri: (BRAND.oauthRedirectUrl || BRAND.oauthRedirectUri || `https://${BRAND.primaryDomain}`).replace(/\/+$/, ''),
   app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
   appMarkupPercentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
   useRealBalance: BRAND.useRealBalance === true,
@@ -335,11 +341,13 @@ app.post('/api/oauth/token', express.json(), async (req, res) => {
     const tokenUrl = env === 'staging'
       ? 'https://staging-auth.deriv.com/oauth2/token'
       : 'https://auth.deriv.com/oauth2/token';
+    const configuredRedirect = (BRAND.oauthRedirectUrl || BRAND.oauthRedirectUri || '').trim();
+    const effectiveRedirectUri = (b.redirect_uri || configuredRedirect || `https://${BRAND.primaryDomain}`).replace(/\/+$/, '');
     const form = new URLSearchParams({
       grant_type: b.grant_type || 'authorization_code',
       client_id: b.client_id || DERIV_CLIENT_ID,
       code: b.code || '',
-      redirect_uri: b.redirect_uri || '',
+      redirect_uri: effectiveRedirectUri,
       code_verifier: b.code_verifier || '',
     });
     const upstream = await fetch(tokenUrl, {
