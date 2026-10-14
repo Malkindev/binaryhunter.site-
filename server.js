@@ -273,7 +273,10 @@ app.get('/api/appwrite/bot-xml', (req, res) => {
   const bot = adminStore.getBotById(id);
   if (!bot) return res.status(404).type('text/plain').send('bot not found');
   const full = path.join(BOT_DIR, bot.file);
-  fs.readFile(full, 'utf8', (err, xml) => {
+  const tmpFull = path.join('/tmp', bot.file);
+  const filePath = fs.existsSync(full) ? full : (fs.existsSync(tmpFull) ? tmpFull : null);
+  if (!filePath) return res.status(404).type('text/plain').send('bot xml not found');
+  fs.readFile(filePath, 'utf8', (err, xml) => {
     if (err) return res.status(404).type('text/plain').send('bot xml not found');
     res.setHeader('Content-Type', 'application/xml');
     res.send(xml);

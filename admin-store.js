@@ -8,9 +8,51 @@ const MARKETING_FILE = path.join(DATA_DIR, 'marketing-config.json');
 const BOTS_FILE = path.join(DATA_DIR, 'bots-registry.json');
 const AUDIT_FILE = path.join(DATA_DIR, 'audit-log.json');
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+// Safe filesystem helpers that NEVER throw EROFS in serverless (e.g. Vercel)
+function safeMkdir(dirPath) {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  } catch (_) {}
+}
+
+safeMkdir(DATA_DIR);
+
+function safeWriteJson(filePath, data) {
+  try {
+    safeMkdir(path.dirname(filePath));
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch (err) {
+    // If running in a read-only serverless environment (e.g. Vercel), fallback to /tmp
+    try {
+      const tmpPath = path.join('/tmp', path.basename(filePath));
+      fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+function safeReadJson(filePath, fallback) {
+  // Check /tmp first for serverless runtime mutations
+  try {
+    const tmpPath = path.join('/tmp', path.basename(filePath));
+    if (fs.existsSync(tmpPath)) {
+      return JSON.parse(fs.readFileSync(tmpPath, 'utf8'));
+    }
+  } catch (_) {}
+
+  // Check bundled file path
+  try {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    }
+  } catch (_) {}
+
+  return fallback;
 }
 
 // ─── ADMIN AUTH CONFIG ────────────────────────────────────────────────────────
@@ -20,13 +62,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'binaryhunter2026';
 
 // ─── INITIAL SEEDING ──────────────────────────────────────────────────────────
 function initMarketingConfig() {
-  if (fs.existsSync(MARKETING_FILE)) {
-    try {
-      return JSON.parse(fs.readFileSync(MARKETING_FILE, 'utf8'));
-    } catch (e) {
-      console.error('Error reading marketing-config.json:', e);
-    }
-  }
+  const existing = safeReadJson(MARKETING_FILE, null);
+  if (existing) return existing;
 
   const initial = {
     useRealBalance: BRAND.useRealBalance === true,
@@ -41,7 +78,7 @@ function initMarketingConfig() {
     lastDeactivatedAt: BRAND.useRealBalance === true ? new Date().toISOString() : null
   };
 
-  fs.writeFileSync(MARKETING_FILE, JSON.stringify(initial, null, 2), 'utf8');
+  safeWriteJson(MARKETING_FILE, initial);
   return initial;
 }
 
@@ -68,20 +105,12 @@ function isRemovedBot(id, filename) {
 }
 
 function initBotsRegistry() {
-  if (fs.existsSync(BOTS_FILE)) {
-    try {
-      const bots = JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8'));
-      if (Array.isArray(bots)) {
-        const cleaned = bots.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
-          ...b,
-          destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
-        }));
-        fs.writeFileSync(BOTS_FILE, JSON.stringify(cleaned, null, 2), 'utf8');
-        return cleaned;
-      }
-    } catch (e) {
-      console.error('Error reading bots-registry.json:', e);
-    }
+  const existing = safeReadJson(BOTS_FILE, null);
+  if (Array.isArray(existing)) {
+    return existing.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
+      ...b,
+      destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
+    }));
   }
 
   const brandBots = Array.isArray(BRAND.bots) ? BRAND.bots : [];
@@ -109,18 +138,14 @@ function initBotsRegistry() {
       };
     });
 
-  fs.writeFileSync(BOTS_FILE, JSON.stringify(initial, null, 2), 'utf8');
+  safeWriteJson(BOTS_FILE, initial);
   return initial;
 }
 
 function initAuditLog() {
-  if (fs.existsSync(AUDIT_FILE)) {
-    try {
-      return JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf8'));
-    } catch (e) {
-      console.error('Error reading audit-log.json:', e);
-    }
-  }
+  const existing = safeReadJson(AUDIT_FILE, null);
+  if (Array.isArray(existing)) return existing;
+
   const initial = [
     {
       id: 'audit-' + Date.now(),
@@ -130,17 +155,14 @@ function initAuditLog() {
       actor: 'system'
     }
   ];
-  fs.writeFileSync(AUDIT_FILE, JSON.stringify(initial, null, 2), 'utf8');
+  safeWriteJson(AUDIT_FILE, initial);
   return initial;
 }
 
 // ─── AUDIT LOGGING ────────────────────────────────────────────────────────────
 function appendAuditLog(action, details, actor = 'admin', ip = '') {
   try {
-    let logs = [];
-    if (fs.existsSync(AUDIT_FILE)) {
-      logs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf8'));
-    }
+    let logs = safeReadJson(AUDIT_FILE, []);
     const entry = {
       id: 'audit-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: new Date().toISOString(),
@@ -150,9 +172,8 @@ function appendAuditLog(action, details, actor = 'admin', ip = '') {
       ip: ip || ''
     };
     logs.unshift(entry);
-    // Keep max 200 entries
     if (logs.length > 200) logs = logs.slice(0, 200);
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify(logs, null, 2), 'utf8');
+    safeWriteJson(AUDIT_FILE, logs);
     return entry;
   } catch (e) {
     console.error('Audit log failed:', e);
@@ -162,13 +183,8 @@ function appendAuditLog(action, details, actor = 'admin', ip = '') {
 
 // ─── MARKETING REPOSITORY ─────────────────────────────────────────────────────
 function getMarketingConfig() {
-  try {
-    if (fs.existsSync(MARKETING_FILE)) {
-      return JSON.parse(fs.readFileSync(MARKETING_FILE, 'utf8'));
-    }
-  } catch (e) {
-    console.error('Failed reading marketing config:', e);
-  }
+  const cfg = safeReadJson(MARKETING_FILE, null);
+  if (cfg) return cfg;
   return initMarketingConfig();
 }
 
@@ -208,7 +224,7 @@ function saveMarketingConfig(data, actor = 'admin', ip = '') {
     updatedAt: new Date().toISOString()
   };
 
-  fs.writeFileSync(MARKETING_FILE, JSON.stringify(updated, null, 2), 'utf8');
+  safeWriteJson(MARKETING_FILE, updated);
   appendAuditLog('MARKETING_CONFIG_SAVED', `Updated ROT: ${rot}, Balance: ${startingBalance} ${currency}, Markup: ${markup}%`, actor, ip);
   return updated;
 }
@@ -226,7 +242,7 @@ function activateMarketing(actor = 'admin', ip = '') {
     updatedAt: new Date().toISOString()
   };
 
-  fs.writeFileSync(MARKETING_FILE, JSON.stringify(updated, null, 2), 'utf8');
+  safeWriteJson(MARKETING_FILE, updated);
   appendAuditLog('MARKETING_ACTIVATED', `Activated Marketing profile for ROT: ${current.rot} (Simulation mode)`, actor, ip);
   return updated;
 }
@@ -240,25 +256,19 @@ function deactivateMarketing(actor = 'admin', ip = '') {
     updatedAt: new Date().toISOString()
   };
 
-  fs.writeFileSync(MARKETING_FILE, JSON.stringify(updated, null, 2), 'utf8');
+  safeWriteJson(MARKETING_FILE, updated);
   appendAuditLog('MARKETING_DEACTIVATED', `Deactivated Marketing profile. Restored real Deriv account behavior.`, actor, ip);
   return updated;
 }
 
 // ─── BOTS REPOSITORY ──────────────────────────────────────────────────────────
 function getAllBots() {
-  try {
-    if (fs.existsSync(BOTS_FILE)) {
-      const bots = JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8'));
-      if (Array.isArray(bots)) {
-        return bots.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
-          ...b,
-          destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
-        }));
-      }
-    }
-  } catch (e) {
-    console.error('Failed reading bots registry:', e);
+  const bots = safeReadJson(BOTS_FILE, null);
+  if (Array.isArray(bots)) {
+    return bots.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
+      ...b,
+      destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
+    }));
   }
   return initBotsRegistry();
 }
@@ -286,32 +296,28 @@ function getBotById(id) {
   return getAllBots().find(b => b.id.toLowerCase() === cleanId || b.file.toLowerCase() === cleanId);
 }
 
+// ─── BOT FILE VALIDATION ──────────────────────────────────────────────────────
 function validateDbotXml(xmlString) {
   if (!xmlString || typeof xmlString !== 'string') {
-    throw new Error('Bot content is empty or invalid.');
+    throw new Error('Bot file content is empty or unreadable.');
   }
-  if (xmlString.length > 5 * 1024 * 1024) {
-    throw new Error('Bot file exceeds the 5MB size limit.');
+  const trimmed = xmlString.trim();
+
+  // Root XML tag validation
+  if (!trimmed.includes('<xml') || !trimmed.includes('</xml>')) {
+    throw new Error('Invalid bot XML: Missing root <xml> tags.');
   }
 
-  const clean = xmlString.trim();
-  if (!clean.startsWith('<xml') && !clean.includes('<xml')) {
-    throw new Error('Invalid bot format: Must be a valid XML file.');
+  // Deriv DBot schema validation
+  const hasDbotAttr = trimmed.includes('is_dbot="true"');
+  const hasBlocklyBlock = trimmed.includes('<block') && (trimmed.includes('blockly') || trimmed.includes('xmlns="http://www.w3.org/1999/xhtml"'));
+  if (!hasDbotAttr && !hasBlocklyBlock) {
+    throw new Error('Invalid bot XML: Must be a Deriv DBot compatible strategy.');
   }
 
-  // Must be Deriv DBot compatible
-  if (!clean.includes('is_dbot="true"') && !clean.includes('blockly') && !clean.includes('<block')) {
-    throw new Error('Incompatible bot: File must be a valid Deriv DBot XML with Blockly trading blocks.');
-  }
-
-  // Basic XML structure balance check
-  if (!clean.includes('</xml>')) {
-    throw new Error('Malformed XML: Missing closing </xml> tag.');
-  }
-
-  // Reject embedded malicious scripts
-  if (/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi.test(clean)) {
-    throw new Error('Security rejection: Script tags are forbidden in bot XML.');
+  // Security: Check for dangerous executable tags
+  if (/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi.test(trimmed)) {
+    throw new Error('Security violation: XML file contains forbidden script elements.');
   }
 
   return true;
@@ -323,8 +329,7 @@ function saveBot({ id, displayName, description, category, destination, folderNa
   // Generate safe ID and filename
   const baseName = (displayName || filename || 'Custom Bot').trim().replace(/[^a-zA-Z0-9_\-\s]/g, '');
   const botId = (id || baseName.toLowerCase().replace(/\s+/g, '-')).replace(/[^a-z0-9\-]/g, '');
-
-  let safeFilename = (filename || `${baseName.replace(/\s+/g, '')}.xml`).trim();
+  let safeFilename = (filename || `${botId}.xml`).trim();
   if (!safeFilename.toLowerCase().endsWith('.xml')) safeFilename += '.xml';
   safeFilename = path.basename(safeFilename).replace(/[^a-zA-Z0-9_\-\.]/g, '');
 
@@ -336,13 +341,19 @@ function saveBot({ id, displayName, description, category, destination, folderNa
 
   // Prevent path traversal
   const targetPath = path.join(BOTS_DIR, safeFilename);
-  if (!targetPath.startsWith(BOTS_DIR)) {
-    throw new Error('Security rejection: Invalid target path.');
-  }
+  let fileSize = Buffer.byteLength(xmlContent, 'utf8');
 
-  // Write file to bots directory
-  fs.writeFileSync(targetPath, xmlContent, 'utf8');
-  const stats = fs.statSync(targetPath);
+  try {
+    safeMkdir(BOTS_DIR);
+    fs.writeFileSync(targetPath, xmlContent, 'utf8');
+    const stats = fs.statSync(targetPath);
+    fileSize = stats.size;
+  } catch (err) {
+    try {
+      const tmpTarget = path.join('/tmp', safeFilename);
+      fs.writeFileSync(tmpTarget, xmlContent, 'utf8');
+    } catch (_) {}
+  }
 
   const bots = getAllBots();
   const existingIndex = bots.findIndex(b => b.id === botId || b.file === safeFilename);
@@ -355,7 +366,7 @@ function saveBot({ id, displayName, description, category, destination, folderNa
     destination: validDestination,
     folderId: 'custom',
     folderName: folderName || (validDestination === 'store' ? 'Bot Store' : (validDestination === 'both' ? 'Free & Store' : 'Free Bots')),
-    fileSize: stats.size,
+    fileSize: fileSize,
     uploadedAt: new Date().toISOString(),
     published: true
   };
@@ -368,7 +379,7 @@ function saveBot({ id, displayName, description, category, destination, folderNa
     appendAuditLog('BOT_UPLOADED', `Uploaded new bot '${botRecord.displayName}' (${safeFilename}, destination: ${validDestination})`, actor, ip);
   }
 
-  fs.writeFileSync(BOTS_FILE, JSON.stringify(bots, null, 2), 'utf8');
+  safeWriteJson(BOTS_FILE, bots);
   return botRecord;
 }
 
@@ -380,7 +391,7 @@ function togglePublishBot(id, published, actor = 'admin', ip = '') {
   }
 
   bot.published = published === true;
-  fs.writeFileSync(BOTS_FILE, JSON.stringify(bots, null, 2), 'utf8');
+  safeWriteJson(BOTS_FILE, bots);
   appendAuditLog(bot.published ? 'BOT_PUBLISHED' : 'BOT_UNPUBLISHED', `${bot.published ? 'Published' : 'Unpublished'} bot '${bot.displayName}' (${bot.file})`, actor, ip);
   return bot;
 }
@@ -404,7 +415,7 @@ function updateBot(id, { displayName, description, category, destination, folder
     }
   }
 
-  fs.writeFileSync(BOTS_FILE, JSON.stringify(bots, null, 2), 'utf8');
+  safeWriteJson(BOTS_FILE, bots);
   appendAuditLog('BOT_METADATA_UPDATED', `Updated metadata for bot '${bot.displayName}' (destination: ${bot.destination})`, actor, ip);
   return bot;
 }
@@ -419,16 +430,18 @@ function deleteBot(id, actor = 'admin', ip = '') {
   const [bot] = bots.splice(botIndex, 1);
   const targetPath = path.join(BOTS_DIR, bot.file);
 
-  // Safely delete file if it exists and is within BOTS_DIR
-  if (fs.existsSync(targetPath) && targetPath.startsWith(BOTS_DIR)) {
-    try {
+  try {
+    if (fs.existsSync(targetPath) && targetPath.startsWith(BOTS_DIR)) {
       fs.unlinkSync(targetPath);
-    } catch (e) {
-      console.warn(`Could not delete file ${targetPath}:`, e.message);
     }
-  }
+  } catch (_) {}
 
-  fs.writeFileSync(BOTS_FILE, JSON.stringify(bots, null, 2), 'utf8');
+  try {
+    const tmpTarget = path.join('/tmp', bot.file);
+    if (fs.existsSync(tmpTarget)) fs.unlinkSync(tmpTarget);
+  } catch (_) {}
+
+  safeWriteJson(BOTS_FILE, bots);
   appendAuditLog('BOT_DELETED', `Deleted bot '${bot.displayName}' (${bot.file})`, actor, ip);
   return bot;
 }
@@ -448,24 +461,13 @@ function authenticateAdmin(username, password) {
 
 function checkAdminAuth(req) {
   const authHeader = req.headers['authorization'] || '';
-  const tokenHeader = req.headers['x-admin-token'] || req.headers['x-api-key'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
+  const customHeader = req.headers['x-admin-token'] || req.headers['x-api-key'] || '';
 
-  let token = '';
-  if (authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7).trim();
-  } else if (authHeader) {
-    token = authHeader.trim();
-  } else if (tokenHeader) {
-    token = tokenHeader.trim();
-  }
-
-  if (token && token === ADMIN_API_KEY) {
-    return true;
-  }
-  return false;
+  return token === ADMIN_API_KEY || customHeader === ADMIN_API_KEY;
 }
 
-// Initialize files immediately
+// Initialize on module load without throwing read-only filesystem errors
 initMarketingConfig();
 initBotsRegistry();
 initAuditLog();
@@ -485,12 +487,7 @@ module.exports = {
   togglePublishBot,
   updateBot,
   deleteBot,
-  getAuditLog: () => {
-    try {
-      if (fs.existsSync(AUDIT_FILE)) return JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf8'));
-    } catch (_) {}
-    return [];
-  },
+  getAuditLog: () => safeReadJson(AUDIT_FILE, []),
   appendAuditLog,
   authenticateAdmin,
   checkAdminAuth

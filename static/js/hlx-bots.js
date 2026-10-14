@@ -399,7 +399,7 @@
           var pill = document.createElement('div');
           if (dest === 'store') {
             pill.className = 'bh-store-pill';
-            pill.textContent = (match && match.category) ? match.category.toUpperCase() : 'BOT STORE';
+            pill.textContent = 'BOT STORE';
             labelEl.insertBefore(pill, labelEl.firstChild);
           } else if (dest === 'both') {
             pill.className = 'bh-free-pill';
