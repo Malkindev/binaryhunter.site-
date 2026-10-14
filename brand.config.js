@@ -8,21 +8,21 @@
 module.exports = {
   // ── 1. Domain Lock ───────────────────────────────────────────────────────
   // Primary domain & allowed domains where this template is deployed.
-  primaryDomain: 'youngestfx.com',
-  allowedDomains: ['youngestfx.com', 'www.youngestfx.com'],
+  primaryDomain: 'binaryhunter.site',
+  allowedDomains: ['binaryhunter.site', 'www.binaryhunter.site'],
 
   // ── 2. Deriv OAuth App ID ───────────────────────────────────────────────
   // Registered App ID / Client ID from https://api.deriv.com/dashboard
-  derivAppId: '34ALAwDCUqXNTA3duzmaZ',
+  derivAppId: '341i9w1kMb0sa8fBV1NyJ',
 
   // ── 3. Platform Identity & Wordmark ──────────────────────────────────────
-  appName: 'Youngestfx',
-  brandName: 'Youngestfx',
-  logoTextMain: 'Youngestfx',
-  logoTextAccent: 'Youngestfx',
+  appName: 'Binaryhunter',
+  brandName: 'Binaryhunter',
+  logoTextMain: 'Binaryhunter',
+  logoTextAccent: 'Binaryhunter',
   tagline: 'Strategic Trading Platform',
   titleSuffix: 'Strategic Trading Platform',
-  description: 'Youngestfx is a strategic trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
+  description: 'Binaryhunter is a strategic trading platform on Deriv. Build and run trading bots, scan live markets, and execute automated strategies.',
 
   // ── 4. Assets (Images / Logo / Favicon) ──────────────────────────────────
   // Paths or URLs for logo and favicon (defaults fallback to assets/media/)
@@ -96,13 +96,13 @@ module.exports = {
 
   // ── 10. Social Links ─────────────────────────────────────────────────────
   socialLinks: {
-    whatsapp: 'https://wa.me/254750690784',
-    whatsapp2: 'https://whatsapp.com/channel/0029Vb8O7OcBVJlCK07ZXd1b',
+    whatsapp: '',
+    whatsapp2: '',
     instagram: '',
     facebook: '',
     youtube: '',
-    tiktok: 'https://www.tiktok.com/@derivtrader0',
-    website: 'https://youngestfx.com'
+    tiktok: '',
+    website: ''
   },
 
   // ── 11. Tab Navigation Config ────────────────────────────────────────────
