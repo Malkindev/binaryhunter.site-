@@ -1,5 +1,61 @@
 [
   {
+    "id": "audit-1792018044414-6g8r",
+    "timestamp": "2026-10-14T22:47:24.414Z",
+    "action": "MARKETING_CONFIG_SAVED",
+    "details": "Updated ROT: ROT90394362, Balance: 79.84 USD, Markup: 3%",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792017848851-rxzg",
+    "timestamp": "2026-10-14T22:44:08.851Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'States Digit Switcher (1)' (StatesDigitSwitcher1.xml, destination: store)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792017824248-oc6r",
+    "timestamp": "2026-10-14T22:43:44.248Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'LAURA-TRADER V2' (LAURA-TRADERV2.xml, destination: free)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792017809949-511b",
+    "timestamp": "2026-10-14T22:43:29.949Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'Malkin Speed bot V3' (MalkinSpeedbotV3.xml, destination: free)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792017602156-nnig",
+    "timestamp": "2026-10-14T22:40:02.156Z",
+    "action": "BOT_DELETED",
+    "details": "Deleted bot 'Malkin Speed PRO V3 Renamed' (MalkinSpeedbotV3.xml)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792017602105-jagj",
+    "timestamp": "2026-10-14T22:40:02.105Z",
+    "action": "BOT_METADATA_UPDATED",
+    "details": "Updated metadata for bot 'Malkin Speed PRO V3 Renamed' (destination: store)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792017602064-k8rb",
+    "timestamp": "2026-10-14T22:40:02.064Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'Malkin Speed bot V3' (MalkinSpeedbotV3.xml, destination: free)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
     "id": "audit-1792014673492-a32l",
     "timestamp": "2026-10-14T21:51:13.492Z",
     "action": "BOT_DELETED",

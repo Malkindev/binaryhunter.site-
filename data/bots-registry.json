@@ -11,5 +11,44 @@
     "uploadedAt": "2026-10-14T20:48:47.788Z",
     "published": true,
     "destination": "free"
+  },
+  {
+    "id": "malkin-speed-bot-v3",
+    "file": "MalkinSpeedbotV3.xml",
+    "displayName": "Malkin Speed bot V3",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "free",
+    "folderId": "custom",
+    "folderName": "Free Bots",
+    "fileSize": 19822,
+    "uploadedAt": "2026-10-14T22:43:29.947Z",
+    "published": true
+  },
+  {
+    "id": "laura-trader-v2",
+    "file": "LAURA-TRADERV2.xml",
+    "displayName": "LAURA-TRADER V2",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "free",
+    "folderId": "custom",
+    "folderName": "Free Bots",
+    "fileSize": 33801,
+    "uploadedAt": "2026-10-14T22:43:44.247Z",
+    "published": true
+  },
+  {
+    "id": "states-digit-switcher-1",
+    "file": "StatesDigitSwitcher1.xml",
+    "displayName": "States Digit Switcher (1)",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "store",
+    "folderId": "custom",
+    "folderName": "Bot Store",
+    "fileSize": 782658,
+    "uploadedAt": "2026-10-14T22:44:08.850Z",
+    "published": true
   }
 ]

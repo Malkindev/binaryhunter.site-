@@ -3,10 +3,10 @@
   "rot": "ROT90394362",
   "startingBalance": 79.84,
   "currency": "USD",
-  "accuracy": 100,
+  "accuracy": 50,
   "mode": "simulation",
   "app_markup_percentage": 3,
-  "updatedAt": "2026-10-14T20:59:15.288Z",
+  "updatedAt": "2026-10-14T22:47:24.411Z",
   "lastActivatedAt": "2026-10-14T20:43:45.691Z",
   "lastDeactivatedAt": "2026-10-14T20:43:45.674Z"
 }
