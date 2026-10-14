@@ -63,6 +63,7 @@ const DERIV_CLIENT_ID = BRAND.derivAppId;
 const socialLinksObj = BRAND.socialLinks || {};
 const socialLinksMap = {
   socialWhatsapp: socialLinksObj.whatsapp || '',
+  socialWhatsapp2: socialLinksObj.whatsapp2 || '',
   socialTelegram: socialLinksObj.telegram || '',
   socialInstagram: socialLinksObj.instagram || '',
   socialFacebook: socialLinksObj.facebook || '',
@@ -189,7 +190,9 @@ const HLX_SITE = {
   textColor: BRAND.loginTextColor || '#ffffff',
   fontFamily: BRAND.fontFamily,
   socialWhatsapp: socialLinksMap.socialWhatsapp,
+  socialWhatsapp2: socialLinksMap.socialWhatsapp2,
   socialTelegram: socialLinksMap.socialTelegram,
+  socialTiktok: socialLinksMap.socialTiktok,
   tabsConfig: HLX_SETTINGS.tabs,
   includeFreeBots: BRAND.includeFreeBots !== false,
   bots: BRAND.bots || []

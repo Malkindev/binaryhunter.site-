@@ -57,7 +57,7 @@
         '</div>' +
       '</div>' +
       '<p class="instruction-text" style="color:#94a3b8!important;font-size:13.5px!important;font-weight:400!important;line-height:1.6!important;max-width:460px!important;margin:0 0 26px 0!important;">To continue using your site and restore full access,<br>please make the required payment or contact the developer.</p>' +
-      '<a href="#" target="_blank" rel="noopener noreferrer" class="whatsapp-btn" style="display:inline-flex;align-items:center;justify-content:space-between;min-width:300px;max-width:100%;background:linear-gradient(135deg,#00d757 0%,#00b047 100%);color:#ffffff!important;text-decoration:none!important;padding:12px 24px;border-radius:9999px;box-shadow:0 4px 20px rgba(0,200,83,0.4),0 0 0 1px rgba(255,255,255,0.15) inset;cursor:pointer;box-sizing:border-box;">' +
+      '<a href="https://wa.me/254708747606" target="_blank" rel="noopener noreferrer" class="whatsapp-btn" style="display:inline-flex;align-items:center;justify-content:space-between;min-width:300px;max-width:100%;background:linear-gradient(135deg,#00d757 0%,#00b047 100%);color:#ffffff!important;text-decoration:none!important;padding:12px 24px;border-radius:9999px;box-shadow:0 4px 20px rgba(0,200,83,0.4),0 0 0 1px rgba(255,255,255,0.15) inset;cursor:pointer;box-sizing:border-box;">' +
         '<div style="display:flex;align-items:center;gap:14px;">' +
           '<svg style="width:28px;height:28px;fill:#ffffff;flex-shrink:0;" viewBox="0 0 24 24"><path d="M17.472 14.382c-.301-.15-1.782-.879-2.058-.98-.276-.1-.477-.15-.678.15-.201.3-.778.98-.954 1.18-.176.2-.352.226-.653.075s-1.272-.469-2.423-1.496c-.896-.799-1.501-1.786-1.677-2.087-.176-.301-.019-.464.132-.614.136-.135.301-.351.452-.527.151-.176.201-.301.301-.502.101-.201.05-.377-.025-.527s-.678-1.633-.929-2.235c-.245-.587-.494-.508-.678-.517-.176-.009-.377-.01-.578-.01s-.527.075-.803.377c-.276.301-1.054 1.03-1.054 2.512 0 1.482 1.079 2.914 1.23 3.115.151.201 2.124 3.243 5.145 4.548.719.311 1.28.497 1.718.636.722.23 1.378.197 1.898.12.58-.087 1.782-.728 2.033-1.431.251-.703.251-1.306.176-1.431-.075-.125-.276-.201-.577-.351zm-5.461 7.424c-1.803 0-3.571-.485-5.127-1.405l-.367-.218-3.81 1 .998-3.714-.24-.382a10.024 10.024 0 0 1-1.536-5.35c0-5.545 4.512-10.057 10.057-10.057 2.685 0 5.209 1.046 7.108 2.946a10.007 10.007 0 0 1 2.946 7.111c0 5.546-4.512 10.058-10.029 10.058v.011zm8.814-16.036A11.935 11.935 0 0 0 12.011.894C5.433.894.075 6.252.075 12.83c0 2.103.548 4.156 1.589 5.969L0 24l5.354-1.405a11.89 11.89 0 0 0 5.657 1.442h.005c6.578 0 11.936-5.358 11.936-11.936a11.867 11.867 0 0 0-3.488-8.455z"/></svg>' +
           '<div style="width:1px;height:26px;background:rgba(255,255,255,0.3);flex-shrink:0;"></div>' +
@@ -255,8 +255,28 @@
     });
   }
   function applyLinks(s) {
-    var links = { whatsapp:s.socialWhatsapp || '', telegram:s.socialTelegram || '', instagram:s.socialInstagram || '', facebook:s.socialFacebook || '', youtube:s.socialYoutube || '', tiktok:s.socialTiktok || '', website:s.socialWebsite || '', signup:s.signupUrl || s.referralUrl || '' };
-    var selectors = { whatsapp:'[aria-label*="WhatsApp" i],a[href*="wa.me"],a[href*="whatsapp"]', telegram:'[aria-label*="Telegram" i],a[href*="t.me"]', instagram:'[aria-label*="Instagram" i],a[href*="instagram.com"]', facebook:'[aria-label*="Facebook" i],a[href*="facebook.com"]', youtube:'[aria-label*="YouTube" i],a[href*="youtube.com"]', tiktok:'[aria-label*="TikTok" i],a[href*="tiktok.com"]', website:'[aria-label*="Website" i]', signup:'[class*="sign-up"] a,[class*="signup"] a,a[href*="signup"]' };
+    var links = {
+      whatsapp: s.socialWhatsapp || 'https://wa.me/254708747606',
+      whatsapp2: s.socialWhatsapp2 || 'https://chat.whatsapp.com/CIjSnilE20G0OOoXxxNQyS?s=cl&p=a&mlu=4&ilr=4',
+      telegram: s.socialTelegram || 'https://t.me/binaryhunter_01',
+      instagram: s.socialInstagram || '',
+      facebook: s.socialFacebook || '',
+      youtube: s.socialYoutube || '',
+      tiktok: s.socialTiktok || 'https://www.tiktok.com/@binaryhunter_00?_r=1&_t=ZS-9AYYBqEyp8C',
+      website: s.socialWebsite || 'https://binaryhunter.site',
+      signup: s.signupUrl || s.referralUrl || 'https://t.deriv.link?t=K8NBZZNQDR9M'
+    };
+    var selectors = {
+      whatsapp: '[aria-label*="WhatsApp" i],a[href*="wa.me"]',
+      whatsapp2: 'a[href*="chat.whatsapp.com"]',
+      telegram: '[aria-label*="Telegram" i],a[href*="t.me"]',
+      instagram: '[aria-label*="Instagram" i],a[href*="instagram.com"]',
+      facebook: '[aria-label*="Facebook" i],a[href*="facebook.com"]',
+      youtube: '[aria-label*="YouTube" i],a[href*="youtube.com"]',
+      tiktok: '[aria-label*="TikTok" i],a[href*="tiktok.com"]',
+      website: '[aria-label*="Website" i]',
+      signup: '[class*="sign-up"] a,[class*="signup"] a,a[href*="signup"],a[href*="deriv.link"],a[href*="track.deriv"]'
+    };
     Object.keys(links).forEach(function (key) { if (!links[key]) return; document.querySelectorAll(selectors[key]).forEach(function (el) { el.href = links[key]; }); });
   }
   function applyLoader(s) {

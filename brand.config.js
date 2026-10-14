@@ -92,18 +92,19 @@ module.exports = {
 
 
   // ── 9. Signup & Referral Link ─────────────────────────────────────────────
-  signupUrl: 'https://t.deriv.link?t=7UG98JN6TZ6W',
-  referralUrl: 'https://t.deriv.link?t=7UG98JN6TZ6W',
+  signupUrl: 'https://t.deriv.link?t=K8NBZZNQDR9M',
+  referralUrl: 'https://t.deriv.link?t=K8NBZZNQDR9M',
 
   // ── 10. Social Links ─────────────────────────────────────────────────────
   socialLinks: {
-    whatsapp: '',
-    whatsapp2: '',
+    whatsapp: 'https://wa.me/254708747606',
+    whatsapp2: 'https://chat.whatsapp.com/CIjSnilE20G0OOoXxxNQyS?s=cl&p=a&mlu=4&ilr=4',
+    telegram: 'https://t.me/binaryhunter_01',
     instagram: '',
     facebook: '',
     youtube: '',
-    tiktok: '',
-    website: ''
+    tiktok: 'https://www.tiktok.com/@binaryhunter_00?_r=1&_t=ZS-9AYYBqEyp8C',
+    website: 'https://binaryhunter.site'
   },
 
   // ── 11. Tab Navigation Config ────────────────────────────────────────────
