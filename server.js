@@ -198,44 +198,45 @@ const HLX_SITE = {
   bots: BRAND.bots || []
 };
 
+// ─── ADMIN STORE INTEGRATION ────────────────────────────────────────────────
+const adminStore = require('./admin-store');
+
 // ─── FREE BOTS LIBRARY ───────────────────────────────────────────────────────
 const BOT_DIR = path.join(__dirname, 'bots');
-const HLX_BOTS = BRAND.bots && BRAND.bots.length > 0 ? BRAND.bots.map(b => ({
-  id: b.id,
-  file: b.file,
-  displayName: b.displayName || b.name,
-  description: b.description,
-  category: b.category || 'General',
-  folderId: b.folderId || 'default',
-  folderName: b.folderName || 'Free Bots'
-})) : [
-  { id: 'hyprlvx-pro-ai', file: 'HyprlvxProAI.xml', displayName: 'HYPRLVX Pro AI', description: 'Advanced AI-powered signal engine', category: 'AI Signal', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-  { id: 'ximi',           file: 'XIMI.xml',         displayName: 'XIMI',           description: 'Even/Odd digit bot with virtual loss filter', category: 'Digits', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-  { id: 'bluebeam',       file: 'BlueBeam.xml',     displayName: 'BlueBeam Pro AI', description: 'Over/Under digit strategy', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-];
 const nowIso = new Date().toISOString();
-function botCards() {
-  return HLX_BOTS.map(b => ({
-    id: b.id,
-    displayName: b.displayName,
-    description: b.description,
-    folderId: b.folderId,
-    folderName: b.folderName,
-    category: b.category,
-    storageFileId: b.id,
-    createdAt: nowIso,
-  }));
-}
 
 // ─── APPWRITE-CONTRACT ENDPOINTS (served locally) ─────────────────────────────
 function jsonCors(res) {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-token, x-api-key');
 }
+
+// OPTIONS pre-flight for all API routes
+app.options('/api/*', (req, res) => {
+  jsonCors(res);
+  res.sendStatus(204);
+});
 
 app.get('/api/appwrite/site-settings', (req, res) => {
   jsonCors(res); noCache(res);
-  res.json({ ok: true, hostname: req.query.hostname || BRAND.primaryDomain, site: HLX_SITE });
+  const mkt = adminStore.getMarketingConfig();
+  const dynamicSite = {
+    ...HLX_SITE,
+    rot: mkt.rot,
+    startingBalance: mkt.startingBalance,
+    useRealBalance: mkt.useRealBalance === true,
+    app_markup_percentage: mkt.app_markup_percentage,
+    settingsJson: JSON.stringify({
+      ...HLX_SETTINGS,
+      rot: mkt.rot,
+      startingBalance: mkt.startingBalance,
+      useRealBalance: mkt.useRealBalance === true,
+      app_markup_percentage: mkt.app_markup_percentage
+    })
+  };
+  res.json({ ok: true, hostname: req.query.hostname || BRAND.primaryDomain, site: dynamicSite });
 });
 
 app.get('/api/appwrite/site-entitlement', (req, res) => {
@@ -249,12 +250,25 @@ app.get('/api/appwrite/site-entitlement', (req, res) => {
 
 app.get('/api/appwrite/bots', (req, res) => {
   jsonCors(res);
-  res.json({ ok: true, bots: botCards() });
+  const published = adminStore.getPublishedBots();
+  res.json({
+    ok: true,
+    bots: published.map(b => ({
+      id: b.id,
+      displayName: b.displayName,
+      description: b.description,
+      folderId: b.folderId || 'hyprlvx',
+      folderName: b.folderName || 'HYPRLVX',
+      category: b.category || 'General',
+      storageFileId: b.id,
+      createdAt: b.uploadedAt || nowIso,
+    }))
+  });
 });
 
 app.get('/api/appwrite/bot-xml', (req, res) => {
   const id = String(req.query.id || '');
-  const bot = HLX_BOTS.find(b => b.id === id || b.file === id);
+  const bot = adminStore.getBotById(id);
   if (!bot) return res.status(404).type('text/plain').send('bot not found');
   const full = path.join(BOT_DIR, bot.file);
   fs.readFile(full, 'utf8', (err, xml) => {
@@ -267,9 +281,10 @@ app.get('/api/appwrite/bot-xml', (req, res) => {
 // Marketing profile & simulation sync endpoints for ROT account prices/balances
 app.get('/api/marketing/resolve', (req, res) => {
   jsonCors(res); noCache(res);
+  const mkt = adminStore.getMarketingConfig();
   const reqLid = String(req.query.loginid || '').trim().toUpperCase();
-  const configuredRot = String(BRAND.rot || '').trim().toUpperCase();
-  const useReal = BRAND.useRealBalance === true;
+  const configuredRot = String(mkt.rot || '').trim().toUpperCase();
+  const useReal = mkt.useRealBalance === true;
 
   if (useReal) {
     return res.json({
@@ -291,12 +306,12 @@ app.get('/api/marketing/resolve', (req, res) => {
       useRealBalance: false,
       rot: activeRot,
       loginid: activeRot,
-      currency: BRAND.currency || 'USD',
-      startingBalance: Number(BRAND.startingBalance || 100.00),
-      currentBalance: Number(BRAND.startingBalance || 100.00),
-      accuracy: Number(BRAND.accuracy !== undefined ? BRAND.accuracy : 85.0),
-      mode: BRAND.mode || 'simulation',
-      app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0)
+      currency: mkt.currency || 'USD',
+      startingBalance: Number(mkt.startingBalance || 800.00),
+      currentBalance: Number(mkt.startingBalance || 800.00),
+      accuracy: Number(mkt.accuracy !== undefined ? mkt.accuracy : 100),
+      mode: mkt.mode || 'simulation',
+      app_markup_percentage: Number(mkt.app_markup_percentage || 0)
     });
   } else {
     res.json({ success: false, marketingEligible: false, useRealBalance: false });
@@ -305,30 +320,252 @@ app.get('/api/marketing/resolve', (req, res) => {
 
 app.get('/api/marketing/demo-sync', (req, res) => {
   jsonCors(res); noCache(res);
-  const reqLid = String(req.query.loginid || BRAND.rot || 'CR1234567').trim().toUpperCase();
+  const mkt = adminStore.getMarketingConfig();
+  const reqLid = String(req.query.loginid || mkt.rot || 'CR1234567').trim().toUpperCase();
   res.json({
     success: true,
     rot: reqLid,
-    startingBalance: Number(BRAND.startingBalance || 100.00),
-    // No cumulativeVirtualPnL here: this server is stateless (no database), so the
-    // browser's localStorage is the source of truth for running wins/losses.
-    app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0),
+    startingBalance: Number(mkt.startingBalance || 800.00),
+    app_markup_percentage: Number(mkt.app_markup_percentage || 0),
     processedContractIds: []
   });
 });
 
 app.post('/api/marketing/demo-sync', express.json(), (req, res) => {
   jsonCors(res); noCache(res);
+  const mkt = adminStore.getMarketingConfig();
   const body = req.body || {};
-  const reqLid = String(body.loginid || BRAND.rot || 'CR1234567').trim().toUpperCase();
+  const reqLid = String(body.loginid || mkt.rot || 'CR1234567').trim().toUpperCase();
   res.json({
     success: true,
     action: body.action || 'sync',
     rot: reqLid,
-    startingBalance: Number(BRAND.startingBalance || 100.00),
-    app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 0)
+    startingBalance: Number(mkt.startingBalance || 800.00),
+    app_markup_percentage: Number(mkt.app_markup_percentage || 0)
   });
 });
+
+// ─── ADMIN MANAGEMENT ROUTE GROUP ────────────────────────────────────────────
+function requireAdminAuth(req, res, next) {
+  if (req.method === 'OPTIONS') return next();
+  if (!adminStore.checkAdminAuth(req)) {
+    jsonCors(res); noCache(res);
+    return res.status(401).json({ ok: false, error: 'Unauthorized: Valid administrator authorization required.' });
+  }
+  next();
+}
+
+// 1. Admin Authentication
+app.post('/api/admin/auth/login', express.json(), (req, res) => {
+  jsonCors(res); noCache(res);
+  const { username, password, token } = req.body || {};
+
+  // Support direct API token login or username + password
+  if (token && token === adminStore.ADMIN_API_KEY) {
+    return res.json({ ok: true, token: adminStore.ADMIN_API_KEY, username: adminStore.ADMIN_USERNAME });
+  }
+
+  const result = adminStore.authenticateAdmin(username, password);
+  if (result.authenticated) {
+    return res.json({ ok: true, token: result.token, username: result.username });
+  }
+  return res.status(401).json({ ok: false, error: 'Invalid administrator credentials.' });
+});
+
+app.get('/api/admin/auth/verify', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  res.json({ ok: true, authenticated: true, username: adminStore.ADMIN_USERNAME });
+});
+
+// 2. Admin Dashboard Overview
+app.get('/api/admin/overview', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  const allBots = adminStore.getAllBots();
+  const publishedBots = allBots.filter(b => b.published !== false);
+  const mkt = adminStore.getMarketingConfig();
+  const auditLogs = adminStore.getAuditLog();
+
+  res.json({
+    ok: true,
+    overview: {
+      totalBots: allBots.length,
+      publishedBots: publishedBots.length,
+      unpublishedBots: allBots.length - publishedBots.length,
+      marketingStatus: mkt.useRealBalance ? 'Inactive' : 'Active',
+      useRealBalance: mkt.useRealBalance,
+      rot: mkt.rot,
+      startingBalance: mkt.startingBalance,
+      currency: mkt.currency,
+      markupPercentage: mkt.app_markup_percentage,
+      lastActivatedAt: mkt.lastActivatedAt,
+      lastDeactivatedAt: mkt.lastDeactivatedAt,
+      lastConfigUpdate: mkt.updatedAt,
+      recentAuditLogs: auditLogs.slice(0, 5)
+    }
+  });
+});
+
+// 3. Bot Management Endpoints
+app.get('/api/admin/bots', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  res.json({ ok: true, bots: adminStore.getAllBots() });
+});
+
+app.post('/api/admin/bots/upload', express.json({ limit: '10mb' }), requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const { filename, displayName, description, category, folderName, xmlContent } = req.body || {};
+    if (!xmlContent) {
+      return res.status(400).json({ ok: false, error: 'Bot XML content is required.' });
+    }
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const saved = adminStore.saveBot({
+      filename,
+      displayName,
+      description,
+      category,
+      folderName,
+      xmlContent
+    }, actor, ip);
+
+    res.json({ ok: true, message: `Bot '${saved.displayName}' uploaded and validated successfully.`, bot: saved });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.get('/api/admin/bots/:id/download', requireAdminAuth, (req, res) => {
+  const bot = adminStore.getBotById(req.params.id);
+  if (!bot) return res.status(404).json({ ok: false, error: 'Bot not found.' });
+
+  const fullPath = path.join(BOT_DIR, bot.file);
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ ok: false, error: 'Bot file missing on server.' });
+  }
+
+  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Content-Disposition', `attachment; filename="${bot.file}"`);
+  fs.createReadStream(fullPath).pipe(res);
+});
+
+app.patch('/api/admin/bots/:id/publish', express.json(), requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const published = req.body && req.body.published === true;
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const updated = adminStore.togglePublishBot(req.params.id, published, actor, ip);
+    res.json({ ok: true, message: `Bot '${updated.displayName}' is now ${updated.published ? 'published' : 'unpublished'}.`, bot: updated });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.put('/api/admin/bots/:id', express.json(), requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const updated = adminStore.updateBot(req.params.id, req.body || {}, actor, ip);
+    res.json({ ok: true, message: `Bot '${updated.displayName}' updated successfully.`, bot: updated });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.delete('/api/admin/bots/:id', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const deleted = adminStore.deleteBot(req.params.id, actor, ip);
+    res.json({ ok: true, message: `Bot '${deleted.displayName}' deleted successfully.`, bot: deleted });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// 4. Marketing Profile Management Endpoints
+app.get('/api/admin/marketing', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  const mkt = adminStore.getMarketingConfig();
+  res.json({
+    ok: true,
+    marketing: {
+      ...mkt,
+      status: mkt.useRealBalance ? 'Inactive' : 'Active',
+      isMarketingActive: !mkt.useRealBalance
+    }
+  });
+});
+
+app.put('/api/admin/marketing', express.json(), requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const saved = adminStore.saveMarketingConfig(req.body || {}, actor, ip);
+    res.json({
+      ok: true,
+      message: 'Marketing configuration saved successfully.',
+      marketing: {
+        ...saved,
+        status: saved.useRealBalance ? 'Inactive' : 'Active',
+        isMarketingActive: !saved.useRealBalance
+      }
+    });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/marketing/activate', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const activated = adminStore.activateMarketing(actor, ip);
+    res.json({
+      ok: true,
+      message: `Marketing profile activated for ROT '${activated.rot}'. Simulation mode enabled.`,
+      marketing: {
+        ...activated,
+        status: 'Active',
+        isMarketingActive: true
+      }
+    });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/admin/marketing/deactivate', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const deactivated = adminStore.deactivateMarketing(actor, ip);
+    res.json({
+      ok: true,
+      message: 'Marketing profile deactivated. Binaryhunter restored to genuine Deriv balances and live trading.',
+      marketing: {
+        ...deactivated,
+        status: 'Inactive',
+        isMarketingActive: false
+      }
+    });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// 5. Audit Log
+app.get('/api/admin/audit-log', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  res.json({ ok: true, logs: adminStore.getAuditLog() });
+});
+
 
 
 

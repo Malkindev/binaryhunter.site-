@@ -14,7 +14,9 @@
           "docs/**",
           "index.html",
           "manifest.json",
-          "brand.config.js"
+          "brand.config.js",
+          "admin-store.js",
+          "data/**"
         ]
       }
     }

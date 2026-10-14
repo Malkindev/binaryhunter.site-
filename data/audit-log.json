@@ -1,0 +1,81 @@
+[
+  {
+    "id": "audit-1792010625692-q52c",
+    "timestamp": "2026-10-14T20:43:45.692Z",
+    "action": "MARKETING_ACTIVATED",
+    "details": "Activated Marketing profile for ROT: USD ROT91155080 (Simulation mode)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010625675-fn07",
+    "timestamp": "2026-10-14T20:43:45.675Z",
+    "action": "MARKETING_DEACTIVATED",
+    "details": "Deactivated Marketing profile. Restored real Deriv account behavior.",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010625657-gkzu",
+    "timestamp": "2026-10-14T20:43:45.657Z",
+    "action": "MARKETING_CONFIG_SAVED",
+    "details": "Updated ROT: USD ROT91155080, Balance: 800 USD, Markup: 3%",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010625647-z7ux",
+    "timestamp": "2026-10-14T20:43:45.647Z",
+    "action": "BOT_DELETED",
+    "details": "Deleted bot 'Automated Test Bot' (AutomatedTestBot.xml)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010625624-z1i5",
+    "timestamp": "2026-10-14T20:43:45.624Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'Automated Test Bot' (AutomatedTestBot.xml, 114 bytes)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010319857-k18n",
+    "timestamp": "2026-10-14T20:38:39.857Z",
+    "action": "BOT_PUBLISHED",
+    "details": "Published bot 'BlueBeam Pro AI' (BlueBeam.xml)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010319839-ylgj",
+    "timestamp": "2026-10-14T20:38:39.839Z",
+    "action": "BOT_UNPUBLISHED",
+    "details": "Unpublished bot 'BlueBeam Pro AI' (BlueBeam.xml)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010310965-cxu0",
+    "timestamp": "2026-10-14T20:38:30.965Z",
+    "action": "MARKETING_ACTIVATED",
+    "details": "Activated Marketing profile for ROT: USD ROT91155080 (Simulation mode)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010310942-qe6n",
+    "timestamp": "2026-10-14T20:38:30.942Z",
+    "action": "MARKETING_DEACTIVATED",
+    "details": "Deactivated Marketing profile. Restored real Deriv account behavior.",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010209531",
+    "timestamp": "2026-10-14T20:36:49.531Z",
+    "action": "SYSTEM_INIT",
+    "details": "Binaryhunter administrative store initialized",
+    "actor": "system"
+  }
+]
