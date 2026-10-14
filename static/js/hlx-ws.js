@@ -194,11 +194,18 @@
   function loadCachedLogo() {
     try {
       var cached = String(localStorage.getItem(LOGO_STORAGE_KEY) || '').trim();
-      if (cached) {
+      if (cached && !/youngest/i.test(cached)) {
         HLX_LOGO_URL = cached;
         window.__DERIV_LOGO_URL__ = cached;
+      } else {
+        localStorage.removeItem(LOGO_STORAGE_KEY);
+        HLX_LOGO_URL = '/assets/media/logo.png';
+        window.__DERIV_LOGO_URL__ = '/assets/media/logo.png';
       }
-    } catch (e) {}
+    } catch (e) {
+      HLX_LOGO_URL = '/assets/media/logo.png';
+      window.__DERIV_LOGO_URL__ = '/assets/media/logo.png';
+    }
   }
 
   function loadCustomerSettings() {

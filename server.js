@@ -90,7 +90,7 @@ const HLX_SETTINGS = {
   siteTitle: `${BRAND.appName} — ${BRAND.titleSuffix || BRAND.tagline}`,
   logoUrl: BRAND.logo || '/assets/media/logo.png',
   logoFileId: '',
-  faviconUrl: BRAND.favicon || '/assets/media/favicon.png',
+  faviconUrl: BRAND.favicon || '/assets/media/favicon.png?v=bh2',
   faviconFileId: '',
 
   // ── Deriv OAuth ── newAppId present ⇒ PKCE flow
@@ -138,8 +138,8 @@ const HLX_SETTINGS = {
   loaderHighlightColor: BRAND.loaderHighlightColor || BRAND.accentColor || '#38BDF8',
   loaderTextColor: BRAND.loaderTextColor || '#FFFFFF',
   loaderBackgroundColor: BRAND.backgroundColor || '#0A0713',
-  loaderBackgroundImage: BRAND.loaderBackgroundImage || '',
-  loaderBackgroundImageUrl: BRAND.loaderBackgroundImage || '',
+  loaderBackgroundImage: BRAND.loaderBackgroundImage || '/assets/media/logo.png',
+  loaderBackgroundImageUrl: BRAND.loaderBackgroundImage || '/assets/media/logo.png',
 
   // ── Referral & Links ──
   signupUrl: BRAND.signupUrl || BRAND.referralUrl || '',
@@ -180,8 +180,8 @@ const HLX_SITE = {
   useRealBalance: BRAND.useRealBalance === true,
   brandName: BRAND.brandName || BRAND.appName,
   logoUrl: BRAND.logo || '/assets/media/logo.png',
-  faviconUrl: BRAND.favicon || '/assets/media/favicon.png',
-  loaderBackgroundImage: BRAND.loaderBackgroundImage || '',
+  faviconUrl: BRAND.favicon || '/assets/media/favicon.png?v=bh2',
+  loaderBackgroundImage: BRAND.loaderBackgroundImage || '/assets/media/logo.png',
   primaryColor: BRAND.primaryColor,
   secondaryColor: BRAND.secondaryColor,
   accentColor: BRAND.tabActiveColor || BRAND.accentColor,
@@ -371,6 +371,11 @@ app.get('/', (req, res) => {
 });
 app.get('/manifest.json', (req, res) => {
   res.type('json').send(renderTemplate(path.join(__dirname, 'manifest.json')));
+});
+app.get(['/favicon.ico', '/favicon.png'], (req, res) => {
+  noCache(res);
+  res.setHeader('Content-Type', 'image/png');
+  res.sendFile(path.join(__dirname, 'assets', 'media', 'favicon.png'));
 });
 
 // Minimal no-op service worker: the build registers a SW for PWA support, but we

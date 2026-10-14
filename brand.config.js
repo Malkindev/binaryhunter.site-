@@ -28,8 +28,8 @@ module.exports = {
   // ── 4. Assets (Images / Logo / Favicon) ──────────────────────────────────
   // Paths or URLs for logo and favicon (defaults fallback to assets/media/)
   logo: '/assets/media/logo.png',
-  favicon: '/assets/media/favicon.png',
-  loaderBackgroundImage: '', // Optional background image URL for loader screen
+  favicon: '/assets/media/favicon.png?v=bh2',
+  loaderBackgroundImage: '/assets/media/logo.png',
 
   // ── 5. Theme Colors & Visual Styles ──────────────────────────────────────
   primaryColor: '#00A3E0',

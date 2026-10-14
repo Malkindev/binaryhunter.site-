@@ -121,16 +121,23 @@
   }
 
   function setFavicon(url) {
-    if (!url) return;
-    var absolute = absoluteAssetUrl(url);
-    var links = document.querySelectorAll('link[rel="icon"],link[rel="shortcut icon"]');
+    var raw = String(url || '/assets/media/favicon.png').trim();
+    if (!raw) raw = '/assets/media/favicon.png';
+    if (raw.indexOf('v=') === -1) {
+      raw += (raw.indexOf('?') === -1 ? '?' : '&') + 'v=bh2026';
+    }
+    var absolute = absoluteAssetUrl(raw);
+    var links = document.querySelectorAll('link[rel*="icon"]');
     if (!links.length) {
       var link = document.createElement('link');
       link.rel = 'icon';
       document.head.appendChild(link);
       links = [link];
     }
-    Array.prototype.forEach.call(links, function (link) { link.href = absolute; });
+    Array.prototype.forEach.call(links, function (link) {
+      link.href = absolute;
+      link.type = 'image/png';
+    });
   }
 
   function updateMeta(name, value) {
@@ -185,7 +192,7 @@
     var loaderAccent = s.loaderSecondaryColor || s.loaderAccentColor || accent;
     var loaderHighlight = s.loaderHighlightColor || accent;
     var loaderText = s.loaderTextColor || '#ffffff';
-    var loaderImage = absoluteAssetUrl(String(s.loaderBackgroundImage || s.loaderBackgroundImageUrl || s.loaderImage || ''));
+    var loaderImage = absoluteAssetUrl(String(s.loaderBackgroundImage || s.loaderBackgroundImageUrl || s.loaderImage || '/assets/media/logo.png'));
     var loaderBg = loaderPrimary === loaderAccent ? loaderPrimary : 'linear-gradient(135deg,' + loaderPrimary + ',' + loaderAccent + ')';
     var botBg = s.botCardStyle === 'card' ? 'linear-gradient(180deg,#f8fafc 0%,#e2e8f0 100%)' : s.botCardStyle === 'compact' ? secondary : s.botCardStyle === 'minimal' ? secondary : 'linear-gradient(135deg,' + secondary + ' 0%,' + primary + ' 48%,' + accent + ' 100%)';
     var style = document.getElementById(STYLE_ID);
@@ -203,10 +210,8 @@
       '.auth-actions button,.auth-actions__primary,.login-button,[class*="login"] button,[class*="sign-up"] button{background:' + login + ' !important;color:' + loginText + ' !important}' +
       '[class*="bot-list"] button,.bot-card button,.bot-list__card button,[class*="bot"] button[class*="load"]{background:' + load + ' !important;color:' + loadText + ' !important}' +
       '.bot-card,[class*="bot-list__card"]{background:' + botBg + ' !important}' +
-      '.loaderx-root,.initial-loader,#hlx-loader{background:' + (loaderImage ? 'linear-gradient(135deg,rgba(10,7,19,.62),rgba(10,7,19,.88)),url("' + loaderImage.replace(/"/g, '\\"') + '") !important;background-size:cover !important;background-position:center !important;' : loaderBg + ' !important;') + '}' +
-      (loaderImage ? '.loaderx-root{background-image:linear-gradient(135deg,rgba(10,7,19,0.72),rgba(10,7,19,0.85)),url("' + loaderImage.replace(/"/g, '\\"') + '") !important;background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important}' +
-      '.loaderx-root--basic{background-image:linear-gradient(135deg,rgba(255,255,255,0.82),rgba(255,255,255,0.92)),url("' + loaderImage.replace(/"/g, '\\"') + '") !important;background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important}' +
-      '.loaderx__panel,.loaderx__terminal,.loaderx__rings-card{background:rgba(2,6,16,0.65) !important;backdrop-filter:blur(8px) !important}' : '') +
+      '.loaderx-root,.initial-loader,#hlx-loader{background:radial-gradient(circle at center,rgba(0,163,224,0.22) 0%,rgba(3,8,19,0.78) 60%,rgba(2,6,14,0.95) 100%),url("' + loaderImage.replace(/"/g, '\\"') + '") center center no-repeat,#030813 !important;background-size:min(85vw, 680px) auto !important;background-position:center center !important;background-repeat:no-repeat !important}' +
+      '.loaderx__panel,.loaderx__terminal,.loaderx__rings-card{background:rgba(2,6,16,0.78) !important;backdrop-filter:blur(12px) !important;-webkit-backdrop-filter:blur(12px) !important;border:1px solid rgba(0,163,224,0.3) !important;box-shadow:0 16px 48px rgba(0,0,0,0.7),0 0 30px rgba(0,163,224,0.2) !important;border-radius:16px !important}' +
       '.logo-holder::after{content:"' + logoText.replace(/"/g, '\\"') + '" !important;color:' + tabActive + ' !important}' +
       '.logo-holder .d-apollo-logo__image--branded,.logo-holder img ~ img{display:none !important}' +
       '.hlx-load-word em{color:' + accent + ' !important}.hlx-load-bar::before{background:linear-gradient(90deg,' + primary + ',' + accent + ',#c4a8ff) !important}' +
