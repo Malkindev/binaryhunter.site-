@@ -250,16 +250,18 @@ app.get('/api/appwrite/site-entitlement', (req, res) => {
 
 app.get('/api/appwrite/bots', (req, res) => {
   jsonCors(res);
-  const published = adminStore.getPublishedBots();
+  const dest = req.query.destination || null;
+  const published = adminStore.getPublishedBots(dest);
   res.json({
     ok: true,
     bots: published.map(b => ({
       id: b.id,
       displayName: b.displayName,
       description: b.description,
-      folderId: b.folderId || 'hyprlvx',
-      folderName: b.folderName || 'HYPRLVX',
+      folderId: b.folderId || 'custom',
+      folderName: b.folderName || (b.destination === 'store' ? 'Bot Store' : (b.destination === 'both' ? 'Free & Store' : 'Free Bots')),
       category: b.category || 'General',
+      destination: b.destination || 'free',
       storageFileId: b.id,
       createdAt: b.uploadedAt || nowIso,
     }))
@@ -414,7 +416,7 @@ app.get('/api/admin/bots', requireAdminAuth, (req, res) => {
 app.post('/api/admin/bots/upload', express.json({ limit: '10mb' }), requireAdminAuth, (req, res) => {
   jsonCors(res); noCache(res);
   try {
-    const { filename, displayName, description, category, folderName, xmlContent } = req.body || {};
+    const { filename, displayName, description, category, destination, folderName, xmlContent } = req.body || {};
     if (!xmlContent) {
       return res.status(400).json({ ok: false, error: 'Bot XML content is required.' });
     }
@@ -425,6 +427,7 @@ app.post('/api/admin/bots/upload', express.json({ limit: '10mb' }), requireAdmin
       displayName,
       description,
       category,
+      destination,
       folderName,
       xmlContent
     }, actor, ip);
@@ -457,6 +460,22 @@ app.patch('/api/admin/bots/:id/publish', express.json(), requireAdminAuth, (req,
     const ip = req.ip || req.connection.remoteAddress;
     const updated = adminStore.togglePublishBot(req.params.id, published, actor, ip);
     res.json({ ok: true, message: `Bot '${updated.displayName}' is now ${updated.published ? 'published' : 'unpublished'}.`, bot: updated });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.patch('/api/admin/bots/:id/destination', express.json(), requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const { destination } = req.body || {};
+    if (!destination) {
+      return res.status(400).json({ ok: false, error: 'Destination is required (free, store, or both).' });
+    }
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const ip = req.ip || req.connection.remoteAddress;
+    const updated = adminStore.updateBot(req.params.id, { destination }, actor, ip);
+    res.json({ ok: true, message: `Bot '${updated.displayName}' destination set to '${updated.destination}'.`, bot: updated });
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message });
   }
@@ -648,13 +667,21 @@ app.get('/api/site-config', (req, res) => {
   res.sendFile(path.join(__dirname, 'api', 'site-config.html'));
 });
 
-// Featured bots (used by our own bot-library overlay).
-app.get('/api/featured-bots', (req, res) => res.json({ bots: [
-  { id: 'hyprlvx-pro-ai', name: 'HYPRLVX Pro AI', file: '/bots/HyprlvxProAI.xml', description: 'Advanced AI-powered signal engine built exclusively for HYPRLVX', category: 'AI Signal', badge: 'EXCLUSIVE' },
-  { id: 'ximi', name: 'XIMI', file: '/bots/XIMI.xml', description: 'Even/Odd digit bot with virtual loss filter and martingale recovery', category: 'Digits', badge: 'POPULAR' },
-  { id: 'bluebeam', name: 'BlueBeam Pro AI', file: '/bots/BlueBeam.xml', description: 'Over/Under digit strategy with dual-window market analysis', category: 'Over/Under', badge: 'HOT' },
-  { id: 'dark-owl', name: 'Dark Owl', file: '/bots/DarkOwl.xml', description: 'Alternating Under 4 / Over 5 strategy with smart martingale', category: 'Over/Under', badge: null },
-]}));
+// Featured bots (dynamically served from published bots store)
+app.get('/api/featured-bots', (req, res) => {
+  jsonCors(res);
+  const published = adminStore.getPublishedBots();
+  res.json({
+    bots: published.map(b => ({
+      id: b.id,
+      name: b.displayName,
+      file: `/bots/${b.file}`,
+      description: b.description,
+      category: b.category,
+      destination: b.destination || 'free'
+    }))
+  });
+});
 
 // Empty/OK stubs for any other /api/* the bundle probes.
 app.all('/api/*', (req, res) => { jsonCors(res); res.json({ ok: true, data: null, status: 'ok' }); });

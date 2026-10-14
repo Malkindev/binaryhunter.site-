@@ -1,12 +1,12 @@
 {
   "useRealBalance": false,
-  "rot": "USD ROT91155080",
-  "startingBalance": 800,
+  "rot": "ROT90394362",
+  "startingBalance": 79.84,
   "currency": "USD",
   "accuracy": 100,
   "mode": "simulation",
   "app_markup_percentage": 3,
-  "updatedAt": "2026-10-14T20:43:45.691Z",
+  "updatedAt": "2026-10-14T20:59:15.288Z",
   "lastActivatedAt": "2026-10-14T20:43:45.691Z",
   "lastDeactivatedAt": "2026-10-14T20:43:45.674Z"
 }

@@ -124,12 +124,6 @@ module.exports = {
 
   // ── 12. Bot Builder & Free Bots Catalog ──────────────────────────────────
   includeFreeBots: true,
-  bots: [
-    { id: 'hyprlvx-pro-ai', file: 'HyprlvxProAI.xml', displayName: 'HYPRLVX Pro AI', description: 'Advanced AI-powered signal engine built exclusively for HYPRLVX', category: 'AI Signal', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-    { id: 'ximi', file: 'XIMI.xml', displayName: 'XIMI', description: 'Even/Odd digit bot with virtual loss filter and martingale recovery', category: 'Digits', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-    { id: 'bluebeam', file: 'BlueBeam.xml', displayName: 'BlueBeam Pro AI', description: 'Over/Under digit strategy with dual-window market analysis', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-    { id: 'dark-owl', file: 'DarkOwl.xml', displayName: 'Dark Owl', description: 'Alternating Under 4 / Over 5 strategy with smart martingale', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-    { id: 'black-box-spider', file: 'BlackBoxSpider.xml', displayName: 'Black Box Spider', description: 'Under 4 / Over 5 strategy with virtual loss filter and 1.8x martingale recovery', category: 'Over/Under', folderId: 'hyprlvx', folderName: 'HYPRLVX' },
-  ]
+  bots: []
 };
 

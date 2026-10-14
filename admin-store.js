@@ -45,36 +45,69 @@ function initMarketingConfig() {
   return initial;
 }
 
+// ─── PERMANENTLY REMOVED BOTS BLOCKLIST ──────────────────────────────────────
+const PERMANENTLY_REMOVED_BOT_IDS = new Set([
+  'hyprlvx-pro-ai',
+  'ximi',
+  'bluebeam',
+  'dark-owl',
+  'black-box-spider'
+]);
+const PERMANENTLY_REMOVED_BOT_FILES = new Set([
+  'hyprlvxproai.xml',
+  'ximi.xml',
+  'bluebeam.xml',
+  'darkowl.xml',
+  'blackboxspider.xml'
+]);
+
+function isRemovedBot(id, filename) {
+  const cleanId = String(id || '').trim().toLowerCase();
+  const cleanFile = String(filename || '').trim().toLowerCase();
+  return PERMANENTLY_REMOVED_BOT_IDS.has(cleanId) || PERMANENTLY_REMOVED_BOT_FILES.has(cleanFile);
+}
+
 function initBotsRegistry() {
   if (fs.existsSync(BOTS_FILE)) {
     try {
-      return JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8'));
+      const bots = JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8'));
+      if (Array.isArray(bots)) {
+        const cleaned = bots.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
+          ...b,
+          destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
+        }));
+        fs.writeFileSync(BOTS_FILE, JSON.stringify(cleaned, null, 2), 'utf8');
+        return cleaned;
+      }
     } catch (e) {
       console.error('Error reading bots-registry.json:', e);
     }
   }
 
   const brandBots = Array.isArray(BRAND.bots) ? BRAND.bots : [];
-  const initial = brandBots.map(b => {
-    let fileSize = 0;
-    try {
-      const stats = fs.statSync(path.join(BOTS_DIR, b.file));
-      fileSize = stats.size;
-    } catch (_) {}
+  const initial = brandBots
+    .filter(b => !isRemovedBot(b.id, b.file))
+    .map(b => {
+      let fileSize = 0;
+      try {
+        const stats = fs.statSync(path.join(BOTS_DIR, b.file));
+        fileSize = stats.size;
+      } catch (_) {}
 
-    return {
-      id: b.id,
-      file: b.file,
-      displayName: b.displayName || b.name,
-      description: b.description || '',
-      category: b.category || 'General',
-      folderId: b.folderId || 'hyprlvx',
-      folderName: b.folderName || 'HYPRLVX',
-      fileSize: fileSize,
-      uploadedAt: new Date().toISOString(),
-      published: true
-    };
-  });
+      return {
+        id: b.id,
+        file: b.file,
+        displayName: b.displayName || b.name,
+        description: b.description || '',
+        category: b.category || 'General',
+        destination: b.destination || 'free',
+        folderId: 'custom',
+        folderName: b.destination === 'store' ? 'Bot Store' : 'Free Bots',
+        fileSize: fileSize,
+        uploadedAt: new Date().toISOString(),
+        published: true
+      };
+    });
 
   fs.writeFileSync(BOTS_FILE, JSON.stringify(initial, null, 2), 'utf8');
   return initial;
@@ -216,7 +249,13 @@ function deactivateMarketing(actor = 'admin', ip = '') {
 function getAllBots() {
   try {
     if (fs.existsSync(BOTS_FILE)) {
-      return JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8'));
+      const bots = JSON.parse(fs.readFileSync(BOTS_FILE, 'utf8'));
+      if (Array.isArray(bots)) {
+        return bots.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
+          ...b,
+          destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
+        }));
+      }
     }
   } catch (e) {
     console.error('Failed reading bots registry:', e);
@@ -224,13 +263,26 @@ function getAllBots() {
   return initBotsRegistry();
 }
 
-function getPublishedBots() {
-  return getAllBots().filter(b => b.published !== false);
+function getPublishedBots(destination = null) {
+  const published = getAllBots().filter(b => b.published !== false);
+  if (!destination) return published;
+  const dest = String(destination).trim().toLowerCase();
+  if (dest === 'free') {
+    return published.filter(b => b.destination === 'free' || b.destination === 'both' || !b.destination);
+  }
+  if (dest === 'store') {
+    return published.filter(b => b.destination === 'store' || b.destination === 'both');
+  }
+  if (dest === 'both') {
+    return published.filter(b => b.destination === 'both');
+  }
+  return published;
 }
 
 function getBotById(id) {
   if (!id) return null;
   const cleanId = String(id).trim().toLowerCase();
+  if (isRemovedBot(cleanId, cleanId)) return null;
   return getAllBots().find(b => b.id.toLowerCase() === cleanId || b.file.toLowerCase() === cleanId);
 }
 
@@ -265,10 +317,8 @@ function validateDbotXml(xmlString) {
   return true;
 }
 
-function saveBot({ id, displayName, description, category, folderName, xmlContent, filename }, actor = 'admin', ip = '') {
+function saveBot({ id, displayName, description, category, destination, folderName, xmlContent, filename }, actor = 'admin', ip = '') {
   validateDbotXml(xmlContent);
-
-  const bots = getAllBots();
 
   // Generate safe ID and filename
   const baseName = (displayName || filename || 'Custom Bot').trim().replace(/[^a-zA-Z0-9_\-\s]/g, '');
@@ -277,6 +327,12 @@ function saveBot({ id, displayName, description, category, folderName, xmlConten
   let safeFilename = (filename || `${baseName.replace(/\s+/g, '')}.xml`).trim();
   if (!safeFilename.toLowerCase().endsWith('.xml')) safeFilename += '.xml';
   safeFilename = path.basename(safeFilename).replace(/[^a-zA-Z0-9_\-\.]/g, '');
+
+  if (isRemovedBot(botId, safeFilename)) {
+    throw new Error('This bot has been permanently removed and cannot be uploaded.');
+  }
+
+  const validDestination = (destination === 'store' || destination === 'both') ? destination : 'free';
 
   // Prevent path traversal
   const targetPath = path.join(BOTS_DIR, safeFilename);
@@ -288,6 +344,7 @@ function saveBot({ id, displayName, description, category, folderName, xmlConten
   fs.writeFileSync(targetPath, xmlContent, 'utf8');
   const stats = fs.statSync(targetPath);
 
+  const bots = getAllBots();
   const existingIndex = bots.findIndex(b => b.id === botId || b.file === safeFilename);
   const botRecord = {
     id: botId,
@@ -295,8 +352,9 @@ function saveBot({ id, displayName, description, category, folderName, xmlConten
     displayName: displayName || baseName,
     description: description || 'Deriv DBot automated strategy',
     category: category || 'General',
+    destination: validDestination,
     folderId: 'custom',
-    folderName: folderName || 'Custom Bots',
+    folderName: folderName || (validDestination === 'store' ? 'Bot Store' : (validDestination === 'both' ? 'Free & Store' : 'Free Bots')),
     fileSize: stats.size,
     uploadedAt: new Date().toISOString(),
     published: true
@@ -304,10 +362,10 @@ function saveBot({ id, displayName, description, category, folderName, xmlConten
 
   if (existingIndex >= 0) {
     bots[existingIndex] = { ...bots[existingIndex], ...botRecord };
-    appendAuditLog('BOT_REPLACED', `Replaced bot '${botRecord.displayName}' (${safeFilename}, ${stats.size} bytes)`, actor, ip);
+    appendAuditLog('BOT_REPLACED', `Replaced bot '${botRecord.displayName}' (${safeFilename}, destination: ${validDestination})`, actor, ip);
   } else {
     bots.push(botRecord);
-    appendAuditLog('BOT_UPLOADED', `Uploaded new bot '${botRecord.displayName}' (${safeFilename}, ${stats.size} bytes)`, actor, ip);
+    appendAuditLog('BOT_UPLOADED', `Uploaded new bot '${botRecord.displayName}' (${safeFilename}, destination: ${validDestination})`, actor, ip);
   }
 
   fs.writeFileSync(BOTS_FILE, JSON.stringify(bots, null, 2), 'utf8');
@@ -327,7 +385,7 @@ function togglePublishBot(id, published, actor = 'admin', ip = '') {
   return bot;
 }
 
-function updateBot(id, { displayName, description, category, folderName }, actor = 'admin', ip = '') {
+function updateBot(id, { displayName, description, category, destination, folderName }, actor = 'admin', ip = '') {
   const bots = getAllBots();
   const bot = bots.find(b => b.id === id);
   if (!bot) {
@@ -338,9 +396,16 @@ function updateBot(id, { displayName, description, category, folderName }, actor
   if (description !== undefined) bot.description = description.trim();
   if (category) bot.category = category.trim();
   if (folderName) bot.folderName = folderName.trim();
+  if (destination) {
+    const d = destination.trim().toLowerCase();
+    if (d === 'free' || d === 'store' || d === 'both') {
+      bot.destination = d;
+      bot.folderName = d === 'store' ? 'Bot Store' : (d === 'both' ? 'Free & Store' : 'Free Bots');
+    }
+  }
 
   fs.writeFileSync(BOTS_FILE, JSON.stringify(bots, null, 2), 'utf8');
-  appendAuditLog('BOT_METADATA_UPDATED', `Updated metadata for bot '${bot.displayName}'`, actor, ip);
+  appendAuditLog('BOT_METADATA_UPDATED', `Updated metadata for bot '${bot.displayName}' (destination: ${bot.destination})`, actor, ip);
   return bot;
 }
 

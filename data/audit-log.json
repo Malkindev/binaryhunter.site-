@@ -1,5 +1,61 @@
 [
   {
+    "id": "audit-1792014673492-a32l",
+    "timestamp": "2026-10-14T21:51:13.492Z",
+    "action": "BOT_DELETED",
+    "details": "Deleted bot 'Hunter Trend PRO' (HunterTrendPRO.xml)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792014673469-megi",
+    "timestamp": "2026-10-14T21:51:13.469Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'Hunter Trend PRO' (HunterTrendPRO.xml, destination: store)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792014573410-ag3l",
+    "timestamp": "2026-10-14T21:49:33.410Z",
+    "action": "BOT_METADATA_UPDATED",
+    "details": "Updated metadata for bot 'L A U R A  T R A D E R  V1' (destination: free)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792014573387-t6ml",
+    "timestamp": "2026-10-14T21:49:33.387Z",
+    "action": "BOT_METADATA_UPDATED",
+    "details": "Updated metadata for bot 'L A U R A  T R A D E R  V1' (destination: both)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792014573363-4kn5",
+    "timestamp": "2026-10-14T21:49:33.363Z",
+    "action": "BOT_METADATA_UPDATED",
+    "details": "Updated metadata for bot 'L A U R A  T R A D E R  V1' (destination: store)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792011555289-2y1u",
+    "timestamp": "2026-10-14T20:59:15.289Z",
+    "action": "MARKETING_CONFIG_SAVED",
+    "details": "Updated ROT: ROT90394362, Balance: 79.84 USD, Markup: 3%",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
+    "id": "audit-1792010927788-s7a8",
+    "timestamp": "2026-10-14T20:48:47.788Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'L A U R A  T R A D E R  V1' (LAURA-TRADERV1.xml, 39294 bytes)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
     "id": "audit-1792010625692-q52c",
     "timestamp": "2026-10-14T20:43:45.692Z",
     "action": "MARKETING_ACTIVATED",
