@@ -32,14 +32,14 @@ module.exports = {
   loaderBackgroundImage: '', // Optional background image URL for loader screen
 
   // ── 5. Theme Colors & Visual Styles ──────────────────────────────────────
-  primaryColor: '#9D0698',
-  accentColor: '#FF00FF',
+  primaryColor: '#00A3E0',
+  accentColor: '#00D2FF',
   secondaryColor: '#0B0F19',
   backgroundColor: '#0A0713',
-  tabActiveColor: '#FF00FF',
-  loginButtonColor: '#FF00FF',
+  tabActiveColor: '#00A3E0',
+  loginButtonColor: '#00A3E0',
   loginTextColor: '#FFFFFF',
-  loadBotButtonColor: '#FF00FF',
+  loadBotButtonColor: '#00A3E0',
   loadBotButtonTextColor: '#FFFFFF',
   tabIconSize: 24,
   tabLabelColor: '#FFFFFF',
@@ -74,9 +74,9 @@ module.exports = {
   //   'bounce'         — Bouncing ball indicator
   //   'basic'          — Classic minimalist circular spinner ring
   loaderStyle: 'orbit_terminal',
-  loaderPrimaryColor: '#00FF66',
-  loaderAccentColor: '#FF5577',
-  loaderHighlightColor: '#22FF88',
+  loaderPrimaryColor: '#00A3E0',
+  loaderAccentColor: '#00D2FF',
+  loaderHighlightColor: '#38BDF8',
   loaderTextColor: '#FFFFFF',
 
 

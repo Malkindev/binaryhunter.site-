@@ -129,6 +129,7 @@
           if (img.classList && img.classList.contains('d-apollo-logo__image--branded')) return;
           seen.push(img);
           if (img.src !== logo) img.src = logo;
+          img.style.objectFit = 'contain';
         });
       } catch (e) {}
     });

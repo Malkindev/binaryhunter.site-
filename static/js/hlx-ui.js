@@ -153,6 +153,7 @@
       document.querySelectorAll('.logo-holder img.d-apollo-logo__image--uploaded,.logo-holder img:first-child,img[data-site-logo]').forEach(function (img) {
         if (img.classList && img.classList.contains('d-apollo-logo__image--branded')) return;
         if (img.src !== logo) img.src = logo;
+        img.style.objectFit = 'contain';
       });
     }
     setFavicon(s.faviconUrl || s.favicon || '');
@@ -166,7 +167,7 @@
   }
 
   function applyCss(s) {
-    var primary = s.primaryColor || '#9d0698';
+    var primary = s.primaryColor || '#00A3E0';
     var accent = s.accentColor || s.tabActiveColor || primary;
     var secondary = s.secondaryColor || '#0b0f19';
     var background = s.backgroundColor || '#0a0713';

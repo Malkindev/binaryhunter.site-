@@ -106,15 +106,15 @@ const HLX_SETTINGS = {
   accuracy: Number(BRAND.accuracy !== undefined ? BRAND.accuracy : 85.0),
 
   // ── Theme Colors ──
-  primaryColor: BRAND.primaryColor || '#9D0698',
+  primaryColor: BRAND.primaryColor || '#00A3E0',
   secondaryColor: BRAND.secondaryColor || '#0B0F19',
-  accentColor: BRAND.accentColor || '#FF00FF',
-  tabActiveColor: BRAND.tabActiveColor || BRAND.accentColor || '#FF00FF',
-  buttonPrimaryColor: BRAND.primaryColor || '#9D0698',
-  buttonLoginColor: BRAND.loginButtonColor || '#FF00FF',
-  loginButtonColor: BRAND.loginButtonColor || '#FF00FF',
+  accentColor: BRAND.accentColor || '#00D2FF',
+  tabActiveColor: BRAND.tabActiveColor || BRAND.accentColor || '#00A3E0',
+  buttonPrimaryColor: BRAND.primaryColor || '#00A3E0',
+  buttonLoginColor: BRAND.loginButtonColor || '#00A3E0',
+  loginButtonColor: BRAND.loginButtonColor || '#00A3E0',
   loginTextColor: BRAND.loginTextColor || '#FFFFFF',
-  loadBotButtonColor: BRAND.loadBotButtonColor || '#FF00FF',
+  loadBotButtonColor: BRAND.loadBotButtonColor || '#00A3E0',
   loadBotButtonTextColor: BRAND.loadBotButtonTextColor || '#FFFFFF',
   tabIconSize: Number(BRAND.tabIconSize || 24),
   tabLabelColor: BRAND.tabLabelColor || '#FFFFFF',
@@ -126,16 +126,16 @@ const HLX_SETTINGS = {
   botCardStyle: BRAND.botCardStyle || 'gradient',
   tabNavigationStyle: BRAND.tabNavigationStyle || 'solid',
   listItemBackgroundGradient: BRAND.botCardStyle === 'gradient'
-    ? `linear-gradient(135deg, #131B2E 0%, ${BRAND.primaryColor} 52%, ${BRAND.accentColor} 100%)`
+    ? `linear-gradient(135deg, #131B2E 0%, ${BRAND.primaryColor || '#00A3E0'} 52%, ${BRAND.accentColor || '#00D2FF'} 100%)`
     : '',
-  listItemHoverGradient: `linear-gradient(135deg, #241640 0%, ${BRAND.primaryColor} 55%, ${BRAND.accentColor} 100%)`,
+  listItemHoverGradient: `linear-gradient(135deg, #0f2b48 0%, ${BRAND.primaryColor || '#00A3E0'} 55%, ${BRAND.accentColor || '#00D2FF'} 100%)`,
 
   // ── Loaders ──
   loaderStyle: BRAND.loaderStyle || 'orbit_terminal',
-  loaderPrimaryColor: BRAND.loaderPrimaryColor || BRAND.primaryColor || '#00FF66',
-  loaderSecondaryColor: BRAND.loaderAccentColor || BRAND.accentColor || '#FF5577',
-  loaderAccentColor: BRAND.loaderAccentColor || BRAND.accentColor || '#FF5577',
-  loaderHighlightColor: BRAND.loaderHighlightColor || BRAND.accentColor || '#22FF88',
+  loaderPrimaryColor: BRAND.loaderPrimaryColor || BRAND.primaryColor || '#00A3E0',
+  loaderSecondaryColor: BRAND.loaderAccentColor || BRAND.accentColor || '#00D2FF',
+  loaderAccentColor: BRAND.loaderAccentColor || BRAND.accentColor || '#00D2FF',
+  loaderHighlightColor: BRAND.loaderHighlightColor || BRAND.accentColor || '#38BDF8',
   loaderTextColor: BRAND.loaderTextColor || '#FFFFFF',
   loaderBackgroundColor: BRAND.backgroundColor || '#0A0713',
   loaderBackgroundImage: BRAND.loaderBackgroundImage || '',

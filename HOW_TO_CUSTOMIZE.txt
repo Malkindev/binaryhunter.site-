@@ -40,11 +40,11 @@ organized into 12 configuration sections:
      - loaderBackgroundImage: Optional loader background image URL
 
   5. Theme Colors & Visual Styles
-     - primaryColor: Main brand color (hex), e.g. "#9D0698"
-     - accentColor: Highlight tone, e.g. "#FF00FF"
+     - primaryColor: Main brand color (hex), e.g. "#00A3E0"
+     - accentColor: Highlight tone, e.g. "#00D2FF"
      - secondaryColor: Surface background dark tone, e.g. "#0B0F19"
      - backgroundColor: Page background, e.g. "#0A0713"
-     - tabActiveColor: Active tab indicator color, e.g. "#FF00FF"
+     - tabActiveColor: Active tab indicator color, e.g. "#00A3E0"
      - loginButtonColor: Login/Sign Up button background color
      - loginTextColor: Login/Sign Up text color
      - loadBotButtonColor: Load Bot button background color

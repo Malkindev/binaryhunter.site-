@@ -57,9 +57,9 @@ window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
             --hlx-purple: %%PRIMARY_COLOR%%;
             --hlx-purple-hi: %%ACCENT_COLOR%%;
             --hlx-purple-lo: %%PRIMARY_COLOR_DARK%%;
-            --hlx-glow: #8b5cf6;
+            --hlx-glow: #00D2FF;
             --hlx-bg: %%BACKGROUND_COLOR%%;
-            --hlx-ink: #e9e4f5;
+            --hlx-ink: #e0f2fe;
             --hlx-font: %%FONT_FAMILY%%;
         }
 
@@ -73,7 +73,7 @@ window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
         /* ── HYPRLVX THEME OVERRIDES ──────────────────────────────────────────
            The build themes from /api/appwrite/site-settings (primaryColor / …).
            These variable overrides re-skin the remaining Deriv design tokens the
-           settings JSON doesn't reach — the HYPRLVX purple/black palette. Loss /
+           settings JSON doesn't reach — the sky blue palette. Loss /
            danger stays red because red carries meaning (a loss), not brand. */
         :root, .theme--dark, .theme--light, body {
             --button-primary-default: %%PRIMARY_COLOR%%;
@@ -81,59 +81,60 @@ window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
             --du-brand-red-coral: %%PRIMARY_COLOR%%;
             --du-button-primary-default: %%PRIMARY_COLOR%%;
             --du-button-primary-hover: %%PRIMARY_COLOR_DARK%%;
-            --du-button-primary-light-default: #723ec322;
-            --du-button-primary-light-hover: #723ec33a;
-            --du-button-tertiary-hover: #723ec31c;
+            --du-button-primary-light-default: rgba(0, 163, 224, 0.14);
+            --du-button-primary-light-hover: rgba(0, 163, 224, 0.24);
+            --du-button-tertiary-hover: rgba(0, 163, 224, 0.12);
             --du-text-red: %%ACCENT_COLOR%%;
             --du-purchase-main-2: %%PRIMARY_COLOR%%;
             --du-purchase-section-2: %%PRIMARY_COLOR_DARK%%;
             /* danger / loss keep a true red (semantic, not brand) */
             --du-status-danger: #ef4444;
             --du-transparent-danger: #ef444422;
-            /* Retint every Deriv blue to the HYPRLVX purple family */
+            /* Retint every Deriv blue to the sky blue family */
             --du-color-blue-1: %%PRIMARY_COLOR%%;
-            --du-color-blue-2: #8b5cf6;
-            --du-color-blue-3: #7c3aed;
-            --du-color-blue-4: #6d28d9;
-            --du-color-blue-5: #5b21b6;
-            --du-color-blue-6: #4c1d95;
+            --du-color-blue-2: #38bdf8;
+            --du-color-blue-3: #0284c7;
+            --du-color-blue-4: #0369a1;
+            --du-color-blue-5: #075985;
+            --du-color-blue-6: #0c4a6e;
             --du-text-blue: %%ACCENT_COLOR%%;
             --du-text-info: %%ACCENT_COLOR%%;
             --du-status-info: %%PRIMARY_COLOR%%;
-            --du-transparent-info: #723ec322;
+            --du-transparent-info: rgba(0, 163, 224, 0.14);
             --du-button-info-default: %%PRIMARY_COLOR%%;
-            --du-button-info-hover: #8b5cf6;
+            --du-button-info-hover: #00D2FF;
             --core-color-solid-blue-1: %%PRIMARY_COLOR%%;
-            --core-color-solid-blue-2: #8b5cf6;
+            --core-color-solid-blue-2: #00D2FF;
             color-scheme: light;
         }
 
         /* ── SINGLE BRAND LOCKUP ──────────────────────────────────────────────
            Restyle the build's native header logo (React-owned, so pure CSS — no
-           JS injection to get reconciled away): cropped owl mark (logoUrl) +
-           a "HYPRLVX" wordmark, with the "powered by deriv" sub-mark removed. */
+           JS injection to get reconciled away): cropped emblem mark (logoUrl) +
+           a "Binaryhunter" wordmark, with the "powered by deriv" sub-mark removed. */
         /* Hide the generated "powered by deriv" wordmark (a data: SVG) and any secondary branded duplicate. */
         .logo-holder img[src^="data:"],
         .logo-holder .d-apollo-logo__image--branded,
         .logo-holder img ~ img {
             display: none !important;
         }
-        /* The owl mark (uploaded logoUrl) — size + glow. */
+        /* The emblem mark (uploaded logoUrl) — size + glow. */
         .logo-holder img:not([src^="data:"]) {
             height: 42px !important; width: auto !important;
-            filter: drop-shadow(0 0 8px rgba(114,62,195,.6));
+            object-fit: contain !important;
+            filter: drop-shadow(0 0 8px rgba(0, 163, 224, 0.6));
             transition: transform .3s cubic-bezier(.16,1,.3,1), filter .3s;
         }
         .d-apollo-logo:hover .logo-holder img:not([src^="data:"]) {
             transform: translateY(-1px) scale(1.05);
-            filter: drop-shadow(0 0 15px rgba(157,110,240,.95));
+            filter: drop-shadow(0 0 15px rgba(0, 210, 255, 0.95));
         }
         .logo-holder { display: flex !important; align-items: center; gap: 10px; }
         .logo-holder::after {
             content: "%%APP_NAME%%";
             font-family: var(--hlx-font), sans-serif; font-size: 2.6rem; letter-spacing: .03em; line-height: 1;
             color: var(--site-tab-active, var(--hlx-purple-hi)); white-space: nowrap;
-            text-shadow: 0 0 10px rgba(114,62,195,.7), 0 0 22px rgba(139,92,246,.4);
+            text-shadow: 0 0 10px rgba(0, 163, 224, 0.7), 0 0 22px rgba(0, 210, 255, 0.5);
         }
 
         /* ── NAVIGATION TABS INTERACTION & RESPONSIVENESS ───────────────────── */
@@ -170,12 +171,10 @@ window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
         [class*="spinner"] svg circle[stroke]:not([stroke="none"]) { stroke: var(--hlx-purple-hi) !important; }
         .dc-loading, [class*="loading__"] path[fill]:not([fill="none"]) { color: var(--hlx-purple-hi) !important; }
 
-        /* Analysis embed (api.binarytool.site) is cross-origin — its blue
-           "Analysistool" title can't be selected directly, so shift the embed's
-           hue toward the HYPRLVX purple. */
-        .iframe-switcher iframe, iframe[src*="binarytool"] { filter: hue-rotate(48deg) saturate(1.05); }
+        /* Analysis embed (api.binarytool.site) is cross-origin */
+        .iframe-switcher iframe, iframe[src*="binarytool"] { filter: none; }
 
-        /* Tradingview / Trading-grid toggle buttons → theme purple (were hard blue) */
+        /* Tradingview / Trading-grid toggle buttons → theme sky blue (were hard blue) */
         [class*="chart"] button[class*="active"], .smartcharts button.active { background: var(--hlx-purple) !important; }
 
         /* ── LIFE: shimmer, glow, hover, reflection ───────────────────────────
@@ -190,7 +189,7 @@ window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
                         filter .28s cubic-bezier(.16,1,.3,1) !important;
         }
 
-        /* primary buttons: lift + purple glow + a light sheen that sweeps across */
+        /* primary buttons: lift + sky blue glow + a light sheen that sweeps across */
         .dc-btn--primary, .auth-actions__primary, button[class*="--primary"] {
             position: relative; overflow: hidden;
         }
@@ -203,7 +202,7 @@ window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
         .dc-btn--primary:hover, .auth-actions__primary:hover,
         button[class*="--primary"]:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 22px rgba(114,62,195,.45), 0 0 0 1px rgba(157,110,240,.35) inset;
+            box-shadow: 0 6px 22px rgba(0, 163, 224, 0.45), 0 0 0 1px rgba(0, 210, 255, 0.35) inset;
         }
         .dc-btn--primary:hover::after, .auth-actions__primary:hover::after,
         button[class*="--primary"]:hover::after {
@@ -214,11 +213,11 @@ window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
         /* cards: lift + glow + a faint top reflection */
         .bot-card:hover, [class*="bot-list__card"]:hover {
             transform: translateY(-3px);
-            box-shadow: 0 14px 40px rgba(114,62,195,.28), 0 0 0 1px rgba(157,110,240,.25);
+            box-shadow: 0 14px 40px rgba(0, 163, 224, 0.28), 0 0 0 1px rgba(0, 210, 255, 0.25);
         }
 
         /* tabs: active/hover glow */
-        [role="tab"]:hover, .dc-tabs__item:hover { filter: drop-shadow(0 0 6px rgba(139,92,246,.5)); }
+        [role="tab"]:hover, .dc-tabs__item:hover { filter: drop-shadow(0 0 6px rgba(0, 163, 224, 0.5)); }
 
         @keyframes hlx-aura { 0%,100%{opacity:.5} 50%{opacity:.9} }
 
