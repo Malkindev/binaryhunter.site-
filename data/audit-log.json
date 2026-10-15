@@ -1,5 +1,13 @@
 [
   {
+    "id": "audit-1792059015994-iucn",
+    "timestamp": "2026-10-15T10:10:15.994Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot '_Over 2 Under 7 Bot' (_Over2Under7Bot.xml, destination: free)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
     "id": "audit-1792054998987-3iha",
     "timestamp": "2026-10-15T09:03:18.987Z",
     "action": "BOT_UPLOADED",

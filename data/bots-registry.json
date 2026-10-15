@@ -102,5 +102,18 @@
     "fileSize": 6879,
     "uploadedAt": "2026-10-15T09:03:18.986Z",
     "published": true
+  },
+  {
+    "id": "over-2-under-7-bot",
+    "file": "_Over2Under7Bot.xml",
+    "displayName": "_Over 2 Under 7 Bot",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "free",
+    "folderId": "custom",
+    "folderName": "Free Bots",
+    "fileSize": 25331,
+    "uploadedAt": "2026-10-15T10:10:15.989Z",
+    "published": true
   }
 ]
