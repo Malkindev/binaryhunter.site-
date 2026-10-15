@@ -349,7 +349,11 @@ app.get('/api/marketing/resolve', (req, res) => {
       startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
       currentBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
       accuracy: Number(mkt.accuracy !== undefined ? mkt.accuracy : 100),
-      mode: mkt.mode || 'simulation',
+      targetMode: targetMode,
+      account_mode: targetMode,
+      mode: targetMode,
+      tradingMode: mkt.mode || 'simulation',
+      marketingMode: mkt.mode || 'simulation',
       app_markup_percentage: Number(mkt.app_markup_percentage || 0)
     });
   } else {
