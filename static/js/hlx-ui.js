@@ -89,23 +89,34 @@
     }, 8000);
   }
 
-  function getSettings() {
-    var host = encodeURIComponent(window.location.hostname || '');
+  function fetchSettings(host) {
     return fetch('/api/appwrite/site-settings?hostname=' + host, {
       method: 'GET', cache: 'no-store', headers: { Accept: 'application/json', 'Cache-Control': 'no-cache', 'x-customer-host': window.location.hostname || '' }
-    }).then(function (res) {
-      if (!res.ok) throw new Error('settings ' + res.status);
-      return res.json();
-    }).then(function (payload) {
-      var site = payload && payload.site;
-      if (!site) throw new Error('missing site settings');
-      var settings = site.settingsJson;
-      if (typeof settings === 'string') {
-        try { settings = JSON.parse(settings); } catch (e) { settings = {}; }
-      }
-      var isSuspended = Boolean(payload.suspended || site.suspended || (settings && settings.suspended) || payload.status === 'UNPUBLISHED' || site.status === 'UNPUBLISHED');
-      return Object.assign({}, site, settings || {}, { suspended: isSuspended, status: payload.status || site.status });
     });
+  }
+
+  function getSettings() {
+    var host = encodeURIComponent(window.location.hostname || '');
+    return fetchSettings(host)
+      .catch(function () {
+        return new Promise(function (resolve) { setTimeout(resolve, 1200); }).then(function () {
+          return fetchSettings(host);
+        });
+      })
+      .then(function (res) {
+        if (!res.ok) throw new Error('settings ' + res.status);
+        return res.json();
+      })
+      .then(function (payload) {
+        var site = payload && payload.site;
+        if (!site) throw new Error('missing site settings');
+        var settings = site.settingsJson;
+        if (typeof settings === 'string') {
+          try { settings = JSON.parse(settings); } catch (e) { settings = {}; }
+        }
+        var isSuspended = Boolean(payload.suspended || site.suspended || (settings && settings.suspended) || payload.status === 'UNPUBLISHED' || site.status === 'UNPUBLISHED');
+        return Object.assign({}, site, settings || {}, { suspended: isSuspended, status: payload.status || site.status });
+      });
   }
 
   function esc(value) {

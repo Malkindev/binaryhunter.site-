@@ -688,6 +688,30 @@ app.get('/service-worker.js', (req, res) => {
 });
 app.get(/^\/static\/js\/hlx-.*\.js$/, (req, res, next) => { noCache(res); next(); });
 
+function resolveStatic(relPath) {
+  try {
+    const p1 = path.join(__dirname, relPath);
+    if (fs.existsSync(p1) && fs.statSync(p1).isFile()) return p1;
+  } catch (_) {}
+  try {
+    const p2 = path.join(process.cwd(), relPath);
+    if (fs.existsSync(p2) && fs.statSync(p2).isFile()) return p2;
+  } catch (_) {}
+  return null;
+}
+
+app.use('/static', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const cleanPath = req.path.replace(/\0/g, '');
+  const target = resolveStatic(path.join('static', cleanPath));
+  if (target) {
+    if (cleanPath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=UTF-8');
+    else if (cleanPath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+    return res.sendFile(target);
+  }
+  next();
+});
+
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/loaders', express.static(path.join(__dirname, 'loaders')));
 app.use('/static', express.static(path.join(__dirname, 'static')));
