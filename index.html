@@ -24,7 +24,17 @@
 try { if (localStorage.getItem('theme') === 'dark') { document.documentElement.classList.remove('theme--light'); document.documentElement.classList.add('theme--dark'); } } catch (_) {}
 window.__DERIV_APP_ID__ = '%%DERIV_APP_ID%%';
 window.__DERIV_NEW_APP_ID__ = '%%DERIV_APP_ID%%';
-window.__DERIV_REDIRECT_URI__ = '%%OAUTH_REDIRECT_URI%%';
+window.__DERIV_REDIRECT_URI__ = (function() {
+  try {
+    if (typeof window !== 'undefined' && window.location) {
+      var h = (window.location.hostname || '').toLowerCase();
+      if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0') {
+        return window.location.origin;
+      }
+    }
+  } catch (_) {}
+  return '%%OAUTH_REDIRECT_URI%%';
+})();
 </script>
 
     <!-- Open Graph -->
