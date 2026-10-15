@@ -30,8 +30,58 @@
   // ─── BLOCKLY SHIELD FOR CUSTOM / THIRD-PARTY STRATEGIES ─────────────────────
   function ensureBlocklyShield() {
     if (typeof window === 'undefined') return;
+    if (window.Blockly) {
+      if (window.Blockly.Field && window.Blockly.Field.prototype && !window.Blockly.Field.prototype.__shielded) {
+        window.Blockly.Field.prototype.__shielded = true;
+        var origGetSvgRoot = window.Blockly.Field.prototype.getSvgRoot;
+        window.Blockly.Field.prototype.getSvgRoot = function () {
+          var root = origGetSvgRoot ? origGetSvgRoot.call(this) : this.fieldGroup_;
+          if (!root && this.sourceBlock_ && typeof this.init === 'function') {
+            try { this.init(); } catch (_) {}
+            root = this.fieldGroup_;
+          }
+          return root || this.fieldGroup_ || this.borderRect_ || null;
+        };
+      }
+
+      try {
+        var blockRendering = window.Blockly.blockRendering;
+        if (blockRendering && blockRendering.Drawer && blockRendering.Drawer.prototype && !blockRendering.Drawer.prototype.__shielded) {
+          blockRendering.Drawer.prototype.__shielded = true;
+          var origLayoutField = blockRendering.Drawer.prototype.layoutField_;
+          if (origLayoutField) {
+            blockRendering.Drawer.prototype.layoutField_ = function (fieldInfo) {
+              try {
+                if (fieldInfo && fieldInfo.field && !fieldInfo.field.getSvgRoot()) {
+                  if (typeof fieldInfo.field.init === 'function') {
+                    try { fieldInfo.field.init(); } catch (_) {}
+                  }
+                }
+                return origLayoutField.call(this, fieldInfo);
+              } catch (err) {
+                console.warn('[hlx-bots] layoutField_ exception safely handled:', err);
+              }
+            };
+          }
+        }
+      } catch (_) {}
+    }
+
     if (window.Blockly && window.Blockly.Blocks) {
       var blocks = window.Blockly.Blocks;
+      if (blocks.trade_definition && blocks.trade_definition.init && !blocks.trade_definition.__paramLabelPatched) {
+        blocks.trade_definition.__paramLabelPatched = true;
+        var origTradeDefInit = blocks.trade_definition.init;
+        blocks.trade_definition.init = function () {
+          origTradeDefInit.call(this);
+          try {
+            if (!this.getField('PARAM_LABEL')) {
+              this.appendDummyInput('PARAM_LABEL_HOLDER').appendField('', 'PARAM_LABEL').setVisible(false);
+            }
+          } catch (_) {}
+        };
+      }
+
       if (!blocks.__shielded) {
         blocks.__shielded = true;
         var knownThirdPartyBlocks = [
@@ -60,7 +110,7 @@
         });
       }
     } else {
-      setTimeout(ensureBlocklyShield, 250);
+      setTimeout(ensureBlocklyShield, 150);
     }
   }
   ensureBlocklyShield();

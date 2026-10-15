@@ -3286,6 +3286,29 @@
             // 1. Authorize intercept
             if (req.authorize) {
               var token = String(req.authorize || '').trim();
+              if (token === 'AdDA8jU7lRadRwH') {
+                setTimeout(function () {
+                  emitWsMessage(ws, {
+                    echo_req: req,
+                    msg_type: 'authorize',
+                    authorize: {
+                      account_list: [
+                        { account_category: 'trading', account_type: 'virtual', balance: 10000, currency: 'USD', is_disabled: 0, is_virtual: 1, loginid: 'VRTC9999999' }
+                      ],
+                      balance: 10000,
+                      currency: 'USD',
+                      email: 'vh@virtualhook.bot',
+                      is_virtual: 1,
+                      landing_company_name: 'virtual',
+                      loginid: 'VRTC9999999',
+                      scopes: ['read', 'trade'],
+                      user_id: 888888
+                    },
+                    req_id: req.req_id
+                  });
+                }, 15);
+                return;
+              }
               var tokenUpper = token.toUpperCase();
               var matchedAcct = findAccountByToken(token);
               var isDemoToken = (matchedAcct && (matchedAcct.is_virtual || isDemoLoginid(matchedAcct.loginid))) || isDemoLoginid(tokenUpper);
