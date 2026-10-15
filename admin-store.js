@@ -267,11 +267,11 @@ let lastRemoteFetchTime = 0;
 
 async function syncWithRemoteRegistry() {
   const now = Date.now();
-  if (now - lastRemoteFetchTime < 30000 && remoteRegistryCache) {
+  if (now - lastRemoteFetchTime < 5000 && remoteRegistryCache) {
     return remoteRegistryCache;
   }
   try {
-    const res = await fetch('https://raw.githubusercontent.com/Malkindev/binaryhunter.site-/main/data/bots-registry.json', { cache: 'no-store' });
+    const res = await fetch(`https://raw.githubusercontent.com/Malkindev/binaryhunter.site-/main/data/bots-registry.json?t=${now}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -420,6 +420,8 @@ function saveBot({ id, displayName, description, category, destination, folderNa
   }
 
   safeWriteJson(BOTS_FILE, bots);
+  remoteRegistryCache = null;
+  lastRemoteFetchTime = 0;
   syncToGit(`Admin: uploaded bot '${botRecord.displayName}' (${validDestination})`);
   return botRecord;
 }
@@ -485,6 +487,8 @@ function deleteBot(id, actor = 'admin', ip = '') {
   } catch (_) {}
 
   safeWriteJson(BOTS_FILE, bots);
+  remoteRegistryCache = null;
+  lastRemoteFetchTime = 0;
   appendAuditLog('BOT_DELETED', `Deleted bot '${bot.displayName}' (${bot.file})`, actor, ip);
   syncToGit(`Admin: deleted bot '${bot.displayName}'`);
   return bot;
@@ -493,6 +497,42 @@ function deleteBot(id, actor = 'admin', ip = '') {
 // ─── GIT DEPLOYMENT & SYNC HELPER ─────────────────────────────────────────────
 let isSyncingGit = false;
 let lastSyncStatus = { ok: true, message: 'Up to date with origin/main', timestamp: new Date().toISOString() };
+
+function pushToGitHubProxy(repoDir) {
+  return new Promise((resolve, reject) => {
+    const http = require('http');
+    const net = require('net');
+    const { spawn } = require('child_process');
+
+    const server = http.createServer();
+    server.on('connect', (req, clientSocket, head) => {
+      const serverSocket = net.connect(443, '140.82.112.3', () => {
+        clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+        serverSocket.write(head);
+        serverSocket.pipe(clientSocket);
+        clientSocket.pipe(serverSocket);
+      });
+      serverSocket.on('error', () => clientSocket.end());
+      clientSocket.on('error', () => serverSocket.end());
+    });
+
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      const child = spawn('git', ['-c', `http.proxy=http://127.0.0.1:${port}`, 'push', 'origin', 'main'], { cwd: repoDir });
+      let out = '';
+      child.stdout.on('data', d => { out += d; });
+      child.stderr.on('data', d => { out += d; });
+      child.on('close', code => {
+        server.close();
+        if (code === 0 || out.includes('Everything up-to-date')) {
+          resolve(out);
+        } else {
+          reject(new Error(out || `git push exited with code ${code}`));
+        }
+      });
+    });
+  });
+}
 
 function syncToGit(commitMessage) {
   if (isSyncingGit) {
@@ -510,23 +550,30 @@ function syncToGit(commitMessage) {
     const repoDir = path.resolve(__dirname);
     const msg = (commitMessage || 'Admin: update bots and configurations').replace(/"/g, '\\"');
 
-    const command = process.platform === 'win32'
-      ? `git add bots/ data/ ; git commit -m "${msg}" ; git push origin main`
-      : `git add bots/ data/ && git commit -m "${msg}" && git push origin main`;
+    const commitCmd = process.platform === 'win32'
+      ? `git add bots/ data/ ; git commit -m "${msg}"`
+      : `git add bots/ data/ && git commit -m "${msg}"`;
 
     const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/sh';
 
-    exec(command, { cwd: repoDir, shell, timeout: 35000 }, (error, stdout, stderr) => {
-      isSyncingGit = false;
-      const combined = (stdout || '') + '\n' + (stderr || '');
-      if (error && !combined.includes('nothing to commit') && !combined.includes('Everything up-to-date')) {
-        console.warn('[GitSync] Push failed:', error.message, combined);
-        lastSyncStatus = { ok: false, message: `Git sync failed: ${error.message}`, error: combined, timestamp: new Date().toISOString() };
+    exec(commitCmd, { cwd: repoDir, shell }, async (commitErr, commitStdout, commitStderr) => {
+      try {
+        const pushResult = await pushToGitHubProxy(repoDir);
+        isSyncingGit = false;
+        console.log('[GitSync] Successfully pushed to origin/main for Vercel deployment:', pushResult);
+        lastSyncStatus = { ok: true, message: 'Successfully deployed to binaryhunter.site via GitHub', details: pushResult, timestamp: new Date().toISOString() };
         resolve(lastSyncStatus);
-      } else {
-        console.log('[GitSync] Successfully pushed to origin/main for Vercel deployment:', combined);
-        lastSyncStatus = { ok: true, message: 'Successfully deployed to binaryhunter.site via GitHub', details: combined, timestamp: new Date().toISOString() };
-        resolve(lastSyncStatus);
+      } catch (pushErr) {
+        isSyncingGit = false;
+        const combined = (commitStdout || '') + '\n' + (commitStderr || '') + '\n' + (pushErr.message || '');
+        if (combined.includes('nothing to commit') || combined.includes('Everything up-to-date')) {
+          lastSyncStatus = { ok: true, message: 'Up to date with origin/main', timestamp: new Date().toISOString() };
+          resolve(lastSyncStatus);
+        } else {
+          console.warn('[GitSync] Push failed:', pushErr.message);
+          lastSyncStatus = { ok: false, message: `Git sync failed: ${pushErr.message}`, error: combined, timestamp: new Date().toISOString() };
+          resolve(lastSyncStatus);
+        }
       }
     });
   });
@@ -583,5 +630,6 @@ module.exports = {
   getAuditLog: () => safeReadJson(AUDIT_FILE, []),
   appendAuditLog,
   authenticateAdmin,
-  checkAdminAuth
+  checkAdminAuth,
+  pushToGitHubProxy
 };

@@ -259,12 +259,16 @@ app.get('/api/appwrite/bots', async (req, res) => {
     ok: true,
     bots: published.map(b => ({
       id: b.id,
-      displayName: b.displayName,
-      description: b.description,
+      name: b.displayName || b.name,
+      botName: b.displayName || b.name,
+      displayName: b.displayName || b.name,
+      description: b.description || 'Deriv DBot automated strategy',
       folderId: b.folderId || 'custom',
       folderName: b.folderName || (b.destination === 'store' ? 'Bot Store' : (b.destination === 'both' ? 'Free & Store' : 'Free Bots')),
       category: b.category || 'General',
       destination: b.destination || 'free',
+      file: b.file,
+      botFile: b.file,
       storageFileId: b.id,
       createdAt: b.uploadedAt || nowIso,
     }))
@@ -279,7 +283,7 @@ app.get('/api/appwrite/bot-xml', (req, res) => {
   const tmpFull = path.join('/tmp', bot.file);
   const filePath = fs.existsSync(full) ? full : (fs.existsSync(tmpFull) ? tmpFull : null);
   if (!filePath) {
-    fetch(`https://raw.githubusercontent.com/Malkindev/binaryhunter.site-/main/bots/${encodeURIComponent(bot.file)}`)
+    fetch(`https://raw.githubusercontent.com/Malkindev/binaryhunter.site-/main/bots/${encodeURIComponent(bot.file)}?t=${Date.now()}`, { cache: 'no-store' })
       .then(async (r) => {
         if (!r.ok) return res.status(404).type('text/plain').send('bot xml not found');
         const xml = await r.text();

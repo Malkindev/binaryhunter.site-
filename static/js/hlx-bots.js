@@ -112,7 +112,7 @@
   }
 
   function primeBotsCache(callback) {
-    origFetch('/api/appwrite/bots', { cache: 'no-store' })
+    origFetch('/api/appwrite/bots?_t=' + Date.now(), { cache: 'no-store' })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (!data || !Array.isArray(data.bots) || !data.bots.length) return;
@@ -142,13 +142,13 @@
       if (/appwrite/i.test(url)) {
         var m = url.match(FILE_VIEW_RE);
         if (m && m[1]) {
-          return withTimeout('/api/appwrite/bot-xml?id=' + encodeURIComponent(m[1]), init);
+          return withTimeout('/api/appwrite/bot-xml?id=' + encodeURIComponent(m[1]) + '&_t=' + Date.now(), init);
         }
       }
 
       /* Free Bot catalog intercept: always provide our local catalog as Appwrite documents */
       if (isAppwriteDocumentsRequest(url)) {
-        return withTimeout('/api/appwrite/bots', {
+        return withTimeout('/api/appwrite/bots?_t=' + Date.now(), {
           method: 'GET',
           cache: 'no-store',
           headers: { Accept: 'application/json' }
@@ -442,9 +442,17 @@
       var nameEl = card.querySelector('.name_text');
       var name = (nameEl ? nameEl.textContent : (card.getAttribute('title') || '')).trim().toLowerCase();
 
+      var normCard = name.replace(/[^a-z0-9]/g, '');
       var match = cachedBotsCatalog.find(function (b) {
-        var bName = String(b.displayName || b.name || b.id || '').trim().toLowerCase();
-        return bName === name || name.indexOf(bName) !== -1 || bName.indexOf(name) !== -1;
+        var bName = String(b.displayName || b.name || '').trim().toLowerCase();
+        var bFile = String(b.file || b.botFile || '').replace(/\.xml$/i, '').trim().toLowerCase();
+        var bId = String(b.id || '').trim().toLowerCase();
+        var normB = bName.replace(/[^a-z0-9]/g, '');
+        var normF = bFile.replace(/[^a-z0-9]/g, '');
+        var normI = bId.replace(/[^a-z0-9]/g, '');
+        return bName === name || bFile === name || bId === name ||
+          (normCard && (normCard === normB || normCard === normF || normCard === normI)) ||
+          name.indexOf(bName) !== -1 || bName.indexOf(name) !== -1;
       });
 
       var dest = (match && match.destination) ? match.destination : 'free';

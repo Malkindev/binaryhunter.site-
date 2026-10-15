@@ -1,24 +1,17 @@
 "use strict";(self.webpackChunkbot=self.webpackChunkbot||[]).push([["958"],{30142:function(e,t,s){s.r(t),s.d(t,{default:()=>oW,ManualTrader:()=>od});var a,n,i=s("85893"),l=s("67294"),r=s("96877"),o=s("6753"),d=s("92198"),c=s("22273"),u=s("12838");let m=e=>{let{is_client_store_initialized:t,landing_company_shortcode:s=" ",currency:a=" ",email:n=" ",is_logged_in:i=" ",loginid:r=" ",residence:o=" ",last_name:m=" ",first_name:h=" "}=e,_=new URLSearchParams(window.location.search),x="reset_password"===u.fr.getQueryParameter("action"),p=_.get("code")&&x,{data:b}=(0,c.Z)(!0),{cs_chat_livechat:v}=b;(0,l.useEffect)(()=>{if(t&&v){var e;null===(e=window.LiveChatWidget)||void 0===e||e.init()}},[t,v]),(0,l.useEffect)(()=>{if(!p&&t){var e;null===(e=window.LiveChatWidget)||void 0===e||e.on("ready",e=>{var t,l,c,u,_,x;"minimized"===e.state.visibility&&(null===(l=window.LiveChatWidget)||void 0===l||l.call("hide"));let{utm_source:p,utm_medium:b,utm_campaign:v}=JSON.parse(d.Z.get("utm_data")||"{}"),j={is_logged_in:String(i),utm_source:p||" ",utm_medium:b||" ",utm_campaign:v||" ",loginid:i?r:" ",landing_company_shortcode:i?s:" ",currency:i?a:" ",residence:i?o:" ",email:i?n:" "};null===(t=window.LiveChatWidget)||void 0===t||t.call("set_session_variables",j),i?(null===(c=window.LiveChatWidget)||void 0===c||c.call("set_customer_email",n),null===(u=window.LiveChatWidget)||void 0===u||u.call("set_customer_name",`${h} ${m}`)):(null===(_=window.LiveChatWidget)||void 0===_||_.call("set_customer_email"," "),null===(x=window.LiveChatWidget)||void 0===x||x.call("set_customer_name"," "))})}},[n,p,r,i,s,t,a,h,m,o])};var h=s("97613"),_=s("27334"),x=s("79907"),p=s("79649"),b=s("68669");
 let _LandingV2 = () => {
   let [e, t] = (0, l.useState)(!1),
-      a = (document.title.split(" - ")[0] || "Matcheshub").trim(),
-      n = [`Welcome to ${a}`, "Your trusted Deriv third party", "Trade with confidence", "Trade smarter, not harder"],
-      [s, r] = (0, l.useState)(0),
-      [o, d] = (0, l.useState)(""),
+      [showApiModal, setShowApiModal] = (0, l.useState)(!1),
+      [showRiskModal, setShowRiskModal] = (0, l.useState)(!1),
+      [tokenInput, setTokenInput] = (0, l.useState)(""),
+      [tokenError, setTokenError] = (0, l.useState)(""),
+      a = "binaryhunter",
       c = [
-        { initials: "PK", name: "Peter Kamau", role: "Volatility Trader \xb7 Kenya", quote: "Fast tools, clean execution, and bots that are simple to launch." },
-        { initials: "GN", name: "Grace Njeri", role: "Part-time Trader \xb7 Kenya", quote: "The bot builder helped me start with confidence." },
-        { initials: "EO", name: "Emmanuel Owusu", role: "Automated Trader \xb7 Ghana", quote: "Everything I need for automation is in one workspace." }
+        { initials: "M", name: "Mercy Wanjiku", quote: "The bots are super reliable and the execution speed is unmatched." },
+        { initials: "I", name: "Ibrahim Diallo", quote: "Best automated trading platform I've used. Clean interface and great strategies." },
+        { initials: "EO", name: "Emmanuel Owusu", quote: "Everything I need for automation is in one workspace." },
+        { initials: "PK", name: "Peter Kamau", quote: "Fast tools, clean execution, and bots that are simple to launch." }
       ];
-
-  (0, l.useEffect)(() => {
-    let e, t = n[s], a = 0;
-    d("");
-    let i = window.setInterval(() => {
-      a += 1, d(t.slice(0, a)), a >= t.length && (window.clearInterval(i), e = window.setTimeout(() => r(e => (e + 1) % n.length), 4e3))
-    }, 110);
-    return () => { window.clearInterval(i), e && window.clearTimeout(e) };
-  }, [s]);
 
   let u = async () => {
     t(!0);
@@ -33,9 +26,20 @@ let _LandingV2 = () => {
     }
   };
 
-  const svgOp = (0, i.jsx)("svg", { stroke: "currentColor", fill: "currentColor", strokeWidth: "0", viewBox: "0 0 512 512", height: "1em", width: "1em", xmlns: "http://www.w3.org/2000/svg", children: (0, i.jsx)("path", { d: "M496 384H64V80c0-8.84-7.16-16-16-16H16C7.16 64 0 71.16 0 80v336c0 17.67 14.33 32 32 32h464c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16zM464 96H345.94c-21.38 0-32.09 25.85-16.97 40.97l32.4 32.4L288 242.75l-73.37-73.37c-12.5-12.5-32.76-12.5-45.25 0l-68.69 68.69c-6.25 6.25-6.25 16.38 0 22.63l22.62 22.62c6.25 6.25 16.38 6.25 22.63 0L192 237.25l73.37 73.37c12.5 12.5 32.76 12.5 45.25 0l96-96 32.4 32.4c15.12 15.12 40.97 4.41 40.97-16.97V112c.01-8.84-7.15-16-15.99-16z" }) });
-  const svgZ1Y = (0, i.jsx)("svg", { stroke: "currentColor", fill: "currentColor", strokeWidth: "0", viewBox: "0 0 448 512", height: "1em", width: "1em", xmlns: "http://www.w3.org/2000/svg", children: (0, i.jsx)("path", { d: "M190.5 66.9l22.2-22.2c9.4-9.4 24.6-9.4 33.9 0L441 239c9.4 9.4 9.4 24.6 0 33.9L246.6 467.3c-9.4 9.4-24.6 9.4-33.9 0l-22.2-22.2c-9.5-9.5-9.3-25 .4-34.3L311.4 296H24c-13.3 0-24-10.7-24-24v-32c0-13.3 10.7-24 24-24h287.4L190.9 101.2c-9.8-9.3-10-24.8-.4-34.3z" }) });
-  const svgINY = (0, i.jsx)("svg", { stroke: "currentColor", fill: "currentColor", strokeWidth: "0", viewBox: "0 0 640 512", height: "1em", width: "1em", xmlns: "http://www.w3.org/2000/svg", children: (0, i.jsx)("path", { d: "M32,224H64V416H32A31.96166,31.96166,0,0,1,0,384V256A31.96166,31.96166,0,0,1,32,224Zm512-48V448a64.06328,64.06328,0,0,1-64,64H160a64.06328,64.06328,0,0,1-64-64V176a79.974,79.974,0,0,1,80-80H288V32a32,32,0,0,1,64,0V96H464A79.974,79.974,0,0,1,544,176ZM264,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,264,256Zm-8,128H192v32h64Zm96,0H288v32h64ZM456,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,456,256Zm-8,128H384v32h64ZM640,256V384a31.96166,31.96166,0,0,1-32,32H576V224h32A31.96166,31.96166,0,0,1,640,256Z" }) });
+  let submitApiToken = (ev) => {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    const tok = tokenInput.trim();
+    if (!tok) {
+      setTokenError("Please enter a valid Deriv API token.");
+      return;
+    }
+    setTokenError("");
+    window.location.assign(window.location.origin + "/?token1=" + encodeURIComponent(tok));
+  };
+
+  const svgKey = (0, i.jsx)("svg", { stroke: "currentColor", fill: "none", strokeWidth: "2", viewBox: "0 0 24 24", height: "1.1em", width: "1.1em", xmlns: "http://www.w3.org/2000/svg", children: (0, i.jsx)("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" }) });
+  const svgTrade = (0, i.jsx)("svg", { stroke: "currentColor", fill: "none", strokeWidth: "2.2", viewBox: "0 0 24 24", height: "1.1em", width: "1.1em", xmlns: "http://www.w3.org/2000/svg", children: (0, i.jsx)("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" }) });
+  const svgBolt = (0, i.jsx)("svg", { stroke: "currentColor", fill: "none", strokeWidth: "2", viewBox: "0 0 24 24", height: "1.1em", width: "1.1em", xmlns: "http://www.w3.org/2000/svg", children: (0, i.jsx)("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M13 10V3L4 14h7v7l9-11h-7z" }) });
 
   return (0, i.jsxs)("main", {
     className: "landing-v2",
@@ -43,20 +47,44 @@ let _LandingV2 = () => {
       (0, i.jsxs)("nav", {
         className: "landing-v2__nav",
         children: [
-          (0, i.jsxs)("a", {
+          (0, i.jsx)("a", {
             className: "landing-v2__brand",
             href: "/",
             "aria-label": "Home",
-            children: [
-              (0, i.jsx)("span", { className: "landing-v2__brand-mark", children: svgOp }),
-              (0, i.jsx)("span", { children: a })
-            ]
+            children: (0, i.jsxs)("div", {
+              className: "landing-v2__brand-col",
+              children: [
+                (0, i.jsx)("span", { className: "landing-v2__brand-title", children: a }),
+                (0, i.jsxs)("span", {
+                  className: "landing-v2__brand-powered",
+                  children: ["powered by ", (0, i.jsx)("span", { className: "landing-v2__deriv-tag", children: "deriv" })]
+                })
+              ]
+            })
           }),
           (0, i.jsxs)("div", {
             className: "landing-v2__nav-actions",
             children: [
-              (0, i.jsx)("button", { type: "button", className: "landing-v2__login", onClick: u, disabled: e, children: e ? "Connecting…" : "Log in" }),
-              (0, i.jsx)("a", { className: "landing-v2__signup", href: (0, _.OGe)(), target: "_blank", rel: "noreferrer", children: "Get started" })
+              (0, i.jsxs)("button", {
+                type: "button",
+                className: "landing-v2__nav-btn-token",
+                onClick: () => setShowApiModal(!0),
+                children: [svgKey, " API Token"]
+              }),
+              (0, i.jsx)("button", {
+                type: "button",
+                className: "landing-v2__nav-btn-login",
+                onClick: u,
+                disabled: e,
+                children: e ? "Connecting…" : "Log In"
+              }),
+              (0, i.jsx)("a", {
+                className: "landing-v2__nav-btn-signup",
+                href: (0, _.OGe)(),
+                target: "_blank",
+                rel: "noreferrer",
+                children: "Get Started"
+              })
             ]
           })
         ]
@@ -66,12 +94,18 @@ let _LandingV2 = () => {
         "aria-hidden": "true",
         children: (0, i.jsxs)("div", {
           children: [
-            (0, i.jsxs)("span", { children: ["↗ Volatility 100 ", (0, i.jsx)("b", { children: "+1.86%" })] }),
-            (0, i.jsxs)("span", { children: ["↘ Crash 500 ", (0, i.jsx)("em", { children: "-0.31%" })] }),
-            (0, i.jsxs)("span", { children: ["↗ Step Index ", (0, i.jsx)("b", { children: "+1.12%" })] }),
-            (0, i.jsxs)("span", { children: ["↗ Volatility 75 ", (0, i.jsx)("b", { children: "+2.48%" })] }),
-            (0, i.jsxs)("span", { children: ["↗ Boom 1000 ", (0, i.jsx)("b", { children: "+0.74%" })] }),
-            (0, i.jsxs)("span", { children: ["↗ Range Break 100 ", (0, i.jsx)("b", { children: "+1.17%" })] })
+            (0, i.jsxs)("span", { children: ["↘ Crash 500 Index ", (0, i.jsx)("em", { children: "-0.94%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Step Index ", (0, i.jsx)("b", { children: "+0.41%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Range Break 100 ", (0, i.jsx)("b", { children: "+1.17%" })] }),
+            (0, i.jsxs)("span", { children: ["↘ Jump 100 Index ", (0, i.jsx)("em", { children: "-0.63%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Volatility 25 ", (0, i.jsx)("b", { children: "+0.88%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Bear Market Index ", (0, i.jsx)("b", { children: "+2.01%" })] }),
+            (0, i.jsxs)("span", { children: ["↘ Crash 500 Index ", (0, i.jsx)("em", { children: "-0.94%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Step Index ", (0, i.jsx)("b", { children: "+0.41%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Range Break 100 ", (0, i.jsx)("b", { children: "+1.17%" })] }),
+            (0, i.jsxs)("span", { children: ["↘ Jump 100 Index ", (0, i.jsx)("em", { children: "-0.63%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Volatility 25 ", (0, i.jsx)("b", { children: "+0.88%" })] }),
+            (0, i.jsxs)("span", { children: ["↗ Bear Market Index ", (0, i.jsx)("b", { children: "+2.01%" })] })
           ]
         })
       }),
@@ -81,33 +115,43 @@ let _LandingV2 = () => {
           (0, i.jsxs)("div", {
             className: "landing-v2__hero-copy",
             children: [
-              (0, i.jsxs)("span", { className: "landing-v2__eyebrow", children: [(0, i.jsx)("i", {}), " Free bots, automation, and trading tools"] }),
-              (0, i.jsxs)("h1", { className: "landing-v2__typed-title", children: [o, (0, i.jsx)("i", { "aria-hidden": "true" })] }),
-              (0, i.jsx)("p", { children: "Build, load, and run automated strategies from one focused workspace designed for everyday traders." }),
-              (0, i.jsxs)("div", {
-                className: "landing-v2__actions",
-                children: [
-                  (0, i.jsxs)("button", { type: "button", onClick: u, disabled: e, children: [e ? "Connecting…" : "Open workspace", " ", svgZ1Y] }),
-                  (0, i.jsx)("a", { href: (0, _.OGe)(), target: "_blank", rel: "noreferrer", children: "Create free account" })
-                ]
+              (0, i.jsx)("h1", {
+                className: "landing-v2__static-hero-title",
+                children: "Free bots ready to load"
+              }),
+              (0, i.jsx)("p", {
+                className: "landing-v2__static-hero-subtitle",
+                children: "Search proven templates, open tutorial guides, and move directly into the bot builder when you are ready to test."
               }),
               (0, i.jsxs)("div", {
-                className: "landing-v2__trust",
+                className: "landing-v2__githinji-actions",
                 children: [
-                  (0, i.jsx)("span", { children: "✓ Free bot tools" }),
-                  (0, i.jsx)("span", { children: "✓ Secure Deriv login" }),
-                  (0, i.jsx)("span", { children: "✓ No card required" })
+                  (0, i.jsxs)("button", {
+                    type: "button",
+                    className: "landing-v2__gbtn-token",
+                    onClick: () => setShowApiModal(!0),
+                    children: [svgKey, " Login with API Token"]
+                  }),
+                  (0, i.jsxs)("button", {
+                    type: "button",
+                    className: "landing-v2__gbtn-primary",
+                    onClick: u,
+                    disabled: e,
+                    children: [svgTrade, e ? " Connecting…" : " Log In and Trade ›"]
+                  }),
+                  (0, i.jsxs)("a", {
+                    href: (0, _.OGe)(),
+                    target: "_blank",
+                    rel: "noreferrer",
+                    className: "landing-v2__gbtn-signup",
+                    children: [svgBolt, " Create Free Account"]
+                  })
                 ]
+              }),
+              (0, i.jsx)("h2", {
+                className: "landing-v2__testimonials-header",
+                children: "What Traders Are Saying"
               })
-            ]
-          }),
-          (0, i.jsxs)("div", {
-            className: "landing-v2__hero-status",
-            "aria-hidden": "true",
-            children: [
-              svgINY,
-              (0, i.jsx)("span", { children: "Bot workspace ready" }),
-              (0, i.jsx)("b", { children: "● Live" })
             ]
           }),
           (0, i.jsx)("div", {
@@ -115,34 +159,109 @@ let _LandingV2 = () => {
             "aria-label": "Trader testimonials",
             children: (0, i.jsx)("div", {
               className: "landing-v2__hero-reviews-track",
-              children: [...c, ...c].map((e, t) => (0, i.jsxs)("article", {
+              children: [...c, ...c].map((item, idx) => (0, i.jsxs)("article", {
+                className: "landing-v2__review-card",
                 children: [
                   (0, i.jsxs)("div", {
                     className: "landing-v2__review-top",
                     children: [
-                      (0, i.jsx)("span", { className: "landing-v2__avatar", children: e.initials }),
+                      (0, i.jsx)("span", { className: "landing-v2__avatar", children: item.initials }),
                       (0, i.jsxs)("div", {
+                        className: "landing-v2__review-details",
                         children: [
-                          (0, i.jsx)("strong", { children: e.name }),
-                          (0, i.jsx)("em", { children: e.role })
+                          (0, i.jsx)("strong", { children: item.name }),
+                          (0, i.jsxs)("span", {
+                            className: "landing-v2__verified-pill",
+                            children: ["Verified Trader ", (0, i.jsx)("b", { children: "✓" })]
+                          })
                         ]
                       }),
-                      (0, i.jsx)("small", { "aria-label": "5 out of 5 stars", children: "★★★★★" })
+                      (0, i.jsx)("small", {
+                        className: "landing-v2__gold-stars",
+                        "aria-label": "5 out of 5 stars",
+                        children: "★★★★★"
+                      })
                     ]
                   }),
-                  (0, i.jsx)("p", { children: e.quote })
+                  (0, i.jsx)("p", { children: item.quote })
                 ]
-              }, `${e.initials}-${t}`))
+              }, `${item.initials}-${idx}`))
             })
           })
         ]
       }),
-      (0, i.jsxs)("footer", {
-        className: "landing-v2__footer",
-        children: [
-          (0, i.jsx)("span", { children: a }),
-          (0, i.jsx)("small", { children: "Automate with confidence." })
-        ]
+      (0, i.jsxs)("button", {
+        type: "button",
+        className: "landing-v2__risk-chip",
+        onClick: () => setShowRiskModal(!0),
+        children: [(0, i.jsx)("span", { children: "⚠️" }), " Risk Disclaimer"]
+      }),
+      showApiModal && (0, i.jsx)("div", {
+        className: "landing-v2__modal-backdrop",
+        onClick: () => setShowApiModal(!1),
+        children: (0, i.jsxs)("div", {
+          className: "landing-v2__modal-card",
+          onClick: (ev) => ev.stopPropagation(),
+          children: [
+            (0, i.jsxs)("div", {
+              className: "landing-v2__modal-header",
+              children: [
+                (0, i.jsxs)("h3", { children: [svgKey, " Login with API Token"] }),
+                (0, i.jsx)("button", { type: "button", className: "landing-v2__modal-close", onClick: () => setShowApiModal(!1), children: "✕" })
+              ]
+            }),
+            (0, i.jsxs)("form", {
+              onSubmit: submitApiToken,
+              children: [
+                (0, i.jsx)("p", { className: "landing-v2__modal-desc", children: "Paste your Deriv API token below to connect your trading account instantly." }),
+                (0, i.jsx)("input", {
+                  type: "text",
+                  className: "landing-v2__modal-input",
+                  placeholder: "e.g. a1-Xxxxxxxxxxxxxxxxxx",
+                  value: tokenInput,
+                  onChange: (ev) => setTokenInput(ev.target.value),
+                  autoFocus: !0
+                }),
+                tokenError && (0, i.jsx)("p", { className: "landing-v2__modal-err", children: tokenError }),
+                (0, i.jsxs)("div", {
+                  className: "landing-v2__modal-btns",
+                  children: [
+                    (0, i.jsx)("button", { type: "button", className: "landing-v2__modal-btn-cancel", onClick: () => setShowApiModal(!1), children: "Cancel" }),
+                    (0, i.jsx)("button", { type: "submit", className: "landing-v2__modal-btn-submit", children: "Connect Account" })
+                  ]
+                })
+              ]
+            })
+          ]
+        })
+      }),
+      showRiskModal && (0, i.jsx)("div", {
+        className: "landing-v2__modal-backdrop",
+        onClick: () => setShowRiskModal(!1),
+        children: (0, i.jsxs)("div", {
+          className: "landing-v2__modal-card",
+          onClick: (ev) => ev.stopPropagation(),
+          children: [
+            (0, i.jsxs)("div", {
+              className: "landing-v2__modal-header",
+              children: [
+                (0, i.jsxs)("h3", { children: ["⚠️ Risk Disclaimer"] }),
+                (0, i.jsx)("button", { type: "button", className: "landing-v2__modal-close", onClick: () => setShowRiskModal(!1), children: "✕" })
+              ]
+            }),
+            (0, i.jsx)("div", {
+              className: "landing-v2__modal-body",
+              children: (0, i.jsx)("p", {
+                style: { lineHeight: "1.7", color: "#cbd5e1", fontSize: "1.3rem" },
+                children: "Trading binary options, synthetic indices, and contracts for difference carries a significant level of risk and may not be suitable for all traders. Automated bots are tools designed to assist in execution and do not guarantee profits. Past performance does not indicate future results. Only trade with capital you can afford to lose."
+              })
+            }),
+            (0, i.jsx)("div", {
+              className: "landing-v2__modal-btns",
+              children: (0, i.jsx)("button", { type: "button", className: "landing-v2__modal-btn-submit", onClick: () => setShowRiskModal(!1), children: "I Understand" })
+            })
+          ]
+        })
       })
     ]
   });
