@@ -115,5 +115,18 @@
     "fileSize": 25331,
     "uploadedAt": "2026-10-15T10:10:15.989Z",
     "published": true
+  },
+  {
+    "id": "patel-with-entry-v2",
+    "file": "PATELWithEntryv2.xml",
+    "displayName": "PATEL With Entry (v2)",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "store",
+    "folderId": "custom",
+    "folderName": "Bot Store",
+    "fileSize": 23428,
+    "uploadedAt": "2026-10-15T10:10:49.057Z",
+    "published": true
   }
 ]

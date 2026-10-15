@@ -1,5 +1,13 @@
 [
   {
+    "id": "audit-1792059049059-f58h",
+    "timestamp": "2026-10-15T10:10:49.059Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'PATEL With Entry (v2)' (PATELWithEntryv2.xml, destination: store)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
     "id": "audit-1792059015994-iucn",
     "timestamp": "2026-10-15T10:10:15.994Z",
     "action": "BOT_UPLOADED",
