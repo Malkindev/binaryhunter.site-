@@ -262,15 +262,55 @@ function deactivateMarketing(actor = 'admin', ip = '') {
 }
 
 // ─── BOTS REPOSITORY ──────────────────────────────────────────────────────────
+let remoteRegistryCache = null;
+let lastRemoteFetchTime = 0;
+
+async function syncWithRemoteRegistry() {
+  const now = Date.now();
+  if (now - lastRemoteFetchTime < 30000 && remoteRegistryCache) {
+    return remoteRegistryCache;
+  }
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/Malkindev/binaryhunter.site-/main/data/bots-registry.json', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        remoteRegistryCache = data.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
+          ...b,
+          destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
+        }));
+        lastRemoteFetchTime = now;
+        return remoteRegistryCache;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
 function getAllBots() {
   const bots = safeReadJson(BOTS_FILE, null);
+  let localBots = [];
   if (Array.isArray(bots)) {
-    return bots.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
+    localBots = bots.filter(b => !isRemovedBot(b.id, b.file)).map(b => ({
       ...b,
       destination: (b.destination === 'store' || b.destination === 'both') ? b.destination : 'free'
     }));
+  } else {
+    localBots = initBotsRegistry();
   }
-  return initBotsRegistry();
+
+  if (Array.isArray(remoteRegistryCache) && remoteRegistryCache.length > 0) {
+    const map = new Map();
+    localBots.forEach(b => map.set(b.id, b));
+    remoteRegistryCache.forEach(b => {
+      if (!map.has(b.id)) {
+        map.set(b.id, b);
+      }
+    });
+    return Array.from(map.values());
+  }
+
+  return localBots;
 }
 
 function getPublishedBots(destination = null) {
@@ -380,6 +420,7 @@ function saveBot({ id, displayName, description, category, destination, folderNa
   }
 
   safeWriteJson(BOTS_FILE, bots);
+  syncToGit(`Admin: uploaded bot '${botRecord.displayName}' (${validDestination})`);
   return botRecord;
 }
 
@@ -393,6 +434,7 @@ function togglePublishBot(id, published, actor = 'admin', ip = '') {
   bot.published = published === true;
   safeWriteJson(BOTS_FILE, bots);
   appendAuditLog(bot.published ? 'BOT_PUBLISHED' : 'BOT_UNPUBLISHED', `${bot.published ? 'Published' : 'Unpublished'} bot '${bot.displayName}' (${bot.file})`, actor, ip);
+  syncToGit(`Admin: ${bot.published ? 'published' : 'unpublished'} bot '${bot.displayName}'`);
   return bot;
 }
 
@@ -417,6 +459,7 @@ function updateBot(id, { displayName, description, category, destination, folder
 
   safeWriteJson(BOTS_FILE, bots);
   appendAuditLog('BOT_METADATA_UPDATED', `Updated metadata for bot '${bot.displayName}' (destination: ${bot.destination})`, actor, ip);
+  syncToGit(`Admin: updated bot '${bot.displayName}'`);
   return bot;
 }
 
@@ -443,7 +486,54 @@ function deleteBot(id, actor = 'admin', ip = '') {
 
   safeWriteJson(BOTS_FILE, bots);
   appendAuditLog('BOT_DELETED', `Deleted bot '${bot.displayName}' (${bot.file})`, actor, ip);
+  syncToGit(`Admin: deleted bot '${bot.displayName}'`);
   return bot;
+}
+
+// ─── GIT DEPLOYMENT & SYNC HELPER ─────────────────────────────────────────────
+let isSyncingGit = false;
+let lastSyncStatus = { ok: true, message: 'Up to date with origin/main', timestamp: new Date().toISOString() };
+
+function syncToGit(commitMessage) {
+  if (isSyncingGit) {
+    console.log('[GitSync] Sync already in progress, avoiding concurrent push.');
+    return Promise.resolve(lastSyncStatus);
+  }
+
+  if (process.env.VERCEL) {
+    return Promise.resolve({ ok: true, message: 'Running on Vercel: git sync skipped.' });
+  }
+
+  isSyncingGit = true;
+  return new Promise((resolve) => {
+    const { exec } = require('child_process');
+    const repoDir = path.resolve(__dirname);
+    const msg = (commitMessage || 'Admin: update bots and configurations').replace(/"/g, '\\"');
+
+    const command = process.platform === 'win32'
+      ? `git add bots/ data/ ; git commit -m "${msg}" ; git push origin main`
+      : `git add bots/ data/ && git commit -m "${msg}" && git push origin main`;
+
+    const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/sh';
+
+    exec(command, { cwd: repoDir, shell, timeout: 35000 }, (error, stdout, stderr) => {
+      isSyncingGit = false;
+      const combined = (stdout || '') + '\n' + (stderr || '');
+      if (error && !combined.includes('nothing to commit') && !combined.includes('Everything up-to-date')) {
+        console.warn('[GitSync] Push failed:', error.message, combined);
+        lastSyncStatus = { ok: false, message: `Git sync failed: ${error.message}`, error: combined, timestamp: new Date().toISOString() };
+        resolve(lastSyncStatus);
+      } else {
+        console.log('[GitSync] Successfully pushed to origin/main for Vercel deployment:', combined);
+        lastSyncStatus = { ok: true, message: 'Successfully deployed to binaryhunter.site via GitHub', details: combined, timestamp: new Date().toISOString() };
+        resolve(lastSyncStatus);
+      }
+    });
+  });
+}
+
+function getSyncStatus() {
+  return lastSyncStatus;
 }
 
 // ─── AUTHENTICATION HELPERS ───────────────────────────────────────────────────
@@ -487,6 +577,9 @@ module.exports = {
   togglePublishBot,
   updateBot,
   deleteBot,
+  syncToGit,
+  getSyncStatus,
+  syncWithRemoteRegistry,
   getAuditLog: () => safeReadJson(AUDIT_FILE, []),
   appendAuditLog,
   authenticateAdmin,

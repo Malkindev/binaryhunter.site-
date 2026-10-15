@@ -9,7 +9,12 @@
   var origFetch = window.fetch.bind(window);
   var FILE_VIEW_RE = /\/storage\/buckets\/[^/]+\/files\/([^/?]+)\/view/;
   var API_TIMEOUT_MS = 8000;
-  var currentCategory = sessionStorage.getItem('bh_bot_subtab') || 'free';
+  var currentCategory = (function () {
+    if (window.location.hash === '#bot_store' || window.location.search.indexOf('tab=bot_store') !== -1) {
+      return 'store';
+    }
+    return sessionStorage.getItem('bh_bot_subtab') || 'free';
+  })();
   var cachedBotsCatalog = [];
 
   function withTimeout(input, init) {
@@ -58,7 +63,7 @@
       botDescription: description,
       category: bot.category || 'General',
       destination: bot.destination || 'free',
-      version: bot.version,
+      version: bot.version || '1.0.0',
       premium: bot.premium === true,
       storageFileId: storageFileId,
       fileId: storageFileId,
@@ -67,38 +72,28 @@
     };
   }
 
-  function replaceBotCatalogResponse(response, originalPayload) {
-    var docs = Array.isArray(originalPayload && originalPayload.documents) ? originalPayload.documents : null;
-    if (!docs || !docs.some(looksLikeBotDocument)) return response;
-
-    return withTimeout('/api/appwrite/bots', {
-      method: 'GET',
-      cache: 'no-store',
-      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' }
-    }).then(function (publicResponse) {
-      if (!publicResponse.ok) return response;
-      return publicResponse.json().then(function (payload) {
-        var publicBots = Array.isArray(payload && payload.bots) ? payload.bots : [];
-        if (!publicBots.length) return response;
-
-        cachedBotsCatalog = publicBots;
-        window.__HLX_BOTS_CATALOG__ = publicBots;
-
-        var replacement = Object.assign({}, originalPayload, {
-          documents: publicBots.map(toAppwriteDocument),
-          total: publicBots.length
-        });
-
+  function primeBotsCache(callback) {
+    origFetch('/api/appwrite/bots', { cache: 'no-store' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data || !Array.isArray(data.bots) || !data.bots.length) return;
+        cachedBotsCatalog = data.bots;
+        window.__HLX_BOTS_CATALOG__ = data.bots;
+        var docs = data.bots.map(toAppwriteDocument);
+        try {
+          var h = window.location.hostname;
+          var clean = h.replace(/^www\./i, '');
+          localStorage.setItem('bots.cache.' + h, JSON.stringify(docs));
+          localStorage.setItem('bots.cache.' + clean, JSON.stringify(docs));
+          localStorage.setItem('bots.cache.www.' + clean, JSON.stringify(docs));
+        } catch (_) {}
+        if (typeof callback === 'function') callback(data.bots);
         setTimeout(applyCategoryFilterAndSubnav, 50);
-
-        return new Response(JSON.stringify(replacement), {
-          status: response.status,
-          statusText: response.statusText,
-          headers: new Headers({ 'Content-Type': 'application/json' })
-        });
-      }).catch(function () { return response; });
-    }).catch(function () { return response; });
+      }).catch(function () {});
   }
+
+  // Eagerly prime bot cache on script load
+  primeBotsCache();
 
   window.fetch = function (input, init) {
     try {
@@ -112,13 +107,38 @@
         }
       }
 
-      /* Free Bot catalog intercept */
+      /* Free Bot catalog intercept: always provide our local catalog as Appwrite documents */
       if (isAppwriteDocumentsRequest(url)) {
-        return withTimeout(input, init).then(function (response) {
-          if (!response.ok) return response;
-          return response.clone().json().then(function (payload) {
-            return replaceBotCatalogResponse(response, payload);
-          }).catch(function () { return response; });
+        return withTimeout('/api/appwrite/bots', {
+          method: 'GET',
+          cache: 'no-store',
+          headers: { Accept: 'application/json' }
+        }).then(function (res) {
+          if (!res.ok) throw new Error('Local bots API responded with ' + res.status);
+          return res.json().then(function (payload) {
+            var bots = Array.isArray(payload && payload.bots) ? payload.bots : [];
+            cachedBotsCatalog = bots;
+            window.__HLX_BOTS_CATALOG__ = bots;
+            var docs = bots.map(toAppwriteDocument);
+            try {
+              var h = window.location.hostname;
+              var clean = h.replace(/^www\./i, '');
+              localStorage.setItem('bots.cache.' + h, JSON.stringify(docs));
+              localStorage.setItem('bots.cache.' + clean, JSON.stringify(docs));
+              localStorage.setItem('bots.cache.www.' + clean, JSON.stringify(docs));
+            } catch (_) {}
+            setTimeout(applyCategoryFilterAndSubnav, 50);
+            return new Response(JSON.stringify({
+              total: docs.length,
+              documents: docs
+            }), {
+              status: 200,
+              statusText: 'OK',
+              headers: new Headers({ 'Content-Type': 'application/json' })
+            });
+          });
+        }).catch(function () {
+          return withTimeout(input, init);
         });
       }
 

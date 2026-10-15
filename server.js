@@ -248,8 +248,11 @@ app.get('/api/appwrite/site-entitlement', (req, res) => {
   }});
 });
 
-app.get('/api/appwrite/bots', (req, res) => {
+app.get('/api/appwrite/bots', async (req, res) => {
   jsonCors(res);
+  try {
+    await adminStore.syncWithRemoteRegistry();
+  } catch (_) {}
   const dest = req.query.destination || null;
   const published = adminStore.getPublishedBots(dest);
   res.json({
@@ -275,7 +278,17 @@ app.get('/api/appwrite/bot-xml', (req, res) => {
   const full = path.join(BOT_DIR, bot.file);
   const tmpFull = path.join('/tmp', bot.file);
   const filePath = fs.existsSync(full) ? full : (fs.existsSync(tmpFull) ? tmpFull : null);
-  if (!filePath) return res.status(404).type('text/plain').send('bot xml not found');
+  if (!filePath) {
+    fetch(`https://raw.githubusercontent.com/Malkindev/binaryhunter.site-/main/bots/${encodeURIComponent(bot.file)}`)
+      .then(async (r) => {
+        if (!r.ok) return res.status(404).type('text/plain').send('bot xml not found');
+        const xml = await r.text();
+        res.setHeader('Content-Type', 'application/xml');
+        res.send(xml);
+      })
+      .catch(() => res.status(404).type('text/plain').send('bot xml not found'));
+    return;
+  }
   fs.readFile(filePath, 'utf8', (err, xml) => {
     if (err) return res.status(404).type('text/plain').send('bot xml not found');
     res.setHeader('Content-Type', 'application/xml');
@@ -586,6 +599,23 @@ app.post('/api/admin/marketing/deactivate', requireAdminAuth, (req, res) => {
 app.get('/api/admin/audit-log', requireAdminAuth, (req, res) => {
   jsonCors(res); noCache(res);
   res.json({ ok: true, logs: adminStore.getAuditLog() });
+});
+
+// 6. Live GitHub/Vercel Sync
+app.post('/api/admin/sync-live', requireAdminAuth, async (req, res) => {
+  jsonCors(res); noCache(res);
+  try {
+    const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
+    const result = await adminStore.syncToGit(`Admin manual sync by ${actor}`);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.get('/api/admin/sync-status', requireAdminAuth, (req, res) => {
+  jsonCors(res); noCache(res);
+  res.json(adminStore.getSyncStatus());
 });
 
 
