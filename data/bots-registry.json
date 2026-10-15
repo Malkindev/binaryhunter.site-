@@ -63,5 +63,18 @@
     "fileSize": 47631,
     "uploadedAt": "2026-10-15T08:02:04.845Z",
     "published": true
+  },
+  {
+    "id": "over1-under8-switcher-",
+    "file": "Over1under8switcher.xml",
+    "displayName": "Over1 under8 switcher 🚀",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "store",
+    "folderId": "custom",
+    "folderName": "Bot Store",
+    "fileSize": 27994,
+    "uploadedAt": "2026-10-15T08:02:43.311Z",
+    "published": true
   }
 ]
