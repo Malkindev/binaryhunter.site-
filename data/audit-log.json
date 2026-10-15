@@ -1,5 +1,13 @@
 [
   {
+    "id": "audit-1792054804868-ueal",
+    "timestamp": "2026-10-15T09:00:04.868Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'Under 8 Under 5' (Under8Under5.xml, destination: store)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
     "id": "audit-1792051363313-42yj",
     "timestamp": "2026-10-15T08:02:43.313Z",
     "action": "BOT_UPLOADED",

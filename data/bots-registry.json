@@ -76,5 +76,18 @@
     "fileSize": 27994,
     "uploadedAt": "2026-10-15T08:02:43.311Z",
     "published": true
+  },
+  {
+    "id": "under-8-under-5",
+    "file": "Under8Under5.xml",
+    "displayName": "Under 8 Under 5",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "store",
+    "folderId": "custom",
+    "folderName": "Bot Store",
+    "fileSize": 69275,
+    "uploadedAt": "2026-10-15T09:00:04.867Z",
+    "published": true
   }
 ]
