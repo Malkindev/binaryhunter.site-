@@ -89,5 +89,18 @@
     "fileSize": 69275,
     "uploadedAt": "2026-10-15T09:00:04.867Z",
     "published": true
+  },
+  {
+    "id": "trade-script",
+    "file": "tradescript.xml",
+    "displayName": "trade script",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "store",
+    "folderId": "custom",
+    "folderName": "Bot Store",
+    "fileSize": 6879,
+    "uploadedAt": "2026-10-15T09:03:18.986Z",
+    "published": true
   }
 ]
