@@ -376,17 +376,28 @@ window.__DERIV_REDIRECT_URI__ = (function() {
                 transform: none !important;
             }
         }
+
+        /* ── AUTO-DISMISS STUCK BLOCKLY LOADER ONCE CANVAS IS READY ── */
+        body:has(#scratch_div .blocklyBlockCanvas) .bot__loading,
+        body:has(#scratch_div .blocklyBlockCanvas) [data-testid="blockly-loader"],
+        body:has(.blocklySvg .blocklyDraggable) .bot__loading,
+        body:has(.blocklySvg .blocklyDraggable) [data-testid="blockly-loader"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            opacity: 0 !important;
+        }
     </style>
 
     <!-- HYPRLVX overlays — must run before the bundle opens sockets / patches fetch -->
-    <script defer src="/static/js/hlx-ws.js?v=20261015-v17"></script>
-    <script defer src="/static/js/hlx-bots.js?v=20261015-v17"></script>
+    <script defer src="/static/js/hlx-ws.js?v=20261015-v18"></script>
+    <script defer src="/static/js/hlx-bots.js?v=20261015-v18"></script>
 
     <!-- App build (deferred, executes in order) -->
     <script defer src="/static/js/lib-react.7e3f0832.js"></script>
     <script defer src="/static/js/lib-router.13959373.js"></script>
-    <script defer src="/static/js/160.abd80728.js?v=20261015-v17"></script>
-    <script defer src="/static/js/index.2511c10a.js?v=20261015-v17"></script>
+    <script defer src="/static/js/160.abd80728.js?v=20261015-v18"></script>
+    <script defer src="/static/js/index.2511c10a.js?v=20261015-v18"></script>
     <link href="/static/css/160.96116a77.css" rel="stylesheet">
     <link href="/static/css/index.9ed654a3.css" rel="stylesheet">
 

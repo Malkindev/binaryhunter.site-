@@ -116,6 +116,32 @@
   ensureBlocklyShield();
   window.addEventListener('load', ensureBlocklyShield);
 
+  // ─── WATCHDOG: AUTO-CLEAR STUCK "LOADING BLOCKLY..." OVERLAYS ──────────────
+  function watchBlocklyLoader() {
+    function dismissIfReady() {
+      var loaders = document.querySelectorAll('[data-testid="blockly-loader"], .bot__loading');
+      if (!loaders || !loaders.length) return;
+      var hasBlocks = document.querySelector('#scratch_div svg, .blocklySvg, .blocklyBlockCanvas, .blocklyDraggable');
+      if (hasBlocks) {
+        loaders.forEach(function (el) {
+          if (el && el.style) {
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('visibility', 'hidden', 'important');
+            el.style.setProperty('pointer-events', 'none', 'important');
+            try { el.remove(); } catch (_) {}
+          }
+        });
+      }
+    }
+    setInterval(dismissIfReady, 200);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', dismissIfReady);
+    } else {
+      dismissIfReady();
+    }
+  }
+  watchBlocklyLoader();
+
   function looksLikeBotDocument(doc) {
     if (!doc || typeof doc !== 'object') return false;
     var keys = Object.keys(doc).map(function (key) { return key.toLowerCase(); });
