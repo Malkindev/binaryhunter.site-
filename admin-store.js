@@ -591,8 +591,9 @@ function pushToGitHubProxy(repoDir) {
     const { spawn } = require('child_process');
 
     const server = http.createServer();
+    const targetHost = '140.82.112.4';
     server.on('connect', (req, clientSocket, head) => {
-      const serverSocket = net.connect(443, '140.82.112.3', () => {
+      const serverSocket = net.connect(443, targetHost, () => {
         clientSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
         serverSocket.write(head);
         serverSocket.pipe(clientSocket);
