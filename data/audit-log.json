@@ -1,5 +1,13 @@
 [
   {
+    "id": "audit-1792051324846-bked",
+    "timestamp": "2026-10-15T08:02:04.846Z",
+    "action": "BOT_UPLOADED",
+    "details": "Uploaded new bot 'Magic Recovery (1)' (MagicRecovery1.xml, destination: free)",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
     "id": "audit-1792018044414-6g8r",
     "timestamp": "2026-10-14T22:47:24.414Z",
     "action": "MARKETING_CONFIG_SAVED",

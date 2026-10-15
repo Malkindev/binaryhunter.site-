@@ -50,5 +50,18 @@
     "fileSize": 782658,
     "uploadedAt": "2026-10-14T22:44:08.850Z",
     "published": true
+  },
+  {
+    "id": "magic-recovery-1",
+    "file": "MagicRecovery1.xml",
+    "displayName": "Magic Recovery (1)",
+    "description": "Deriv DBot strategy",
+    "category": "General",
+    "destination": "free",
+    "folderId": "custom",
+    "folderName": "Free Bots",
+    "fileSize": 47631,
+    "uploadedAt": "2026-10-15T08:02:04.845Z",
+    "published": true
   }
 ]
