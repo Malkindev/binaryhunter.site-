@@ -1076,15 +1076,41 @@
     }, true);
   }
 
-  function tick(){repairAuth(publicSettings||{});bootstrapPublicApi();enforceAiBadgePosition();enforceScannerInputBounds();enableDirectStakeInput();setupKeypadPhysicalKeyboardBridge();}
+  // ─── MALICIOUS REDIRECT SHIELD & "LOAD HERE" SUPPRESSION ─────────────────────
+  function suppressLoadHereAndExternalRedirects() {
+    var badButtons = document.querySelectorAll('.alert-popup-button.load-here, [class*="alert-popup"] .load-here');
+    badButtons.forEach(function (btn) {
+      if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var target = e.target;
+    if (!target) return;
+    var badBtn = target.closest('.alert-popup-button.load-here, .load-here, a[href*="binarytool"]');
+    if (badBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      var container = badBtn.closest('.alert-popup-overlay, [class*="alert-popup"]');
+      if (container && container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
+      return false;
+    }
+  }, true);
+
+  function tick(){suppressLoadHereAndExternalRedirects();repairAuth(publicSettings||{});bootstrapPublicApi();enforceAiBadgePosition();enforceScannerInputBounds();enableDirectStakeInput();setupKeypadPhysicalKeyboardBridge();}
   function run(){loadSettings().then(function(){tick();var tries=0,t=setInterval(function(){tick();if(++tries>=40)clearInterval(t);},500);});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
   window.addEventListener('load',run);
   try{
     new MutationObserver(function(){
+      suppressLoadHereAndExternalRedirects();
       if(isRepairing||observerTimer)return;
       observerTimer=setTimeout(function(){
         observerTimer=null;
+        suppressLoadHereAndExternalRedirects();
         repairAuth(publicSettings||{});
         enforceAiBadgePosition();
         enforceScannerInputBounds();

@@ -131,25 +131,7 @@
                         <next>
                           <block type="trade_definition_restartonerror" id="/nril6[9_l@oFW^6@in2" deletable="false" movable="false">
                             <field name="RESTARTONERROR">TRUE</field>
-                            <next>
-                              <block type="trade_definition_speedtrading" id="inj_speed_ewiu8klmw" deletable="false" movable="false">
-                                <field name="SPEED_TRADING">FALSE</field>
-                                <next>
-                                  <block type="trade_definition_bulkcount" id="inj_bulk_8rqeh83n4" deletable="false" movable="false">
-                                    <field name="BULK_COUNT">1</field>
-                                    <next>
-                                      <block type="trade_definition_volatilityfilter" id="inj_vol_lo9mhivm2" deletable="false" movable="false">
-                                        <field name="ENABLED_LIST">DISABLE</field>
-                                        <field name="THRESHOLD">70</field>
-                                        <field name="STRATEGY_LIST">EVEN</field>
-                                        <field name="TICK_COUNT">15</field>
-                                        <field name="BARRIER_DIGIT">5</field>
-                                      </block>
-                                    </next>
-                                  </block>
-                                </next>
-                              </block>
-                            </next>
+
                           </block>
                         </next>
                       </block>

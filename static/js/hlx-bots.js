@@ -27,6 +27,45 @@
     return origFetch(input, nextInit).finally(function () { clearTimeout(timer); });
   }
 
+  // ─── BLOCKLY SHIELD FOR CUSTOM / THIRD-PARTY STRATEGIES ─────────────────────
+  function ensureBlocklyShield() {
+    if (typeof window === 'undefined') return;
+    if (window.Blockly && window.Blockly.Blocks) {
+      var blocks = window.Blockly.Blocks;
+      if (!blocks.__shielded) {
+        blocks.__shielded = true;
+        var knownThirdPartyBlocks = [
+          'trade_definition_speedtrading',
+          'trade_definition_bulkcount',
+          'trade_definition_volatilityfilter',
+          'purchase',
+          'apollo_purchase'
+        ];
+        knownThirdPartyBlocks.forEach(function (type) {
+          if (!blocks[type]) {
+            blocks[type] = {
+              init: function () {
+                try {
+                  this.jsonInit({
+                    message0: '%1',
+                    args0: [{ type: 'field_label', text: type }],
+                    nextStatement: null,
+                    previousStatement: null,
+                    colour: 160
+                  });
+                } catch (_) {}
+              }
+            };
+          }
+        });
+      }
+    } else {
+      setTimeout(ensureBlocklyShield, 250);
+    }
+  }
+  ensureBlocklyShield();
+  window.addEventListener('load', ensureBlocklyShield);
+
   function looksLikeBotDocument(doc) {
     if (!doc || typeof doc !== 'object') return false;
     var keys = Object.keys(doc).map(function (key) { return key.toLowerCase(); });
