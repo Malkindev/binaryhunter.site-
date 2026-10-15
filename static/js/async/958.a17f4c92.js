@@ -7,10 +7,11 @@ let _LandingV2 = () => {
       [tokenError, setTokenError] = (0, l.useState)(""),
       a = "binaryhunter",
       c = [
-        { initials: "M", name: "Mercy Wanjiku", quote: "The bots are super reliable and the execution speed is unmatched." },
-        { initials: "I", name: "Ibrahim Diallo", quote: "Best automated trading platform I've used. Clean interface and great strategies." },
-        { initials: "EO", name: "Emmanuel Owusu", quote: "Everything I need for automation is in one workspace." },
-        { initials: "PK", name: "Peter Kamau", quote: "Fast tools, clean execution, and bots that are simple to launch." }
+        { initials: "KK", name: "Kevin Kiprop", quote: "The digit switcher and recovery bots run smoothly. Game changer for synthetic indices." },
+        { initials: "FC", name: "Faith Cherono", quote: "Cleanest Deriv bot workspace I've used. Loading bots directly from the store is instant." },
+        { initials: "DO", name: "David Ochieng", quote: "Consistent execution with zero latency on Volatility and Crash/Boom pairs." },
+        { initials: "BM", name: "Brian Mutua", quote: "The strategy builder and automated risk controls made trading much easier to master." },
+        { initials: "SA", name: "Samuel Adebayo", quote: "Super reliable bot automation. Excellent platform for testing and running strategies." }
       ];
 
   let u = async () => {
