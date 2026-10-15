@@ -1,12 +1,26 @@
 {
-  "useRealBalance": false,
-  "rot": "ROT90394362",
-  "startingBalance": 79.84,
-  "currency": "USD",
-  "accuracy": 50,
-  "mode": "simulation",
-  "app_markup_percentage": 3,
-  "updatedAt": "2026-10-14T22:47:24.411Z",
-  "lastActivatedAt": "2026-10-14T20:43:45.691Z",
-  "lastDeactivatedAt": "2026-10-14T20:43:45.674Z"
+  "real": {
+    "useRealBalance": false,
+    "rot": "ROT90394362",
+    "startingBalance": 79.84,
+    "currency": "USD",
+    "accuracy": 20,
+    "mode": "simulation",
+    "app_markup_percentage": 3,
+    "updatedAt": "2026-10-15T11:59:34.868Z",
+    "lastActivatedAt": "2026-10-14T20:43:45.691Z",
+    "lastDeactivatedAt": "2026-10-14T20:43:45.674Z"
+  },
+  "demo": {
+    "useRealBalance": true,
+    "rot": "VRTC9999999",
+    "startingBalance": 10000,
+    "currency": "USD",
+    "accuracy": 100,
+    "mode": "simulation",
+    "app_markup_percentage": 0,
+    "updatedAt": "2026-10-15T12:52:33.757Z",
+    "lastActivatedAt": "2026-10-15T12:52:33.704Z",
+    "lastDeactivatedAt": "2026-10-15T12:52:33.757Z"
+  }
 }

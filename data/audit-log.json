@@ -1,5 +1,29 @@
 [
   {
+    "id": "audit-1792068753760-vp2p",
+    "timestamp": "2026-10-15T12:52:33.760Z",
+    "action": "MARKETING_DEACTIVATED",
+    "details": "Deactivated Marketing profile for [DEMO]. Restored genuine Deriv account behavior.",
+    "actor": "test",
+    "ip": "127.0.0.1"
+  },
+  {
+    "id": "audit-1792068753706-8aay",
+    "timestamp": "2026-10-15T12:52:33.706Z",
+    "action": "MARKETING_ACTIVATED",
+    "details": "Activated Marketing profile for [DEMO] ROT: VRTC9999999 (Simulation mode)",
+    "actor": "test",
+    "ip": "127.0.0.1"
+  },
+  {
+    "id": "audit-1792065574874-9nuc",
+    "timestamp": "2026-10-15T11:59:34.874Z",
+    "action": "MARKETING_CONFIG_SAVED",
+    "details": "Updated ROT: ROT90394362, Balance: 79.84 USD, Markup: 3%",
+    "actor": "admin",
+    "ip": "::1"
+  },
+  {
     "id": "audit-1792059049059-f58h",
     "timestamp": "2026-10-15T10:10:49.059Z",
     "action": "BOT_UPLOADED",

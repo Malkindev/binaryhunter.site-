@@ -61,25 +61,72 @@ const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'binaryhunter2026';
 
 // ─── INITIAL SEEDING ──────────────────────────────────────────────────────────
-function initMarketingConfig() {
-  const existing = safeReadJson(MARKETING_FILE, null);
-  if (existing) return existing;
+function isDemoLoginid(id) {
+  if (!id) return false;
+  const u = String(id).trim().toUpperCase();
+  return u.startsWith('VRTC') || u.startsWith('VRT') || u.startsWith('DOT') || u.startsWith('DEM') || u.startsWith('VRW');
+}
 
-  const initial = {
+function normalizeMode(mode) {
+  const m = String(mode || '').trim().toLowerCase();
+  if (m === 'demo' || m === 'virtual') return 'demo';
+  return 'real';
+}
+
+function normalizeMarketingConfig(raw) {
+  const defaultReal = {
     useRealBalance: BRAND.useRealBalance === true,
-    rot: BRAND.rot || 'USD ROT91155080',
+    rot: BRAND.rot || 'ROT90394362',
     startingBalance: Number(BRAND.startingBalance || 800.00),
     currency: BRAND.currency || 'USD',
     accuracy: Number(BRAND.accuracy !== undefined ? BRAND.accuracy : 100),
-    mode: BRAND.mode || 'simulation',
+    mode: 'simulation',
     app_markup_percentage: Number(BRAND.app_markup_percentage || BRAND.appMarkupPercentage || 3),
     updatedAt: new Date().toISOString(),
     lastActivatedAt: BRAND.useRealBalance === false ? new Date().toISOString() : null,
     lastDeactivatedAt: BRAND.useRealBalance === true ? new Date().toISOString() : null
   };
 
-  safeWriteJson(MARKETING_FILE, initial);
-  return initial;
+  const defaultDemo = {
+    useRealBalance: true,
+    rot: 'VRTC9999999',
+    startingBalance: 10000.00,
+    currency: 'USD',
+    accuracy: 100,
+    mode: 'simulation',
+    app_markup_percentage: 0,
+    updatedAt: new Date().toISOString(),
+    lastActivatedAt: null,
+    lastDeactivatedAt: null
+  };
+
+  if (!raw || typeof raw !== 'object') {
+    return { real: defaultReal, demo: defaultDemo };
+  }
+
+  // If already structured with real and demo
+  if (raw.real && typeof raw.real === 'object' && raw.demo && typeof raw.demo === 'object') {
+    return {
+      real: { ...defaultReal, ...raw.real },
+      demo: { ...defaultDemo, ...raw.demo }
+    };
+  }
+
+  // Legacy flat format migration: raw is the real config
+  const migratedReal = { ...defaultReal, ...raw };
+  delete migratedReal.real;
+  delete migratedReal.demo;
+  return {
+    real: migratedReal,
+    demo: defaultDemo
+  };
+}
+
+function initMarketingConfig() {
+  const existing = safeReadJson(MARKETING_FILE, null);
+  const normalized = normalizeMarketingConfig(existing);
+  safeWriteJson(MARKETING_FILE, normalized);
+  return normalized;
 }
 
 // ─── PERMANENTLY REMOVED BOTS BLOCKLIST ──────────────────────────────────────
@@ -182,14 +229,27 @@ function appendAuditLog(action, details, actor = 'admin', ip = '') {
 }
 
 // ─── MARKETING REPOSITORY ─────────────────────────────────────────────────────
-function getMarketingConfig() {
+function getMarketingConfig(mode = 'real') {
   const cfg = safeReadJson(MARKETING_FILE, null);
-  if (cfg) return cfg;
-  return initMarketingConfig();
+  const normalized = normalizeMarketingConfig(cfg);
+  if (mode === 'all') {
+    return normalized;
+  }
+  const targetMode = normalizeMode(mode);
+  const modeData = normalized[targetMode];
+  return {
+    ...modeData,
+    activeMode: targetMode,
+    real: normalized.real,
+    demo: normalized.demo
+  };
 }
 
-function saveMarketingConfig(data, actor = 'admin', ip = '') {
-  const current = getMarketingConfig();
+function saveMarketingConfig(data, actor = 'admin', ip = '', mode = null) {
+  const currentAll = normalizeMarketingConfig(safeReadJson(MARKETING_FILE, null));
+  const detectedMode = data.mode_type || data.account_mode || data.mode || mode || (isDemoLoginid(data.rot) ? 'demo' : 'real');
+  const targetMode = normalizeMode(detectedMode);
+  const current = currentAll[targetMode];
 
   // Field validation
   const rot = String(data.rot !== undefined ? data.rot : current.rot).trim();
@@ -213,52 +273,78 @@ function saveMarketingConfig(data, actor = 'admin', ip = '') {
     throw new Error(`Currency ${currency} is not supported. Allowed: ${allowedCurrencies.join(', ')}`);
   }
 
-  const updated = {
+  const accuracy = Number(data.accuracy !== undefined ? data.accuracy : current.accuracy);
+
+  const updatedModeConfig = {
     ...current,
     rot: rot,
     startingBalance: startingBalance,
     currency: currency,
-    accuracy: Number(data.accuracy !== undefined ? data.accuracy : current.accuracy),
+    accuracy: isNaN(accuracy) ? 100 : Math.min(100, Math.max(0, accuracy)),
     mode: 'simulation',
     app_markup_percentage: markup,
     updatedAt: new Date().toISOString()
   };
 
-  safeWriteJson(MARKETING_FILE, updated);
-  appendAuditLog('MARKETING_CONFIG_SAVED', `Updated ROT: ${rot}, Balance: ${startingBalance} ${currency}, Markup: ${markup}%`, actor, ip);
-  return updated;
+  currentAll[targetMode] = updatedModeConfig;
+  safeWriteJson(MARKETING_FILE, currentAll);
+  appendAuditLog('MARKETING_CONFIG_SAVED', `Updated [${targetMode.toUpperCase()}] ROT: ${rot}, Balance: ${startingBalance} ${currency}, Markup: ${markup}%`, actor, ip);
+  return {
+    ...updatedModeConfig,
+    activeMode: targetMode,
+    real: currentAll.real,
+    demo: currentAll.demo
+  };
 }
 
-function activateMarketing(actor = 'admin', ip = '') {
-  const current = getMarketingConfig();
+function activateMarketing(actor = 'admin', ip = '', mode = 'real') {
+  const currentAll = normalizeMarketingConfig(safeReadJson(MARKETING_FILE, null));
+  const targetMode = normalizeMode(mode);
+  const current = currentAll[targetMode];
+
   if (!current.rot || current.rot.trim() === '') {
-    throw new Error('Cannot activate Marketing: ROT / Login ID is not configured.');
+    throw new Error(`Cannot activate Marketing (${targetMode.toUpperCase()}): ROT / Login ID is not configured.`);
   }
 
-  const updated = {
+  const updatedModeConfig = {
     ...current,
     useRealBalance: false, // Marketing is ACTIVE (simulation)
     lastActivatedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
-  safeWriteJson(MARKETING_FILE, updated);
-  appendAuditLog('MARKETING_ACTIVATED', `Activated Marketing profile for ROT: ${current.rot} (Simulation mode)`, actor, ip);
-  return updated;
+  currentAll[targetMode] = updatedModeConfig;
+  safeWriteJson(MARKETING_FILE, currentAll);
+  appendAuditLog('MARKETING_ACTIVATED', `Activated Marketing profile for [${targetMode.toUpperCase()}] ROT: ${current.rot} (Simulation mode)`, actor, ip);
+  return {
+    ...updatedModeConfig,
+    activeMode: targetMode,
+    real: currentAll.real,
+    demo: currentAll.demo
+  };
 }
 
-function deactivateMarketing(actor = 'admin', ip = '') {
-  const current = getMarketingConfig();
-  const updated = {
+function deactivateMarketing(actor = 'admin', ip = '', mode = 'real') {
+  const currentAll = normalizeMarketingConfig(safeReadJson(MARKETING_FILE, null));
+  const targetMode = normalizeMode(mode);
+  const current = currentAll[targetMode];
+
+  const updatedModeConfig = {
     ...current,
     useRealBalance: true, // Marketing is DEACTIVATED (real Deriv balance restored)
     lastDeactivatedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
-  safeWriteJson(MARKETING_FILE, updated);
-  appendAuditLog('MARKETING_DEACTIVATED', `Deactivated Marketing profile. Restored real Deriv account behavior.`, actor, ip);
-  return updated;
+  currentAll[targetMode] = updatedModeConfig;
+  safeWriteJson(MARKETING_FILE, currentAll);
+  appendAuditLog('MARKETING_DEACTIVATED', `Deactivated Marketing profile for [${targetMode.toUpperCase()}]. Restored genuine Deriv account behavior.`, actor, ip);
+  return {
+    ...updatedModeConfig,
+    activeMode: targetMode,
+    real: currentAll.real,
+    demo: currentAll.demo
+  };
 }
 
 // ─── BOTS REPOSITORY ──────────────────────────────────────────────────────────

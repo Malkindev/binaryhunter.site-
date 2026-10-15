@@ -219,21 +219,34 @@ app.options('/api/*', (req, res) => {
   res.sendStatus(204);
 });
 
+function isDemoLoginid(id) {
+  if (!id) return false;
+  const u = String(id).trim().toUpperCase();
+  return u.startsWith('VRTC') || u.startsWith('VRT') || u.startsWith('DOT') || u.startsWith('DEM') || u.startsWith('VRW');
+}
+
 app.get('/api/appwrite/site-settings', (req, res) => {
   jsonCors(res); noCache(res);
-  const mkt = adminStore.getMarketingConfig();
+  const reqMode = String(req.query.mode || req.query.account_type || '').toLowerCase();
+  const mode = reqMode === 'demo' || reqMode === 'virtual' ? 'demo' : 'real';
+  const mkt = adminStore.getMarketingConfig(mode);
+  const allMkt = adminStore.getMarketingConfig('all');
   const dynamicSite = {
     ...HLX_SITE,
     rot: mkt.rot,
     startingBalance: mkt.startingBalance,
     useRealBalance: mkt.useRealBalance === true,
     app_markup_percentage: mkt.app_markup_percentage,
+    real: allMkt.real,
+    demo: allMkt.demo,
     settingsJson: JSON.stringify({
       ...HLX_SETTINGS,
       rot: mkt.rot,
       startingBalance: mkt.startingBalance,
       useRealBalance: mkt.useRealBalance === true,
-      app_markup_percentage: mkt.app_markup_percentage
+      app_markup_percentage: mkt.app_markup_percentage,
+      real: allMkt.real,
+      demo: allMkt.demo
     })
   };
   res.json({ ok: true, hostname: req.query.hostname || BRAND.primaryDomain, site: dynamicSite });
@@ -300,17 +313,20 @@ app.get('/api/appwrite/bot-xml', (req, res) => {
   });
 });
 
-// Marketing profile & simulation sync endpoints for ROT account prices/balances
+// Marketing profile & simulation sync endpoints for Real and Demo account prices/balances
 app.get('/api/marketing/resolve', (req, res) => {
   jsonCors(res); noCache(res);
-  const mkt = adminStore.getMarketingConfig();
   const reqLid = String(req.query.loginid || '').trim().toUpperCase();
+  const isDemo = isDemoLoginid(reqLid) || req.query.mode === 'demo' || req.query.account_type === 'demo';
+  const targetMode = isDemo ? 'demo' : 'real';
+  const mkt = adminStore.getMarketingConfig(targetMode);
   const configuredRot = String(mkt.rot || '').trim().toUpperCase();
   const useReal = mkt.useRealBalance === true;
 
   if (useReal) {
     return res.json({
       success: true,
+      mode: targetMode,
       marketingEligible: false,
       useRealBalance: true
     });
@@ -320,34 +336,39 @@ app.get('/api/marketing/resolve', (req, res) => {
   const rotDigits = configuredRot.replace(/^[^0-9]+/, '');
   const isMatch = !!configuredRot && !!reqLid && (reqLid === configuredRot || (reqDigits && rotDigits && reqDigits === rotDigits));
 
-  if (configuredRot && isMatch) {
+  if (configuredRot && (isMatch || !reqLid)) {
     const activeRot = reqLid || configuredRot;
     res.json({
       success: true,
+      mode: targetMode,
       marketingEligible: true,
       useRealBalance: false,
       rot: activeRot,
       loginid: activeRot,
       currency: mkt.currency || 'USD',
-      startingBalance: Number(mkt.startingBalance || 800.00),
-      currentBalance: Number(mkt.startingBalance || 800.00),
+      startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
+      currentBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
       accuracy: Number(mkt.accuracy !== undefined ? mkt.accuracy : 100),
       mode: mkt.mode || 'simulation',
       app_markup_percentage: Number(mkt.app_markup_percentage || 0)
     });
   } else {
-    res.json({ success: false, marketingEligible: false, useRealBalance: false });
+    res.json({ success: false, mode: targetMode, marketingEligible: false, useRealBalance: false });
   }
 });
 
 app.get('/api/marketing/demo-sync', (req, res) => {
   jsonCors(res); noCache(res);
-  const mkt = adminStore.getMarketingConfig();
-  const reqLid = String(req.query.loginid || mkt.rot || 'CR1234567').trim().toUpperCase();
+  const reqLid = String(req.query.loginid || '').trim().toUpperCase();
+  const isDemo = isDemoLoginid(reqLid) || req.query.mode === 'demo';
+  const targetMode = isDemo ? 'demo' : 'real';
+  const mkt = adminStore.getMarketingConfig(targetMode);
+  const activeLid = reqLid || mkt.rot || (isDemo ? 'VRTC9999999' : 'CR1234567');
   res.json({
     success: true,
-    rot: reqLid,
-    startingBalance: Number(mkt.startingBalance || 800.00),
+    mode: targetMode,
+    rot: activeLid,
+    startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
     app_markup_percentage: Number(mkt.app_markup_percentage || 0),
     processedContractIds: []
   });
@@ -355,14 +376,18 @@ app.get('/api/marketing/demo-sync', (req, res) => {
 
 app.post('/api/marketing/demo-sync', express.json(), (req, res) => {
   jsonCors(res); noCache(res);
-  const mkt = adminStore.getMarketingConfig();
   const body = req.body || {};
-  const reqLid = String(body.loginid || mkt.rot || 'CR1234567').trim().toUpperCase();
+  const reqLid = String(body.loginid || '').trim().toUpperCase();
+  const isDemo = isDemoLoginid(reqLid) || body.mode === 'demo';
+  const targetMode = isDemo ? 'demo' : 'real';
+  const mkt = adminStore.getMarketingConfig(targetMode);
+  const activeLid = reqLid || mkt.rot || (isDemo ? 'VRTC9999999' : 'CR1234567');
   res.json({
     success: true,
+    mode: targetMode,
     action: body.action || 'sync',
-    rot: reqLid,
-    startingBalance: Number(mkt.startingBalance || 800.00),
+    rot: activeLid,
+    startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
     app_markup_percentage: Number(mkt.app_markup_percentage || 0)
   });
 });
@@ -528,13 +553,26 @@ app.delete('/api/admin/bots/:id', requireAdminAuth, (req, res) => {
 // 4. Marketing Profile Management Endpoints
 app.get('/api/admin/marketing', requireAdminAuth, (req, res) => {
   jsonCors(res); noCache(res);
-  const mkt = adminStore.getMarketingConfig();
+  const allMkt = adminStore.getMarketingConfig('all');
+  const targetMode = String(req.query.mode || 'real').toLowerCase() === 'demo' ? 'demo' : 'real';
+  const current = allMkt[targetMode] || allMkt.real;
   res.json({
     ok: true,
     marketing: {
-      ...mkt,
-      status: mkt.useRealBalance ? 'Inactive' : 'Active',
-      isMarketingActive: !mkt.useRealBalance
+      ...current,
+      activeMode: targetMode,
+      status: current.useRealBalance ? 'Inactive' : 'Active',
+      isMarketingActive: !current.useRealBalance,
+      real: {
+        ...allMkt.real,
+        status: allMkt.real.useRealBalance ? 'Inactive' : 'Active',
+        isMarketingActive: !allMkt.real.useRealBalance
+      },
+      demo: {
+        ...allMkt.demo,
+        status: allMkt.demo.useRealBalance ? 'Inactive' : 'Active',
+        isMarketingActive: !allMkt.demo.useRealBalance
+      }
     }
   });
 });
@@ -544,14 +582,27 @@ app.put('/api/admin/marketing', express.json(), requireAdminAuth, (req, res) => 
   try {
     const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
     const ip = req.ip || req.connection.remoteAddress;
-    const saved = adminStore.saveMarketingConfig(req.body || {}, actor, ip);
+    const targetMode = (req.body && (req.body.mode || req.body.account_mode)) || req.query.mode || 'real';
+    const saved = adminStore.saveMarketingConfig(req.body || {}, actor, ip, targetMode);
+    const allMkt = adminStore.getMarketingConfig('all');
     res.json({
       ok: true,
-      message: 'Marketing configuration saved successfully.',
+      message: `Marketing configuration (${targetMode.toUpperCase()}) saved successfully.`,
       marketing: {
         ...saved,
+        activeMode: targetMode,
         status: saved.useRealBalance ? 'Inactive' : 'Active',
-        isMarketingActive: !saved.useRealBalance
+        isMarketingActive: !saved.useRealBalance,
+        real: {
+          ...allMkt.real,
+          status: allMkt.real.useRealBalance ? 'Inactive' : 'Active',
+          isMarketingActive: !allMkt.real.useRealBalance
+        },
+        demo: {
+          ...allMkt.demo,
+          status: allMkt.demo.useRealBalance ? 'Inactive' : 'Active',
+          isMarketingActive: !allMkt.demo.useRealBalance
+        }
       }
     });
   } catch (err) {
@@ -559,19 +610,32 @@ app.put('/api/admin/marketing', express.json(), requireAdminAuth, (req, res) => 
   }
 });
 
-app.post('/api/admin/marketing/activate', requireAdminAuth, (req, res) => {
+app.post('/api/admin/marketing/activate', express.json(), requireAdminAuth, (req, res) => {
   jsonCors(res); noCache(res);
   try {
     const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
     const ip = req.ip || req.connection.remoteAddress;
-    const activated = adminStore.activateMarketing(actor, ip);
+    const targetMode = (req.body && (req.body.mode || req.body.account_mode)) || req.query.mode || 'real';
+    const activated = adminStore.activateMarketing(actor, ip, targetMode);
+    const allMkt = adminStore.getMarketingConfig('all');
     res.json({
       ok: true,
-      message: `Marketing profile activated for ROT '${activated.rot}'. Simulation mode enabled.`,
+      message: `Marketing profile activated for [${targetMode.toUpperCase()}] mode ('${activated.rot}'). Simulation mode enabled.`,
       marketing: {
         ...activated,
+        activeMode: targetMode,
         status: 'Active',
-        isMarketingActive: true
+        isMarketingActive: true,
+        real: {
+          ...allMkt.real,
+          status: allMkt.real.useRealBalance ? 'Inactive' : 'Active',
+          isMarketingActive: !allMkt.real.useRealBalance
+        },
+        demo: {
+          ...allMkt.demo,
+          status: allMkt.demo.useRealBalance ? 'Inactive' : 'Active',
+          isMarketingActive: !allMkt.demo.useRealBalance
+        }
       }
     });
   } catch (err) {
@@ -579,19 +643,32 @@ app.post('/api/admin/marketing/activate', requireAdminAuth, (req, res) => {
   }
 });
 
-app.post('/api/admin/marketing/deactivate', requireAdminAuth, (req, res) => {
+app.post('/api/admin/marketing/deactivate', express.json(), requireAdminAuth, (req, res) => {
   jsonCors(res); noCache(res);
   try {
     const actor = req.headers['x-admin-actor'] || adminStore.ADMIN_USERNAME;
     const ip = req.ip || req.connection.remoteAddress;
-    const deactivated = adminStore.deactivateMarketing(actor, ip);
+    const targetMode = (req.body && (req.body.mode || req.body.account_mode)) || req.query.mode || 'real';
+    const deactivated = adminStore.deactivateMarketing(actor, ip, targetMode);
+    const allMkt = adminStore.getMarketingConfig('all');
     res.json({
       ok: true,
-      message: 'Marketing profile deactivated. Binaryhunter restored to genuine Deriv balances and live trading.',
+      message: `Marketing profile deactivated for [${targetMode.toUpperCase()}] mode. Genuine Deriv balances restored.`,
       marketing: {
         ...deactivated,
+        activeMode: targetMode,
         status: 'Inactive',
-        isMarketingActive: false
+        isMarketingActive: false,
+        real: {
+          ...allMkt.real,
+          status: allMkt.real.useRealBalance ? 'Inactive' : 'Active',
+          isMarketingActive: !allMkt.real.useRealBalance
+        },
+        demo: {
+          ...allMkt.demo,
+          status: allMkt.demo.useRealBalance ? 'Inactive' : 'Active',
+          isMarketingActive: !allMkt.demo.useRealBalance
+        }
       }
     });
   } catch (err) {

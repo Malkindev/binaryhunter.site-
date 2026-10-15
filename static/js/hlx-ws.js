@@ -1343,9 +1343,43 @@
     resetSession: resetVirtualTradingSession
   };
 
+  var currentAuthoritativeMode = null; // 'real' | 'demo'
+  var currentAuthoritativeLoginid = '';
+
+  function setAuthoritativeMode(mode, loginid) {
+    var cleanMode = mode === 'demo' || mode === 'virtual' ? 'demo' : 'real';
+    currentAuthoritativeMode = cleanMode;
+    if (loginid) currentAuthoritativeLoginid = String(loginid).trim().toUpperCase();
+
+    try {
+      localStorage.setItem('account_type', cleanMode);
+      sessionStorage.setItem('account_type', cleanMode);
+      if (loginid) {
+        localStorage.setItem('active_loginid', currentAuthoritativeLoginid);
+        sessionStorage.setItem('active_loginid', currentAuthoritativeLoginid);
+      }
+    } catch (_) {}
+
+    // Synchronize URL query parameter without reloading page
+    try {
+      if (window.location && window.history && window.history.replaceState) {
+        var u = new URL(window.location.href);
+        var currentParam = (u.searchParams.get('account') || '').toLowerCase();
+        if (currentParam !== cleanMode) {
+          u.searchParams.set('account', cleanMode);
+          window.history.replaceState({}, '', u.toString());
+        }
+      }
+    } catch (_) {}
+  }
+
   function isDemoAccountActive() {
     try {
-      // 1. Authoritative active_loginid in localStorage / sessionStorage
+      // 1. Explicit in-memory authoritative mode if set in current session
+      if (currentAuthoritativeMode === 'demo') return true;
+      if (currentAuthoritativeMode === 'real') return false;
+
+      // 2. Authoritative active_loginid in localStorage / sessionStorage
       var activeLoginid = String(
         localStorage.getItem('active_loginid') ||
         sessionStorage.getItem('active_loginid') ||
@@ -1354,48 +1388,30 @@
 
       if (activeLoginid) {
         if (isDemoLoginid(activeLoginid)) return true;
-        // Check if client.accounts explicitly flags this active account as virtual
-        var clientAccounts = localStorage.getItem('client.accounts') || localStorage.getItem('clientAccounts') || sessionStorage.getItem('client.accounts') || sessionStorage.getItem('clientAccounts');
+        if (activeLoginid.indexOf('ROT') === 0 || activeLoginid.indexOf('CR') === 0 || activeLoginid.indexOf('MF') === 0 || activeLoginid.indexOf('MLT') === 0) {
+          return false;
+        }
+        var clientAccounts = localStorage.getItem('client.accounts') || localStorage.getItem('clientAccounts');
         if (clientAccounts) {
           try {
             var ca = JSON.parse(clientAccounts);
             if (ca[activeLoginid]) {
               if (ca[activeLoginid].is_virtual || ca[activeLoginid].demo_account) return true;
-              if (ca[activeLoginid].is_virtual === 0 && (activeLoginid.indexOf('ROT') === 0 || activeLoginid.indexOf('CR') === 0)) return false;
+              if (ca[activeLoginid].is_virtual === 0) return false;
             }
           } catch (_) {}
-        }
-        if (activeLoginid.indexOf('ROT') === 0 || activeLoginid.indexOf('CR') === 0) {
-          // If active account is ROT or CR, check if the UI is currently switched to Demo tab
-          try {
-            var activeTab = document.querySelector('.dc-tabs__item--active, [class*="tabs__item--active" i], [class*="account-switcher__tab--active" i]');
-            if (activeTab && String(activeTab.textContent || '').trim().toLowerCase() === 'demo') {
-              return true;
-            }
-          } catch (_) {}
-          return false;
         }
       }
-
-      // 2. Active Tab in Deriv Account Switcher UI
-      try {
-        var activeTabEl = document.querySelector('.dc-tabs__item--active, [class*="tabs__item--active" i], [class*="account-switcher__tab--active" i]');
-        if (activeTabEl) {
-          var tabName = String(activeTabEl.textContent || '').trim().toLowerCase();
-          if (tabName === 'demo') return true;
-          if (tabName === 'real') return false;
-        }
-      } catch (_) {}
 
       // 3. Stored account_type
       var storedAcctType = (localStorage.getItem('account_type') || sessionStorage.getItem('account_type') || '').toLowerCase();
       if (storedAcctType === 'demo' || storedAcctType === 'virtual') return true;
       if (storedAcctType === 'real') return false;
 
-      // 4. URL parameter ONLY if explicitly 'demo' or 'virtual' (NEVER treat 'usd' as real!)
+      // 4. Fallback URL parameter ONLY if no conflicting active loginid exists
       var urlParams = new URLSearchParams(window.location.search);
       var acctParam = (urlParams.get('account') || '').toLowerCase();
-      if (acctParam === 'demo' || acctParam === 'virtual') return true;
+      if ((acctParam === 'demo' || acctParam === 'virtual') && !activeLoginid) return true;
       if (acctParam === 'real') return false;
     } catch (_) {}
     return false;
@@ -1408,14 +1424,31 @@
     } catch (e) {}
   }
 
-  function isUseRealBalanceEnabled() {
+  function isUseRealBalanceEnabled(targetMode) {
     try {
+      var mode = targetMode || (isDemoAccountActive() ? 'demo' : 'real');
       var s = window.__DERIV_SITE_SETTINGS__;
-      if (s && s.useRealBalance === true) return true;
+      if (s) {
+        if (mode === 'demo' && s.demo && s.demo.useRealBalance !== undefined) {
+          return s.demo.useRealBalance === true;
+        }
+        if (mode === 'real' && s.real && s.real.useRealBalance !== undefined) {
+          return s.real.useRealBalance === true;
+        }
+        if (s.useRealBalance !== undefined) return s.useRealBalance === true;
+      }
       var raw = localStorage.getItem('config.site_settings_json');
       if (raw) {
         var parsed = JSON.parse(raw);
-        if (parsed && (parsed.useRealBalance === true || (parsed.settings && parsed.settings.useRealBalance === true))) return true;
+        if (parsed) {
+          if (mode === 'demo' && parsed.demo && parsed.demo.useRealBalance !== undefined) {
+            return parsed.demo.useRealBalance === true;
+          }
+          if (mode === 'real' && parsed.real && parsed.real.useRealBalance !== undefined) {
+            return parsed.real.useRealBalance === true;
+          }
+          if (parsed.useRealBalance !== undefined) return parsed.useRealBalance === true;
+        }
       }
     } catch (_) {}
     return false;
@@ -1423,19 +1456,21 @@
 
   function patchDomBalances(profile) {
     try {
-      if (isUseRealBalanceEnabled()) return;
-      if (isDemoAccountActive()) return;
+      var isDemo = isDemoAccountActive();
+      if (isUseRealBalanceEnabled(isDemo ? 'demo' : 'real')) return;
 
       var prof = getActiveMarketingProfileForCurrentAccount();
-
-      if (!prof && profile && profile.marketingEligible && isSameAccount(profile.rot, (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.rot))) {
-        prof = profile;
+      if (!prof && profile && profile.marketingEligible && !profile.useRealBalance) {
+        var expectedRot = isDemo ? ((window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.demo && window.__DERIV_SITE_SETTINGS__.demo.rot) || '') : ((window.__DERIV_SITE_SETTINGS__ && (window.__DERIV_SITE_SETTINGS__.real ? window.__DERIV_SITE_SETTINGS__.real.rot : window.__DERIV_SITE_SETTINGS__.rot)) || '');
+        if (isSameAccount(profile.rot, expectedRot)) {
+          prof = profile;
+        }
       }
 
-      if (!prof || !prof.marketingEligible) return;
+      if (!prof || !prof.marketingEligible || prof.useRealBalance) return;
 
       // Base is ALWAYS the configured starting balance; trade P/L is added on top.
-      var mBal = Number(prof.startingBalance !== undefined ? prof.startingBalance : 450.00);
+      var mBal = Number(prof.startingBalance !== undefined ? prof.startingBalance : (isDemo ? 10000.00 : 800.00));
       if (Number.isFinite(mBal) && VIRTUAL_STARTING_BALANCE !== mBal && cumulativeVirtualPnL === 0 && getTotalOpenStakes() === 0) {
         VIRTUAL_STARTING_BALANCE = mBal;
       }
@@ -1445,7 +1480,7 @@
       var cleanRot = String(prof.rot || '').trim().toUpperCase();
       var expectedBalText = balFormatted + ' ' + currency;
 
-      // 1. Header switcher button & balance elements: ALWAYS patch when on REAL marketing account
+      // 1. Header switcher button & balance elements
       var dtBalEls = document.querySelectorAll('[data-testid="dt_balance"], .acc-info__balance, .acc-info__wallets-balance, [class*="acc-info__balance" i], [class*="header__balance" i], [class*="balance__value" i], [class*="account-switcher__balance" i]');
       dtBalEls.forEach(function (dtBalEl) {
         if (dtBalEl) {
@@ -1462,7 +1497,7 @@
           var expectedNum = balFormatted;
           var expectedCurr = currency;
           if (expectedNum === 'NaN' || !expectedNum || expectedNum.indexOf('NaN') !== -1) {
-            expectedNum = (Number.isFinite(VIRTUAL_STARTING_BALANCE) ? VIRTUAL_STARTING_BALANCE : 450.00).toFixed(2);
+            expectedNum = (Number.isFinite(VIRTUAL_STARTING_BALANCE) ? VIRTUAL_STARTING_BALANCE : (isDemo ? 10000.00 : 800.00)).toFixed(2);
           }
           if (spans.length >= 1) {
             if (spans[0].textContent !== expectedNum) spans[0].textContent = expectedNum;
@@ -1474,7 +1509,7 @@
         }
       }
 
-      // 2. Dropdown items in switcher dialog: ONLY patch the configured Real ROT row
+      // 2. Dropdown items in switcher dialog: ONLY patch the configured row matching cleanRot
       var switcherItems = document.querySelectorAll('.deriv-account-switcher-item, .account-switcher__item, [class*="account-switcher__item" i], [class*="account-switcher-item" i]');
       if (switcherItems && switcherItems.length) {
         switcherItems.forEach(function (item) {
@@ -1482,8 +1517,12 @@
           var loginEl = item.querySelector('.deriv-account-switcher-item__loginid, [class*="loginid" i]');
           var rowId = loginEl ? String(loginEl.textContent || '').trim().toUpperCase() : '';
 
-          // STRICT: Never modify any Demo account row!
-          if (isDemoLoginid(rowId) || itemText.indexOf('DEMO') !== -1 || itemText.indexOf('DOT') !== -1 || itemText.indexOf('VRTC') !== -1 || itemText.indexOf('VRT') !== -1) {
+          // If in Real mode: NEVER modify any Demo account row!
+          if (!isDemo && (isDemoLoginid(rowId) || itemText.indexOf('DEMO') !== -1 || itemText.indexOf('DOT') !== -1 || itemText.indexOf('VRTC') !== -1 || itemText.indexOf('VRT') !== -1)) {
+            return;
+          }
+          // If in Demo mode: NEVER modify any Real account row!
+          if (isDemo && !isDemoLoginid(rowId) && (rowId.indexOf('ROT') === 0 || rowId.indexOf('CR') === 0)) {
             return;
           }
 
@@ -1509,9 +1548,7 @@
   try {
     if (!window.__BAL_PATCH_LOOP__) {
       window.__BAL_PATCH_LOOP__ = setInterval(function () {
-        if (!isDemoAccountActive()) {
-          patchDomBalances();
-        }
+        patchDomBalances();
       }, 250);
     }
   } catch (_) {}
@@ -1610,51 +1647,90 @@
   }
 
   function getActiveMarketingProfileForCurrentAccount() {
-    if (isUseRealBalanceEnabled()) return null;
-    if (isDemoAccountActive()) return null;
-    var actId = String(localStorage.getItem('active_loginid') || currentRealLoginId || getStoredRealLoginId() || '').trim().toUpperCase();
-    if (actId && (actId.indexOf('VRTC') === 0 || actId.indexOf('VRT') === 0 || actId.indexOf('DOT') === 0 || actId.indexOf('DEM') === 0)) return null;
+    var isDemo = isDemoAccountActive();
+    var actId = String(localStorage.getItem('active_loginid') || currentAuthoritativeLoginid || '').trim().toUpperCase();
 
-    var rotVal = (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.rot) || 'ROT91298223';
-    if (!actId || !isSameAccount(actId, rotVal)) {
+    if (isDemo) {
+      if (isUseRealBalanceEnabled('demo')) return null;
+      var demoSettings = (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.demo) || {};
+      var demoRot = String(demoSettings.rot || 'VRTC9999999').trim().toUpperCase();
+      if (demoSettings.useRealBalance !== false) return null;
+      var dBal = Number(demoSettings.startingBalance !== undefined ? demoSettings.startingBalance : 10000.00);
+      return {
+        rot: actId || demoRot,
+        marketingEligible: true,
+        useRealBalance: false,
+        startingBalance: dBal,
+        currentBalance: dBal,
+        accuracy: Number(demoSettings.accuracy !== undefined ? demoSettings.accuracy : 100),
+        currency: demoSettings.currency || 'USD',
+        mode: 'simulation',
+        app_markup_percentage: Number(demoSettings.app_markup_percentage || 0),
+        isDemoMarketing: true
+      };
+    } else {
+      if (isUseRealBalanceEnabled('real')) return null;
+      if (actId && (actId.indexOf('VRTC') === 0 || actId.indexOf('VRT') === 0 || actId.indexOf('DOT') === 0 || actId.indexOf('DEM') === 0)) return null;
+
+      var realSettings = (window.__DERIV_SITE_SETTINGS__ && (window.__DERIV_SITE_SETTINGS__.real || window.__DERIV_SITE_SETTINGS__)) || {};
+      var rotVal = String(realSettings.rot || 'ROT90394362').trim().toUpperCase();
+      if (realSettings.useRealBalance === true) return null;
+
+      if (!actId || !isSameAccount(actId, rotVal)) {
+        return null;
+      }
+
+      if (activeMarketingProfile && activeMarketingProfile.marketingEligible && !activeMarketingProfile.isDemoMarketing && isSameAccount(activeMarketingProfile.rot, rotVal)) {
+        return activeMarketingProfile;
+      }
+      for (var kProf in marketingProfilesByRot) {
+        if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible && isSameAccount(marketingProfilesByRot[kProf].rot, rotVal)) {
+          return marketingProfilesByRot[kProf];
+        }
+      }
+
+      try {
+        var startBal = Number(realSettings.startingBalance !== undefined ? realSettings.startingBalance : 800.00);
+        var defProf = {
+          rot: actId || rotVal,
+          marketingEligible: true,
+          useRealBalance: false,
+          startingBalance: startBal,
+          currentBalance: startBal,
+          accuracy: Number(realSettings.accuracy !== undefined ? realSettings.accuracy : 100),
+          currency: realSettings.currency || 'USD',
+          mode: 'simulation',
+          app_markup_percentage: Number(realSettings.app_markup_percentage || 0),
+          isDemoMarketing: false
+        };
+        activeMarketingProfile = defProf;
+        marketingProfilesByRot[rotVal] = defProf;
+        if (actId) marketingProfilesByRot[actId] = defProf;
+        return defProf;
+      } catch (_) {}
+
       return null;
     }
-
-    if (activeMarketingProfile && activeMarketingProfile.marketingEligible && isSameAccount(activeMarketingProfile.rot, rotVal)) return activeMarketingProfile;
-    for (var kProf in marketingProfilesByRot) {
-      if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible && isSameAccount(marketingProfilesByRot[kProf].rot, rotVal)) {
-        return marketingProfilesByRot[kProf];
-      }
-    }
-
-    try {
-      var settings = window.__DERIV_SITE_SETTINGS__ || {};
-      var startBal = Number(settings.startingBalance || 450.00);
-      var defProf = {
-        rot: actId || rotVal,
-        marketingEligible: true,
-        startingBalance: startBal,
-        currentBalance: startBal,
-        accuracy: getMarketingAccuracy(null),
-        currency: settings.currency || 'USD',
-        mode: 'simulation'
-      };
-      activeMarketingProfile = defProf;
-      marketingProfilesByRot[rotVal] = defProf;
-      if (actId) marketingProfilesByRot[actId] = defProf;
-      return defProf;
-    } catch (_) {}
-
-    return null;
   }
 
   function resolveMarketingProfileSync(loginid) {
-    if (isDemoAccountActive()) return null;
     var cleanId = String(loginid || '').trim().toUpperCase();
-    if (cleanId && (cleanId.indexOf('VRTC') === 0 || cleanId.indexOf('VRT') === 0 || cleanId.indexOf('DOT') === 0 || cleanId.indexOf('DEM') === 0)) return null;
+    var isTargetDemo = isDemoLoginid(cleanId);
+    var isCurrentDemo = isDemoAccountActive();
 
-    if (activeMarketingProfile && activeMarketingProfile.marketingEligible) {
+    // If caller requests an account for the opposing mode, do not cross-resolve
+    if (isTargetDemo !== isCurrentDemo) {
+      if (cleanId && marketingProfilesByRot[cleanId] && marketingProfilesByRot[cleanId].marketingEligible) {
+        return marketingProfilesByRot[cleanId];
+      }
+      return null;
+    }
+
+    if (activeMarketingProfile && activeMarketingProfile.marketingEligible && isSameAccount(cleanId, activeMarketingProfile.rot)) {
       return activeMarketingProfile;
+    }
+    if (cleanId && marketingProfilesByRot[cleanId] && marketingProfilesByRot[cleanId].marketingEligible) {
+      return marketingProfilesByRot[cleanId];
     }
     return getActiveMarketingProfileForCurrentAccount();
   }
@@ -2545,21 +2621,35 @@
       if (msg.msg_type === 'authorize' && msg.authorize) {
         var authLoginid = String(msg.authorize.loginid || '').toUpperCase();
         var isDemoMsg = isDemoLoginid(authLoginid) || !!msg.authorize.is_virtual;
-        var isDemoActive = isDemoAccountActive() || isDemoMsg;
-        if (isDemoActive) {
+        if (ws) ws._isDemo = isDemoMsg;
+
+        if (isDemoMsg) {
+          // DEMO AUTHORIZE
+          setAuthoritativeMode('demo', authLoginid);
           actualDemoBalance = Number(msg.authorize.balance || actualDemoBalance);
-          activeMarketingProfile = null;
+          // CRITICAL: A Demo authorize response must NEVER have Real marketing routing applied!
           if (ws) ws._marketingRouting = null;
+
+          var curDemoProf = getActiveMarketingProfileForCurrentAccount();
+          if (curDemoProf && curDemoProf.marketingEligible && !curDemoProf.useRealBalance) {
+            activeMarketingProfile = curDemoProf;
+            msg.authorize.balance = curDemoProf.currentBalance !== undefined ? curDemoProf.currentBalance : curDemoProf.startingBalance;
+            modified = true;
+          } else {
+            activeMarketingProfile = null;
+          }
         } else {
+          // REAL AUTHORIZE
+          setAuthoritativeMode('real', authLoginid);
           actualRealBalance = Number(msg.authorize.balance || actualRealBalance);
           currentRealLoginId = String(authLoginid || currentRealLoginId || getStoredRealLoginId());
         }
 
         // Account discovery preservation:
-        // Filter out any stale/inactive ROT accounts, and update balances only for verified active marketing profile
-        if (!isDemoActive && Array.isArray(msg.authorize.account_list)) {
+        // Update balances only for verified active marketing profile on REAL mode
+        if (!isDemoMsg && Array.isArray(msg.authorize.account_list)) {
           var pCheck = getActiveMarketingProfileForCurrentAccount();
-          if (pCheck && pCheck.marketingEligible) {
+          if (pCheck && pCheck.marketingEligible && !pCheck.useRealBalance && !pCheck.isDemoMarketing) {
             var bCheck = getVirtualTradingBalance();
             msg.authorize.account_list.forEach(function (acc) {
               var lid = String((acc && acc.loginid) || '').toUpperCase();
@@ -2572,7 +2662,7 @@
           }
         }
 
-        if (ws && ws._marketingRouting && ws._marketingRouting.active && !isDemoActive) {
+        if (ws && ws._marketingRouting && ws._marketingRouting.active && !isDemoMsg) {
           var mRouting = ws._marketingRouting;
           var mProfile = mRouting.profile;
           if (msg.echo_req) {
@@ -2585,9 +2675,7 @@
           modified = true;
         }
 
-        if (!isDemoActive) {
-          patchDomBalances();
-        }
+        patchDomBalances();
       }
 
       // 1b. Buy response from Deriv:
@@ -2876,54 +2964,55 @@
       // 1d. Balance response from Deriv
       if (msg.msg_type === 'balance' && msg.balance) {
         var balLoginid = String(msg.balance.loginid || '').toUpperCase();
-        var isDemoMsg = isDemoLoginid(balLoginid);
-        var isDemoActive = isDemoAccountActive() || isDemoMsg;
-        var curMktProf = getActiveMarketingProfileForCurrentAccount();
+        var isDemoMsg = balLoginid ? isDemoLoginid(balLoginid) : (ws ? !!ws._isDemo : isDemoAccountActive());
+        var curModeIsDemo = isDemoAccountActive();
 
-        // Authentic balance accounts preserved natively for all account types
-        if (isDemoActive || isDemoMsg) {
-          // Native demo mode: PRESERVE Deriv's authentic demo balance completely!
+        if (isDemoMsg) {
+          // DEMO BALANCE: Strictly for Demo mode!
           actualDemoBalance = Number(msg.balance.balance || actualDemoBalance);
-          // Protect real marketing account in client.accounts from being polluted with demo balance!
-          try {
-            var caStr = localStorage.getItem('client.accounts');
-            if (caStr) {
-              var caObj = JSON.parse(caStr);
-              for (var rotK in marketingProfilesByRot) {
-                var mProf = marketingProfilesByRot[rotK];
-                if (mProf && mProf.marketingEligible && caObj[mProf.rot]) {
-                  var virtBal = getVirtualTradingBalance();
-                  caObj[mProf.rot].balance = virtBal;
-                  caObj[mProf.rot].converted_amount = virtBal;
-                }
-              }
-              localStorage.setItem('client.accounts', JSON.stringify(caObj));
-              localStorage.setItem('clientAccounts', JSON.stringify(caObj));
-            }
-          } catch (_) {}
-        } else if (curMktProf && !isDemoMsg && (isSameAccount(balLoginid, curMktProf.rot) || !balLoginid)) {
-          // Real marketing mode for this specific account ONLY:
-          actualRealBalance = getVirtualTradingBalance();
-          if (msg.balance.accounts && typeof msg.balance.accounts === 'object') {
-            var rotKey = curMktProf.rot;
-            for (var k in msg.balance.accounts) {
-              if (isSameAccount(k, rotKey)) {
-                msg.balance.accounts[k].balance = getVirtualTradingBalance();
-                msg.balance.accounts[k].converted_amount = getVirtualTradingBalance();
-                modified = true;
-              }
-            }
+          // If active mode is Real, do not let this Demo balance overwrite Real UI
+          if (!curModeIsDemo) {
+            return raw;
           }
-          msg.balance.loginid = curMktProf.rot;
-          msg.balance.balance = getVirtualTradingBalance();
-          if (msg.balance.total && msg.balance.total.deriv) {
-            msg.balance.total.deriv.amount = getVirtualTradingBalance();
+          // Never rewrite Demo balance to Real ROT!
+          var curDemoProf = getActiveMarketingProfileForCurrentAccount();
+          if (curDemoProf && curDemoProf.marketingEligible && !curDemoProf.useRealBalance && curDemoProf.isDemoMarketing) {
+            var demoBal = curDemoProf.currentBalance !== undefined ? curDemoProf.currentBalance : curDemoProf.startingBalance;
+            msg.balance.balance = demoBal;
+            if (msg.balance.total && msg.balance.total.deriv) {
+              msg.balance.total.deriv.amount = demoBal;
+            }
+            modified = true;
           }
-          modified = true;
           patchDomBalances();
         } else {
-          // Non-marketing real account: authentic Deriv balance passes through unmodified!
+          // REAL BALANCE: Strictly for Real mode!
           actualRealBalance = Number(msg.balance.balance || actualRealBalance);
+          // If active mode is Demo, do not let this Real balance overwrite Demo UI
+          if (curModeIsDemo) {
+            return raw;
+          }
+          var curRealProf = getActiveMarketingProfileForCurrentAccount();
+          if (curRealProf && curRealProf.marketingEligible && !curRealProf.useRealBalance && !curRealProf.isDemoMarketing && (isSameAccount(balLoginid, curRealProf.rot) || !balLoginid)) {
+            actualRealBalance = getVirtualTradingBalance();
+            if (msg.balance.accounts && typeof msg.balance.accounts === 'object') {
+              var rotKey = curRealProf.rot;
+              for (var k in msg.balance.accounts) {
+                if (isSameAccount(k, rotKey)) {
+                  msg.balance.accounts[k].balance = getVirtualTradingBalance();
+                  msg.balance.accounts[k].converted_amount = getVirtualTradingBalance();
+                  modified = true;
+                }
+              }
+            }
+            msg.balance.loginid = curRealProf.rot;
+            msg.balance.balance = getVirtualTradingBalance();
+            if (msg.balance.total && msg.balance.total.deriv) {
+              msg.balance.total.deriv.amount = getVirtualTradingBalance();
+            }
+            modified = true;
+            patchDomBalances();
+          }
         }
       }
 
@@ -3311,24 +3400,46 @@
               }
               var tokenUpper = token.toUpperCase();
               var matchedAcct = findAccountByToken(token);
-              var isDemoToken = (matchedAcct && (matchedAcct.is_virtual || isDemoLoginid(matchedAcct.loginid))) || isDemoLoginid(tokenUpper);
-              var isDemoActive = isDemoAccountActive() || isDemoToken;
+              var isDefinitiveDemoToken = false;
+              var isDefinitiveRealToken = false;
 
-              if (isDemoToken || isDemoActive) {
-                // Demo account active: Virtual REAL routing is INACTIVE
+              if (matchedAcct) {
+                if (matchedAcct.is_virtual || isDemoLoginid(matchedAcct.loginid)) {
+                  isDefinitiveDemoToken = true;
+                } else if (matchedAcct.loginid && (matchedAcct.loginid.indexOf('CR') === 0 || matchedAcct.loginid.indexOf('ROT') === 0 || matchedAcct.loginid.indexOf('MF') === 0 || matchedAcct.loginid.indexOf('MLT') === 0)) {
+                  isDefinitiveRealToken = true;
+                }
+              }
+              if (isDemoLoginid(tokenUpper)) isDefinitiveDemoToken = true;
+              if (tokenUpper.indexOf('ROT') === 0 || tokenUpper.indexOf('CR') === 0) isDefinitiveRealToken = true;
+
+              var isTargetDemo = isDefinitiveDemoToken;
+              if (!isDefinitiveDemoToken && !isDefinitiveRealToken) {
+                isTargetDemo = isDemoAccountActive();
+              }
+
+              if (isTargetDemo) {
+                // DEMO ACCOUNT:
+                ws._isDemo = true;
                 ws._virtualRealMode = false;
                 ws._marketingRouting = null;
-                activeMarketingProfile = null;
                 selectedAccountType = 'demo';
-                if (matchedAcct && matchedAcct.loginid) {
-                  selectedAccountId = matchedAcct.loginid;
+                setAuthoritativeMode('demo', matchedAcct ? matchedAcct.loginid : null);
+
+                var curDemoProf = getActiveMarketingProfileForCurrentAccount();
+                if (curDemoProf && curDemoProf.marketingEligible && !curDemoProf.useRealBalance && curDemoProf.isDemoMarketing) {
+                  activeMarketingProfile = curDemoProf;
+                } else {
+                  activeMarketingProfile = null;
                 }
 
                 // Native Deriv Demo token passes straight to Deriv!
                 return origSend.call(ws, data);
               }
 
-              // Real account session:
+              // REAL ACCOUNT SESSION:
+              ws._isDemo = false;
+              selectedAccountType = 'real';
               var isRotToken = tokenUpper.indexOf('ROT') === 0;
               var activeLid = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
               var targetLoginid = '';
@@ -3342,16 +3453,15 @@
               if (!targetLoginid) targetLoginid = getStoredRealLoginId() || '';
 
               currentRealLoginId = targetLoginid;
-              selectedAccountType = 'real';
-              selectedAccountId = targetLoginid;
+              setAuthoritativeMode('real', targetLoginid);
 
-              // Check if this logged-in account matches an active marketing profile
+              // Check if this real account matches an active marketing profile
               var resolved = targetLoginid ? resolveMarketingProfileSync(targetLoginid) : null;
               if (targetLoginid && !resolved) {
                 warmMarketingProfile(targetLoginid);
               }
 
-              if (resolved && resolved.marketingEligible && isSameAccount(targetLoginid, resolved.rot)) {
+              if (resolved && resolved.marketingEligible && !resolved.useRealBalance && !resolved.isDemoMarketing && isSameAccount(targetLoginid, resolved.rot)) {
                 activeMarketingProfile = resolved;
                 loadVirtualTradingState(resolved.rot);
                 applyMarketingProfile(resolved);
@@ -4177,34 +4287,9 @@
         return;
       }
 
-      // 2. Tab click (Real vs Demo)
-      var tab = target.closest && target.closest('.deriv-account-switcher__tab, .dc-tabs__item, [class*="tabs__item" i], [class*="account-switcher__tab" i]');
-      if (tab) {
-        var tText = tab.textContent.trim().toLowerCase();
-        if (tText === 'demo') {
-          // Immediately deactivate marketing profile for Demo view
-          activeMarketingProfile = null;
-          if (typeof window !== 'undefined' && window.__all_deriv_sockets) {
-            window.__all_deriv_sockets.forEach(function (s) {
-              if (s) s._marketingRouting = null;
-            });
-          }
-          return;
-        } else if (tText === 'real') {
-          var realId = String(localStorage.getItem('active_loginid') || '').trim();
-          if (realId && !isDemoLoginid(realId)) {
-            var prof = resolveMarketingProfileSync(realId);
-            if (prof && prof.marketingEligible) {
-              activeMarketingProfile = prof;
-              patchDomBalances(prof);
-            } else {
-              activeMarketingProfile = null;
-            }
-          } else {
-            activeMarketingProfile = null;
-          }
-        }
-      }
+      // 2. Tab click (Real vs Demo inside switcher modal)
+      // Browsing tabs inside modal should NEVER alter the active trading session!
+      // Mode switch only occurs when an account row is explicitly chosen.
 
       // 3. Account row click
       var item = target.closest && target.closest('.deriv-account-switcher-item, .account-switcher__item, [class*="account-switcher__item" i], [class*="account-switcher-item" i]');
@@ -4212,22 +4297,46 @@
         var text = String(item.textContent || '').toUpperCase();
         var loginEl = item.querySelector('.deriv-account-switcher-item__loginid, [class*="loginid" i]');
         var acctId = loginEl ? String(loginEl.textContent || '').trim().toUpperCase() : '';
-        if (isDemoLoginid(acctId) || text.indexOf('VRTC') !== -1 || text.indexOf('DEMO') !== -1 || text.indexOf('DOT') !== -1 || text.indexOf('VRT') !== -1) {
-          activeMarketingProfile = null;
+        var isClickDemo = isDemoLoginid(acctId) || text.indexOf('VRTC') !== -1 || text.indexOf('DEMO') !== -1 || text.indexOf('DOT') !== -1 || text.indexOf('VRT') !== -1;
+
+        if (isClickDemo) {
+          // Explicitly selected a Demo account
+          setAuthoritativeMode('demo', acctId);
           if (typeof window !== 'undefined' && window.__all_deriv_sockets) {
             window.__all_deriv_sockets.forEach(function (s) {
-              if (s) s._marketingRouting = null;
+              if (s) {
+                s._marketingRouting = null;
+                s._isDemo = true;
+              }
             });
+          }
+          var curDemoProf = getActiveMarketingProfileForCurrentAccount();
+          if (curDemoProf && curDemoProf.marketingEligible && !curDemoProf.useRealBalance && curDemoProf.isDemoMarketing) {
+            activeMarketingProfile = curDemoProf;
+            patchDomBalances(curDemoProf);
+          } else {
+            activeMarketingProfile = null;
+            patchDomBalances(null);
           }
           return;
         } else {
+          // Explicitly selected a Real account
+          setAuthoritativeMode('real', acctId);
+          if (typeof window !== 'undefined' && window.__all_deriv_sockets) {
+            window.__all_deriv_sockets.forEach(function (s) {
+              if (s) {
+                s._isDemo = false;
+              }
+            });
+          }
           if (acctId && !isDemoLoginid(acctId)) {
             var prof2 = resolveMarketingProfileSync(acctId);
-            if (prof2 && prof2.marketingEligible && isSameAccount(acctId, prof2.rot)) {
+            if (prof2 && prof2.marketingEligible && !prof2.useRealBalance && !prof2.isDemoMarketing && isSameAccount(acctId, prof2.rot)) {
               activeMarketingProfile = prof2;
               patchDomBalances(prof2);
             } else {
               activeMarketingProfile = null;
+              patchDomBalances(null);
               warmMarketingProfile(acctId);
             }
           }
