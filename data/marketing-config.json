@@ -13,14 +13,14 @@
   },
   "demo": {
     "useRealBalance": true,
-    "rot": "VRTC9999999",
-    "startingBalance": 10000,
+    "rot": "",
+    "startingBalance": null,
     "currency": "USD",
     "accuracy": 100,
-    "mode": "simulation",
+    "mode": "real",
     "app_markup_percentage": 0,
-    "updatedAt": "2026-10-15T12:52:33.757Z",
-    "lastActivatedAt": "2026-10-15T12:52:33.704Z",
-    "lastDeactivatedAt": "2026-10-15T12:52:33.757Z"
+    "updatedAt": "2026-10-16T12:00:00.000Z",
+    "lastActivatedAt": null,
+    "lastDeactivatedAt": null
   }
 }

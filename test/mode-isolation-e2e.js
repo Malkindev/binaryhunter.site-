@@ -32,7 +32,7 @@ async function runTests() {
   assert.strictEqual(realResolve.body.startingBalance, 79.84, 'Real balance must be 79.84');
   assert.strictEqual(realResolve.body.useRealBalance, false, 'Real mode uses simulation');
 
-  const demoResolve = await apiGet('/api/marketing/resolve?loginid=VRTC9999999&mode=demo');
+  const demoResolve = await apiGet('/api/marketing/resolve?loginid=VRTC123456&mode=demo');
   assert.strictEqual(demoResolve.body.success, true, 'Demo resolve should succeed');
   assert.strictEqual(demoResolve.body.mode, 'demo', 'Demo resolve mode must be demo');
   assert.strictEqual(demoResolve.body.useRealBalance, true, 'Demo mode configured with useRealBalance: true');

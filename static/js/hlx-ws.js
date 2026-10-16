@@ -363,37 +363,50 @@
       loginid: ''
     },
     demo: {
-      startingBalance: 10000.00,
+      startingBalance: null,
       pnl: 0.00,
       openContracts: {},
       processedContracts: new Set(),
-      actualBalance: 10000.00,
+      actualBalance: null,
       loginid: ''
     }
   };
 
   var VIRTUAL_STARTING_BALANCE = 79.84;
-  var DEMO_STARTING_BALANCE = 10000.00;
+  var DEMO_STARTING_BALANCE = null;
   var cumulativeVirtualPnL = 0.00;
   var cumulativeRealTradingPnL = 0.00;
   var processedVirtualContractIds = modeState.real.processedContracts;
   var processedRealContractIds = processedVirtualContractIds;
   var currentRealLoginId = '';
 
-  var actualRealBalance = 0.00;
+  var actualRealBalance = 79.84;
   var actualDemoBalance = (function () {
     try {
       var ca = JSON.parse(localStorage.getItem('client.accounts') || '{}');
       for (var k in ca) {
         var ku = k.toUpperCase();
-        if (ku.startsWith('DOT') || ku.startsWith('VRTC') || ku.startsWith('DEM')) {
+        if ((ku.startsWith('DOT') || ku.startsWith('VRTC') || ku.startsWith('DEM') || ku.startsWith('VRT')) && ku !== 'VRTC9999999') {
           var num = parseFloat(ca[k].balance);
           if (Number.isFinite(num) && num > 0) return num;
         }
       }
     } catch (_) {}
-    return 10000.00;
+    return null;
   })();
+  var actualDemoLoginId = (function () {
+    try {
+      var ca = JSON.parse(localStorage.getItem('client.accounts') || '{}');
+      for (var k in ca) {
+        var ku = k.toUpperCase();
+        if ((ku.startsWith('DOT') || ku.startsWith('VRTC') || ku.startsWith('DEM') || ku.startsWith('VRT')) && ku !== 'VRTC9999999') {
+          return ku;
+        }
+      }
+    } catch (_) {}
+    return '';
+  })();
+  var actualDemoCurrency = 'USD';
 
   var selectedAccountType = isDemoAccountActive() ? 'demo' : 'real';
   var selectedAccountId = '';
@@ -418,7 +431,8 @@
   function getVirtualTradingBalance(targetMode) {
     var m = targetMode === 'demo' ? 'demo' : (targetMode === 'real' ? 'real' : (isDemoAccountActive() ? 'demo' : 'real'));
     var st = modeState[m];
-    var start = Number.isFinite(st.startingBalance) ? st.startingBalance : (m === 'demo' ? 10000.00 : 79.84);
+    var start = Number.isFinite(st.startingBalance) ? st.startingBalance : (m === 'demo' ? (actualDemoBalance !== null ? actualDemoBalance : null) : 79.84);
+    if (start === null) return null;
     var pnl = Number.isFinite(st.pnl) ? st.pnl : 0.00;
     var stakes = Number.isFinite(getTotalOpenStakes(m)) ? getTotalOpenStakes(m) : 0.00;
     var bal = start + pnl - stakes;
@@ -430,12 +444,14 @@
   }
 
   function getDemoDisplayBalance() {
-    return getVirtualTradingBalance('demo');
+    return actualDemoBalance !== null ? actualDemoBalance : getVirtualTradingBalance('demo');
   }
 
   function formatVirtualTradingBalance(targetMode) {
-    var bal = getVirtualTradingBalance(targetMode);
-    if (!Number.isFinite(bal) || isNaN(bal)) bal = targetMode === 'demo' ? 10000.00 : 79.84;
+    var bal = targetMode === 'demo' ? (actualDemoBalance !== null ? actualDemoBalance : getVirtualTradingBalance('demo')) : getVirtualTradingBalance(targetMode);
+    if (!Number.isFinite(bal) || isNaN(bal) || bal === null) {
+      return targetMode === 'demo' ? '' : '79.84';
+    }
     return bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
@@ -469,7 +485,7 @@
 
   function getVirtualTradingStorageKey(loginid, targetMode) {
     var m = targetMode === 'demo' ? 'demo' : (targetMode === 'real' ? 'real' : (isDemoAccountActive() ? 'demo' : 'real'));
-    var lid = String(loginid || (m === 'demo' ? 'VRTC9999999' : (currentRealLoginId || getStoredRealLoginId() || 'DEFAULT'))).toUpperCase();
+    var lid = String(loginid || (m === 'demo' ? (actualDemoLoginId || 'DEMO') : (currentRealLoginId || getStoredRealLoginId() || 'DEFAULT'))).toUpperCase();
     return 'sitebuilder_virtual_pnl_' + HOST_KEY + '_' + m + '_' + lid;
   }
 
@@ -481,7 +497,7 @@
     try {
       var m = targetMode === 'demo' ? 'demo' : (targetMode === 'real' ? 'real' : (isDemoAccountActive() ? 'demo' : 'real'));
       var st = modeState[m];
-      var lid = st.loginid || (m === 'demo' ? 'VRTC9999999' : (currentRealLoginId || getStoredRealLoginId() || 'DEFAULT'));
+      var lid = st.loginid || (m === 'demo' ? (actualDemoLoginId || 'DEMO') : (currentRealLoginId || getStoredRealLoginId() || 'DEFAULT'));
       var key = getVirtualTradingStorageKey(lid, m);
       var payload = {
         mode: m,
@@ -502,7 +518,7 @@
 
   function loadVirtualTradingState(targetMode, loginid) {
     var m = targetMode === 'demo' ? 'demo' : (targetMode === 'real' ? 'real' : (isDemoAccountActive() ? 'demo' : 'real'));
-    var lid = String(loginid || (m === 'demo' ? 'VRTC9999999' : (getStoredRealLoginId() || 'DEFAULT'))).trim().toUpperCase();
+    var lid = String(loginid || (m === 'demo' ? (actualDemoLoginId || 'DEMO') : (getStoredRealLoginId() || 'DEFAULT'))).trim().toUpperCase();
     var st = modeState[m];
     st.loginid = lid;
 
@@ -679,13 +695,19 @@
     loadSyncState: loadVirtualTradingState
   };
 
-  // Self-healing: Purge any NaN/null balance corruptions from localStorage
+  // Self-healing: Purge VRTC9999999, mock tokens, and NaN/null balance corruptions from localStorage
   try {
     var caStrInit = localStorage.getItem('client.accounts');
     if (caStrInit) {
       var caObjInit = JSON.parse(caStrInit);
       var dirty = false;
       for (var aKey in caObjInit) {
+        var aKeyUpper = String(aKey).toUpperCase();
+        if (aKeyUpper === 'VRTC9999999' || aKeyUpper.indexOf('MOCKDEMO') !== -1) {
+          delete caObjInit[aKey];
+          dirty = true;
+          continue;
+        }
         if (caObjInit[aKey]) {
           var bVal = caObjInit[aKey].balance;
           if (bVal === null || bVal === undefined || isNaN(bVal) || bVal === 'NaN') {
@@ -699,6 +721,18 @@
         localStorage.setItem('client.accounts', JSON.stringify(caObjInit));
         localStorage.setItem('clientAccounts', JSON.stringify(caObjInit));
       }
+    }
+    var alStrInit = localStorage.getItem('accountsList');
+    if (alStrInit) {
+      var alObjInit = JSON.parse(alStrInit);
+      if (alObjInit['VRTC9999999'] || alObjInit['vrtc9999999']) {
+        delete alObjInit['VRTC9999999'];
+        delete alObjInit['vrtc9999999'];
+        localStorage.setItem('accountsList', JSON.stringify(alObjInit));
+      }
+    }
+    if (String(localStorage.getItem('active_loginid') || '').toUpperCase() === 'VRTC9999999') {
+      localStorage.removeItem('active_loginid');
     }
     for (var i = 0; i < localStorage.length; i++) {
       var lk = localStorage.key(i);
@@ -1143,7 +1177,7 @@
                   for (var ci = 0; ci < cParsed.length; ci++) {
                     var cItem = cParsed[ci];
                     var cLid = String((cItem && (cItem.loginid || cItem.account || cItem.id)) || '').trim().toUpperCase();
-                    if (isDemoLoginid(cLid)) {
+                    if (isDemoLoginid(cLid) && cLid !== 'VRTC9999999') {
                       demoId = cLid;
                       break;
                     }
@@ -1151,7 +1185,7 @@
                 } else if (cParsed && typeof cParsed === 'object') {
                   for (var ck in cParsed) {
                     var ckUpper = String(ck || '').trim().toUpperCase();
-                    if (isDemoLoginid(ckUpper)) {
+                    if (isDemoLoginid(ckUpper) && ckUpper !== 'VRTC9999999') {
                       demoId = ckUpper;
                       break;
                     }
@@ -1176,10 +1210,10 @@
             for (var lid in parsedList) {
               if (Object.prototype.hasOwnProperty.call(parsedList, lid)) {
                 var upperLid = String(lid).trim().toUpperCase();
-                if (isDemoLoginid(upperLid)) {
+                if (isDemoLoginid(upperLid) && upperLid !== 'VRTC9999999') {
                   var tokVal = parsedList[lid];
                   var demoToken = typeof tokVal === 'string' ? tokVal : (tokVal && (tokVal.token || tokVal.ticket));
-                  if (demoToken && String(demoToken).trim().length >= 8) {
+                  if (demoToken && String(demoToken).trim().length >= 8 && String(demoToken).indexOf('a1-mock') === -1) {
                     return { loginid: upperLid, token: String(demoToken).trim(), currency: (tokVal && tokVal.currency) || 'USD' };
                   }
                 }
@@ -1217,10 +1251,10 @@
             for (var i = 0; i < parsed.length; i++) {
               var item = parsed[i];
               var iLid = String((item && (item.loginid || item.account || item.id)) || '').trim().toUpperCase();
-              if (isDemoLoginid(iLid)) {
+              if (isDemoLoginid(iLid) && iLid !== 'VRTC9999999') {
                 var iTok = item && (item.token || item.ticket || (typeof item === 'string' ? item : null));
-                if (iTok && String(iTok).trim().length >= 8) {
-                  return { loginid: iLid || 'VRTC_DEMO', token: String(iTok).trim(), currency: (item && item.currency) || 'USD' };
+                if (iTok && String(iTok).trim().length >= 8 && String(iTok).indexOf('a1-mock') === -1) {
+                  return { loginid: iLid, token: String(iTok).trim(), currency: (item && item.currency) || 'USD' };
                 }
               }
             }
@@ -1229,9 +1263,9 @@
               if (Object.prototype.hasOwnProperty.call(parsed, k)) {
                 var entry = parsed[k];
                 var kLid = String((entry && (entry.loginid || entry.account || entry.id)) || k || '').trim().toUpperCase();
-                if (isDemoLoginid(kLid)) {
+                if (isDemoLoginid(kLid) && kLid !== 'VRTC9999999') {
                   var entryTok = entry && (entry.token || entry.ticket || (typeof entry === 'string' ? entry : null));
-                  if (entryTok && String(entryTok).trim().length >= 8) {
+                  if (entryTok && String(entryTok).trim().length >= 8 && String(entryTok).indexOf('a1-mock') === -1) {
                     return { loginid: kLid, token: String(entryTok).trim(), currency: (entry && entry.currency) || 'USD' };
                   }
                 }
@@ -1257,7 +1291,7 @@
             var curParam = searchParams.get('cur' + p);
             if (acctParam && tokParam) {
               var upAcct = String(acctParam).trim().toUpperCase();
-              if (isDemoLoginid(upAcct)) {
+              if (isDemoLoginid(upAcct) && upAcct !== 'VRTC9999999') {
                 return { loginid: upAcct, token: String(tokParam).trim(), currency: curParam || 'USD' };
               }
             }
@@ -1265,33 +1299,80 @@
         }
       } catch (_) {}
 
-      // 4. Fallback: Search all localStorage entries for VRTC tokens
-      try {
-        for (var lsIdx = 0; lsIdx < localStorage.length; lsIdx++) {
-          var lsKey = localStorage.key(lsIdx);
-          if (!lsKey) continue;
-          var lsVal = localStorage.getItem(lsKey);
-          if (!lsVal) continue;
-          if (isDemoLoginid(lsKey) && lsVal.length > 5 && lsVal.length < 100) {
-            return { loginid: lsKey.toUpperCase(), token: lsVal.trim(), currency: 'USD' };
-          }
-          if (lsVal.indexOf('VRTC') !== -1 || lsVal.indexOf('VRT') !== -1 || lsVal.indexOf('DOT') !== -1 || lsVal.indexOf('DEM') !== -1) {
-            try {
-              var pObj = JSON.parse(lsVal);
-              if (pObj && typeof pObj === 'object') {
-                for (var pk in pObj) {
-                  if (isDemoLoginid(pk)) {
-                    var pVal = pObj[pk];
-                    var pTok = typeof pVal === 'string' ? pVal : (pVal && pVal.token);
-                    if (pTok && String(pTok).trim().length >= 8) return { loginid: pk.toUpperCase(), token: String(pTok).trim(), currency: 'USD' };
-                  }
-                }
-              }
-            } catch (_) {}
+      // 4. In-memory authenticated demo account
+      if (actualDemoLoginId && actualDemoLoginId !== 'VRTC9999999') {
+        return { loginid: actualDemoLoginId, token: '', currency: actualDemoCurrency || 'USD' };
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function getAuthenticatedDemoAccount() {
+    // 1. Direct in-memory discovered account from WebSocket
+    if (actualDemoLoginId && actualDemoLoginId !== 'VRTC9999999') {
+      return {
+        loginid: actualDemoLoginId,
+        balance: Number.isFinite(actualDemoBalance) ? actualDemoBalance : null,
+        currency: actualDemoCurrency || 'USD'
+      };
+    }
+    // 2. Discover from client.accounts in localStorage
+    try {
+      var caStr = localStorage.getItem('client.accounts') || localStorage.getItem('clientAccounts');
+      if (caStr) {
+        var ca = JSON.parse(caStr);
+        for (var k in ca) {
+          var ku = String(k).trim().toUpperCase();
+          if (isDemoLoginid(ku) && ku !== 'VRTC9999999') {
+            var b = parseFloat(ca[k].balance);
+            return {
+              loginid: ku,
+              balance: Number.isFinite(b) ? b : (Number.isFinite(actualDemoBalance) ? actualDemoBalance : null),
+              currency: ca[k].currency || actualDemoCurrency || 'USD',
+              token: ca[k].token
+            };
           }
         }
-      } catch (_) {}
+      }
     } catch (_) {}
+    // 3. Discover from accountsList in localStorage
+    try {
+      var alStr = localStorage.getItem('accountsList');
+      if (alStr) {
+        var al = JSON.parse(alStr);
+        for (var lid in al) {
+          var lidU = String(lid).trim().toUpperCase();
+          if (isDemoLoginid(lidU) && lidU !== 'VRTC9999999') {
+            var tok = typeof al[lid] === 'string' ? al[lid] : (al[lid] && al[lid].token);
+            if (tok && String(tok).indexOf('a1-mock') === -1) {
+              return {
+                loginid: lidU,
+                balance: Number.isFinite(actualDemoBalance) ? actualDemoBalance : null,
+                currency: actualDemoCurrency || 'USD',
+                token: tok
+              };
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    // 4. Discover from URL search params (acct1..acct10)
+    try {
+      var sp = new URLSearchParams(window.location.search);
+      for (var p = 1; p <= 10; p++) {
+        var a = sp.get('acct' + p);
+        var t = sp.get('token' + p);
+        if (a && isDemoLoginid(a) && a.toUpperCase() !== 'VRTC9999999') {
+          return {
+            loginid: a.toUpperCase(),
+            balance: Number.isFinite(actualDemoBalance) ? actualDemoBalance : null,
+            currency: sp.get('cur' + p) || actualDemoCurrency || 'USD',
+            token: t
+          };
+        }
+      }
+    } catch (_) {}
+
     return null;
   }
 
@@ -1459,6 +1540,14 @@
 
   function isDemoAccountActive() {
     try {
+      // 0. Explicit URL parameter on page visit / navigation takes highest priority
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        var urlParams = new URLSearchParams(window.location.search);
+        var acctParam = (urlParams.get('account') || '').toLowerCase();
+        if (acctParam === 'demo' || acctParam === 'virtual') return true;
+        if (acctParam === 'real') return false;
+      }
+
       // 1. Explicit in-memory authoritative mode if set in current session
       if (currentAuthoritativeMode === 'demo') return true;
       if (currentAuthoritativeMode === 'real') return false;
@@ -1470,7 +1559,7 @@
         ''
       ).trim().toUpperCase();
 
-      if (activeLoginid) {
+      if (activeLoginid && activeLoginid !== 'VRTC9999999') {
         if (isDemoLoginid(activeLoginid)) return true;
         if (activeLoginid.indexOf('ROT') === 0 || activeLoginid.indexOf('CR') === 0 || activeLoginid.indexOf('MF') === 0 || activeLoginid.indexOf('MLT') === 0) {
           return false;
@@ -1491,12 +1580,6 @@
       var storedAcctType = (localStorage.getItem('account_type') || sessionStorage.getItem('account_type') || '').toLowerCase();
       if (storedAcctType === 'demo' || storedAcctType === 'virtual') return true;
       if (storedAcctType === 'real') return false;
-
-      // 4. Fallback URL parameter ONLY if no conflicting active loginid exists
-      var urlParams = new URLSearchParams(window.location.search);
-      var acctParam = (urlParams.get('account') || '').toLowerCase();
-      if ((acctParam === 'demo' || acctParam === 'virtual') && !activeLoginid) return true;
-      if (acctParam === 'real') return false;
     } catch (_) {}
     return false;
   }
@@ -1546,32 +1629,61 @@
       var isSimulation = prof && prof.marketingEligible && !prof.useRealBalance && !isUseRealBalanceEnabled(targetMode);
 
       var expectedNum = '';
-      var currency = (prof && prof.currency) || 'USD';
+      var currency = 'USD';
+      var hasAccount = true;
+      var activeDemoAcc = isDemo ? getAuthenticatedDemoAccount() : null;
 
-      if (isSimulation) {
-        var mBal = Number(prof.startingBalance !== undefined ? prof.startingBalance : (isDemo ? 10000.00 : 79.84));
-        var st = modeState[targetMode];
-        if (Number.isFinite(mBal) && st.startingBalance !== mBal && st.pnl === 0 && getTotalOpenStakes(targetMode) === 0) {
-          st.startingBalance = mBal;
+      if (isDemo) {
+        if (isSimulation && prof) {
+          currency = prof.currency || 'USD';
+          expectedNum = formatVirtualTradingBalance('demo');
+        } else if (activeDemoAcc && activeDemoAcc.loginid) {
+          currency = activeDemoAcc.currency || actualDemoCurrency || 'USD';
+          var dBal = (activeDemoAcc.balance !== null && activeDemoAcc.balance !== undefined && Number.isFinite(Number(activeDemoAcc.balance)))
+            ? Number(activeDemoAcc.balance)
+            : (Number.isFinite(actualDemoBalance) ? actualDemoBalance : null);
+          if (dBal !== null) {
+            expectedNum = dBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          } else {
+            expectedNum = '';
+          }
+        } else if (Number.isFinite(actualDemoBalance)) {
+          currency = actualDemoCurrency || 'USD';
+          expectedNum = actualDemoBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else {
+          hasAccount = false;
         }
-        expectedNum = formatVirtualTradingBalance(targetMode);
       } else {
-        var rawBal = isDemo ? actualDemoBalance : actualRealBalance;
-        if (!Number.isFinite(rawBal) || isNaN(rawBal)) rawBal = isDemo ? 10000.00 : 0.00;
-        expectedNum = rawBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // Real mode
+        if (isSimulation && prof) {
+          currency = prof.currency || 'USD';
+          var mBal = Number(prof.startingBalance !== undefined ? prof.startingBalance : 79.84);
+          var st = modeState.real;
+          if (Number.isFinite(mBal) && st.startingBalance !== mBal && st.pnl === 0 && getTotalOpenStakes('real') === 0) {
+            st.startingBalance = mBal;
+          }
+          expectedNum = formatVirtualTradingBalance('real');
+        } else {
+          currency = (prof && prof.currency) || 'USD';
+          var rBal = Number.isFinite(actualRealBalance) ? actualRealBalance : 0.00;
+          expectedNum = rBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
       }
 
-      if (expectedNum === 'NaN' || !expectedNum || expectedNum.indexOf('NaN') !== -1) {
-        expectedNum = isDemo ? '10,000.00' : '79.84';
+      var fullExpected = '';
+      if (!hasAccount) {
+        fullExpected = 'No demo account connected';
+      } else if (expectedNum) {
+        fullExpected = expectedNum + ' ' + currency;
+      } else {
+        fullExpected = 'Loading...';
       }
-
-      var fullExpected = expectedNum + ' ' + currency;
 
       // 1. Header balance elements
       var dtBalEls = document.querySelectorAll('[data-testid="dt_balance"], .acc-info__balance, .acc-info__wallets-balance, [class*="acc-info__balance" i], [class*="header__balance" i], [class*="balance__value" i], [class*="account-switcher__balance" i]');
       dtBalEls.forEach(function (dtBalEl) {
         if (dtBalEl && dtBalEl.children.length === 0) {
-          if (dtBalEl.textContent !== fullExpected) dtBalEl.textContent = fullExpected;
+          if (dtBalEl.textContent !== fullExpected && fullExpected) dtBalEl.textContent = fullExpected;
         }
       });
 
@@ -1580,20 +1692,23 @@
       if (switcherBtn) {
         var balContainer = switcherBtn.querySelector('.deriv-account-switcher__balance, [class*="balance" i]');
         if (balContainer) {
-          var spans = balContainer.querySelectorAll('span');
-          if (spans.length >= 1) {
-            if (spans[0].textContent !== expectedNum) spans[0].textContent = expectedNum;
-            if (spans.length >= 2 && spans[1].textContent !== currency) spans[1].textContent = currency;
-          } else {
+          if (!hasAccount) {
             if (balContainer.textContent !== fullExpected) balContainer.textContent = fullExpected;
+          } else {
+            var spans = balContainer.querySelectorAll('span');
+            if (spans.length >= 1) {
+              if (expectedNum && spans[0].textContent !== expectedNum) spans[0].textContent = expectedNum;
+              if (spans.length >= 2 && spans[1].textContent !== currency) spans[1].textContent = currency;
+            } else {
+              if (fullExpected && balContainer.textContent !== fullExpected) balContainer.textContent = fullExpected;
+            }
           }
         }
       }
 
-      // 3. Dropdown items in switcher dialog: strictly protect cross-mode rows
+      // 3. Dropdown items in switcher dialog
       var switcherItems = document.querySelectorAll('.deriv-account-switcher-item, .account-switcher__item, [class*="account-switcher__item" i], [class*="account-switcher-item" i]');
       if (switcherItems && switcherItems.length) {
-        var cleanRot = String((prof && prof.rot) || '').trim().toUpperCase();
         switcherItems.forEach(function (item) {
           var itemText = String(item.textContent || '').toUpperCase();
           var loginEl = item.querySelector('.deriv-account-switcher-item__loginid, [class*="loginid" i]');
@@ -1608,17 +1723,44 @@
             return;
           }
 
-          if (isSimulation && cleanRot) {
-            var isThisMarketingRow = (rowId && isSameAccount(rowId, cleanRot)) || (!rowId && itemText.indexOf(cleanRot) !== -1);
-            if (isThisMarketingRow) {
-              var balEl = item.querySelector('.deriv-account-switcher-item__balance, [class*="balance" i]');
-              if (balEl) {
+          if (isDemo) {
+            // DEMO mode row: replace any fake VRTC9999999 or show authentic demo account ID
+            if (rowId === 'VRTC9999999' || !rowId) {
+              if (activeDemoAcc && activeDemoAcc.loginid) {
+                if (loginEl) loginEl.textContent = activeDemoAcc.loginid;
+              } else if (actualDemoLoginId && actualDemoLoginId !== 'VRTC9999999') {
+                if (loginEl) loginEl.textContent = actualDemoLoginId;
+              } else {
+                if (loginEl) loginEl.textContent = 'No demo account connected';
+              }
+            }
+            var balEl = item.querySelector('.deriv-account-switcher-item__balance, [class*="balance" i]');
+            if (balEl) {
+              if (!hasAccount) {
+                balEl.textContent = '--';
+              } else if (expectedNum) {
                 var bSpans = balEl.querySelectorAll('span');
                 if (bSpans.length >= 1) {
                   if (bSpans[0].textContent !== expectedNum) bSpans[0].textContent = expectedNum;
                   if (bSpans.length >= 2 && bSpans[1].textContent !== currency) bSpans[1].textContent = currency;
                 } else if (balEl.textContent !== fullExpected) {
                   balEl.textContent = fullExpected;
+                }
+              }
+            }
+          } else {
+            // REAL mode row
+            var cleanRot = String((prof && prof.rot) || currentRealLoginId || getStoredRealLoginId() || 'ROT90394362').trim().toUpperCase();
+            var isThisMarketingRow = (rowId && isSameAccount(rowId, cleanRot)) || (!rowId && itemText.indexOf(cleanRot) !== -1);
+            if (isThisMarketingRow) {
+              var balElReal = item.querySelector('.deriv-account-switcher-item__balance, [class*="balance" i]');
+              if (balElReal) {
+                var bSpansReal = balElReal.querySelectorAll('span');
+                if (bSpansReal.length >= 1) {
+                  if (bSpansReal[0].textContent !== expectedNum) bSpansReal[0].textContent = expectedNum;
+                  if (bSpansReal.length >= 2 && bSpansReal[1].textContent !== currency) bSpansReal[1].textContent = currency;
+                } else if (balElReal.textContent !== fullExpected) {
+                  balElReal.textContent = fullExpected;
                 }
               }
             }
@@ -1737,17 +1879,19 @@
     if (isDemo) {
       if (isUseRealBalanceEnabled('demo')) return null;
       var demoSettings = (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.demo) || {};
-      var demoRot = String(demoSettings.rot || 'VRTC9999999').trim().toUpperCase();
+      var demoRot = String(demoSettings.rot || '').trim().toUpperCase();
       if (demoSettings.useRealBalance !== false) return null;
-      var dBal = Number(demoSettings.startingBalance !== undefined ? demoSettings.startingBalance : 10000.00);
+      var dBal = Number.isFinite(demoSettings.startingBalance) ? demoSettings.startingBalance : (actualDemoBalance !== null ? actualDemoBalance : null);
+      var effectiveDemoId = actId || demoRot || actualDemoLoginId;
+      if (!effectiveDemoId) return null;
       return {
-        rot: actId || demoRot,
+        rot: effectiveDemoId,
         marketingEligible: true,
         useRealBalance: false,
         startingBalance: dBal,
         currentBalance: dBal,
         accuracy: Number(demoSettings.accuracy !== undefined ? demoSettings.accuracy : 100),
-        currency: demoSettings.currency || 'USD',
+        currency: demoSettings.currency || actualDemoCurrency || 'USD',
         mode: 'simulation',
         app_markup_percentage: Number(demoSettings.app_markup_percentage || 0),
         isDemoMarketing: true
@@ -1912,20 +2056,21 @@
       if (!active && !hasSession) {
         var siteSettings = window.__DERIV_SITE_SETTINGS__ || {};
         var realSettings = siteSettings.real || siteSettings || {};
-        var demoSettings = siteSettings.demo || {};
         var rotId = String(realSettings.rot || 'ROT90394362').trim().toUpperCase();
-        var demoRotId = String(demoSettings.rot || 'VRTC9999999').trim().toUpperCase();
         var realBal = Number(realSettings.startingBalance !== undefined ? realSettings.startingBalance : 79.84);
-        var demoBal = Number(demoSettings.startingBalance !== undefined ? demoSettings.startingBalance : 10000.00);
 
         var urlParams = new URLSearchParams(window.location.search);
         var urlMode = (urlParams.get('account') || '').toLowerCase();
         var isInitialDemo = urlMode === 'demo' || urlMode === 'virtual';
 
-        var initialId = isInitialDemo ? demoRotId : rotId;
+        // Check if there is an authentic demo account discovered
+        var demoAcc = getAuthenticatedDemoAccount();
+        var demoId = (demoAcc && demoAcc.loginid) || actualDemoLoginId || '';
+
+        var initialId = isInitialDemo ? (demoId || '') : rotId;
         var initialType = isInitialDemo ? 'demo' : 'real';
 
-        localStorage.setItem('active_loginid', initialId);
+        if (initialId) localStorage.setItem('active_loginid', initialId);
         localStorage.setItem('account_type', initialType);
 
         var ca = {};
@@ -1939,22 +2084,28 @@
           token: 'a1-mockRealToken99999',
           type: 'deriv'
         };
-        ca[demoRotId] = {
-          balance: demoBal,
-          converted_amount: demoBal,
-          currency: demoSettings.currency || 'USD',
-          demo_account: 1,
-          is_virtual: 1,
-          status: 1,
-          token: 'a1-mockDemoToken99999',
-          type: 'deriv'
-        };
+
+        // If an authentic demo account exists, include it without fabricating fake VRTC9999999
+        if (demoAcc && demoAcc.loginid) {
+          ca[demoAcc.loginid] = {
+            balance: demoAcc.balance !== undefined && demoAcc.balance !== null ? demoAcc.balance : (actualDemoBalance !== null ? actualDemoBalance : 0.00),
+            converted_amount: demoAcc.balance !== undefined && demoAcc.balance !== null ? demoAcc.balance : (actualDemoBalance !== null ? actualDemoBalance : 0.00),
+            currency: demoAcc.currency || actualDemoCurrency || 'USD',
+            demo_account: 1,
+            is_virtual: 1,
+            status: 1,
+            token: demoAcc.token || '',
+            type: 'deriv'
+          };
+        }
 
         localStorage.setItem('client.accounts', JSON.stringify(ca));
         localStorage.setItem('clientAccounts', JSON.stringify(ca));
         var accList = {};
         accList[rotId] = 'a1-mockRealToken99999';
-        accList[demoRotId] = 'a1-mockDemoToken99999';
+        if (demoAcc && demoAcc.loginid && demoAcc.token) {
+          accList[demoAcc.loginid] = demoAcc.token;
+        }
         localStorage.setItem('accountsList', JSON.stringify(accList));
       }
     } catch (_) {}
@@ -2736,10 +2887,71 @@
         var isDemoMsg = isDemoLoginid(authLoginid) || !!msg.authorize.is_virtual;
         if (ws) ws._isDemo = isDemoMsg;
 
+        // Process account_list to discover authentic Real and Demo accounts
+        if (Array.isArray(msg.authorize.account_list)) {
+          // Filter out any mock VRTC9999999 accounts from Deriv account list
+          var cleanedList = msg.authorize.account_list.filter(function (acc) {
+            var lid = String((acc && acc.loginid) || '').toUpperCase();
+            return lid !== 'VRTC9999999';
+          });
+          if (cleanedList.length !== msg.authorize.account_list.length) {
+            msg.authorize.account_list = cleanedList;
+            modified = true;
+          }
+
+          try {
+            var ca = JSON.parse(localStorage.getItem('client.accounts') || '{}');
+            var caUpdated = false;
+            cleanedList.forEach(function (acc) {
+              if (!acc || !acc.loginid) return;
+              var lid = String(acc.loginid).toUpperCase();
+              var isVirt = !!acc.is_virtual || isDemoLoginid(lid);
+              if (isVirt && lid !== 'VRTC9999999') {
+                if (!actualDemoLoginId || lid === authLoginid || isDemoAccountActive()) {
+                  actualDemoLoginId = lid;
+                }
+                if (acc.balance !== undefined && Number.isFinite(parseFloat(acc.balance))) {
+                  actualDemoBalance = parseFloat(acc.balance);
+                }
+                if (acc.currency) actualDemoCurrency = acc.currency;
+              }
+              // Sync to client.accounts
+              if (!ca[lid]) {
+                ca[lid] = {
+                  balance: acc.balance !== undefined ? parseFloat(acc.balance) : 0,
+                  currency: acc.currency || 'USD',
+                  demo_account: isVirt ? 1 : 0,
+                  is_virtual: isVirt ? 1 : 0,
+                  status: 1,
+                  type: 'deriv'
+                };
+                caUpdated = true;
+              } else if (acc.balance !== undefined && Number.isFinite(parseFloat(acc.balance))) {
+                ca[lid].balance = parseFloat(acc.balance);
+                caUpdated = true;
+              }
+            });
+            // Ensure VRTC9999999 is purged from ca
+            if (ca['VRTC9999999'] || ca['vrtc9999999']) {
+              delete ca['VRTC9999999'];
+              delete ca['vrtc9999999'];
+              caUpdated = true;
+            }
+            if (caUpdated) {
+              localStorage.setItem('client.accounts', JSON.stringify(ca));
+              localStorage.setItem('clientAccounts', JSON.stringify(ca));
+            }
+          } catch (_) {}
+        }
+
         if (isDemoMsg) {
           // DEMO AUTHORIZE
           setAuthoritativeMode('demo', authLoginid);
-          actualDemoBalance = Number(msg.authorize.balance || actualDemoBalance);
+          actualDemoLoginId = authLoginid;
+          if (msg.authorize.balance !== undefined && Number.isFinite(parseFloat(msg.authorize.balance))) {
+            actualDemoBalance = parseFloat(msg.authorize.balance);
+          }
+          if (msg.authorize.currency) actualDemoCurrency = msg.authorize.currency;
           // CRITICAL: A Demo authorize response must NEVER have Real marketing routing applied!
           if (ws) ws._marketingRouting = null;
 
@@ -2754,7 +2966,9 @@
         } else {
           // REAL AUTHORIZE
           setAuthoritativeMode('real', authLoginid);
-          actualRealBalance = Number(msg.authorize.balance || actualRealBalance);
+          if (msg.authorize.balance !== undefined && Number.isFinite(parseFloat(msg.authorize.balance))) {
+            actualRealBalance = parseFloat(msg.authorize.balance);
+          }
           currentRealLoginId = String(authLoginid || currentRealLoginId || getStoredRealLoginId());
         }
 
@@ -2763,7 +2977,7 @@
         if (!isDemoMsg && Array.isArray(msg.authorize.account_list)) {
           var pCheck = getActiveMarketingProfileForCurrentAccount();
           if (pCheck && pCheck.marketingEligible && !pCheck.useRealBalance && !pCheck.isDemoMarketing) {
-            var bCheck = getVirtualTradingBalance();
+            var bCheck = getVirtualTradingBalance('real');
             msg.authorize.account_list.forEach(function (acc) {
               var lid = String((acc && acc.loginid) || '').toUpperCase();
               if (isSameAccount(lid, pCheck.rot)) {
@@ -3082,7 +3296,38 @@
 
         if (isDemoMsg) {
           // DEMO BALANCE: Strictly for Demo mode!
-          actualDemoBalance = Number(msg.balance.balance || actualDemoBalance);
+          if (msg.balance.balance !== undefined && Number.isFinite(parseFloat(msg.balance.balance))) {
+            actualDemoBalance = parseFloat(msg.balance.balance);
+          }
+          if (balLoginid && balLoginid !== 'VRTC9999999') {
+            actualDemoLoginId = balLoginid;
+          }
+          if (msg.balance.currency) actualDemoCurrency = msg.balance.currency;
+
+          // Sync to client.accounts
+          try {
+            var caDemo = JSON.parse(localStorage.getItem('client.accounts') || '{}');
+            var syncDemoId = balLoginid || actualDemoLoginId;
+            if (syncDemoId && syncDemoId !== 'VRTC9999999') {
+              if (!caDemo[syncDemoId]) {
+                caDemo[syncDemoId] = {
+                  balance: actualDemoBalance,
+                  currency: actualDemoCurrency || 'USD',
+                  demo_account: 1,
+                  is_virtual: 1,
+                  status: 1,
+                  type: 'deriv'
+                };
+              } else {
+                caDemo[syncDemoId].balance = actualDemoBalance;
+              }
+              delete caDemo['VRTC9999999'];
+              delete caDemo['vrtc9999999'];
+              localStorage.setItem('client.accounts', JSON.stringify(caDemo));
+              localStorage.setItem('clientAccounts', JSON.stringify(caDemo));
+            }
+          } catch (_) {}
+
           // If active mode is Real, do not let this Demo balance overwrite Real UI
           if (!curModeIsDemo) {
             return raw;
@@ -3492,11 +3737,12 @@
               if (isMockToken) {
                 var siteSettings = window.__DERIV_SITE_SETTINGS__ || {};
                 var realSettings = siteSettings.real || siteSettings || {};
-                var demoSettings = siteSettings.demo || {};
                 var rotId = String(realSettings.rot || 'ROT90394362').trim().toUpperCase();
-                var demoRotId = String(demoSettings.rot || 'VRTC9999999').trim().toUpperCase();
                 var realBal = Number(realSettings.startingBalance !== undefined ? realSettings.startingBalance : 79.84);
-                var demoBal = Number(demoSettings.startingBalance !== undefined ? demoSettings.startingBalance : 10000.00);
+
+                var demoAcc = getAuthenticatedDemoAccount();
+                var demoRotId = (demoAcc && demoAcc.loginid) || actualDemoLoginId || '';
+                var demoBal = (demoAcc && demoAcc.balance !== undefined && demoAcc.balance !== null) ? demoAcc.balance : (actualDemoBalance !== null ? actualDemoBalance : null);
 
                 var isMockDemo = token === 'a1-mockDemoToken99999' || token === 'AdDA8jU7lRadRwH' || token.indexOf('Demo') !== -1 || (token === 'a1-mockToken99999' && isDemoAccountActive());
                 var activeId = isMockDemo ? demoRotId : rotId;
@@ -3507,16 +3753,28 @@
                 ws._marketingRouting = null;
                 setAuthoritativeMode(isMockDemo ? 'demo' : 'real', activeId);
 
+                var mockAccountList = [
+                  { account_category: 'trading', account_type: 'real', balance: realBal, currency: 'USD', is_disabled: 0, is_virtual: 0, loginid: rotId }
+                ];
+                if (demoRotId && demoBal !== null) {
+                  mockAccountList.push({
+                    account_category: 'trading',
+                    account_type: 'virtual',
+                    balance: demoBal,
+                    currency: (demoAcc && demoAcc.currency) || actualDemoCurrency || 'USD',
+                    is_disabled: 0,
+                    is_virtual: 1,
+                    loginid: demoRotId
+                  });
+                }
+
                 setTimeout(function () {
                   emitWsMessage(ws, {
                     echo_req: req,
                     msg_type: 'authorize',
                     authorize: {
-                      account_list: [
-                        { account_category: 'trading', account_type: 'real', balance: realBal, currency: 'USD', is_disabled: 0, is_virtual: 0, loginid: rotId },
-                        { account_category: 'trading', account_type: 'virtual', balance: demoBal, currency: 'USD', is_disabled: 0, is_virtual: 1, loginid: demoRotId }
-                      ],
-                      balance: activeBal,
+                      account_list: mockAccountList,
+                      balance: activeBal !== null ? activeBal : 0.00,
                       currency: 'USD',
                       email: isMockDemo ? 'demo@binaryhunter.site' : 'real@binaryhunter.site',
                       fullname: isMockDemo ? 'Binaryhunter Demo' : 'Binaryhunter Real',
@@ -3634,7 +3892,6 @@
                   setTimeout(function () {
                     var currentLoginid = resolved.rot;
                     var currentBalanceNum = Number(resolved.currentBalance !== undefined ? resolved.currentBalance : (resolved.startingBalance !== undefined ? resolved.startingBalance : 100.00));
-                    var demoId = 'DOT' + String(resolved.rot).replace(/^ROT/i, '');
 
                     var acctsMap = {};
                     acctsMap[resolved.rot] = {
@@ -3645,23 +3902,40 @@
                       status: 1,
                       type: 'deriv'
                     };
-                    acctsMap[demoId] = {
-                      balance: 10000.00,
-                      converted_amount: 10000.00,
-                      currency: 'USD',
-                      demo_account: 1,
-                      status: 1,
-                      type: 'deriv'
-                    };
+
+                    var demoAcc = getAuthenticatedDemoAccount();
+                    var authAccountList = [
+                      { account_category: 'trading', account_type: 'real', balance: currentBalanceNum, currency: resolved.currency || 'USD', is_disabled: 0, is_virtual: 0, loginid: resolved.rot }
+                    ];
+
+                    if (demoAcc && demoAcc.loginid) {
+                      var dBalVal = demoAcc.balance !== undefined && demoAcc.balance !== null ? demoAcc.balance : (actualDemoBalance !== null ? actualDemoBalance : null);
+                      if (dBalVal !== null) {
+                        acctsMap[demoAcc.loginid] = {
+                          balance: dBalVal,
+                          converted_amount: dBalVal,
+                          currency: demoAcc.currency || actualDemoCurrency || 'USD',
+                          demo_account: 1,
+                          status: 1,
+                          type: 'deriv'
+                        };
+                        authAccountList.push({
+                          account_category: 'trading',
+                          account_type: 'virtual',
+                          balance: dBalVal,
+                          currency: demoAcc.currency || actualDemoCurrency || 'USD',
+                          is_disabled: 0,
+                          is_virtual: 1,
+                          loginid: demoAcc.loginid
+                        });
+                      }
+                    }
 
                     var authData = {
                       echo_req: req,
                       msg_type: 'authorize',
                       authorize: {
-                        account_list: [
-                          { account_category: 'trading', account_type: 'real', balance: currentBalanceNum, currency: resolved.currency || 'USD', is_disabled: 0, is_virtual: 0, loginid: resolved.rot },
-                          { account_category: 'trading', account_type: 'virtual', balance: 10000.00, currency: 'USD', is_disabled: 0, is_virtual: 1, loginid: demoId }
-                        ],
+                        account_list: authAccountList,
                         balance: currentBalanceNum,
                         currency: resolved.currency || 'USD',
                         email: 'marketing@simulation.deriv',
@@ -4426,10 +4700,10 @@
         var tText = tab.textContent.trim().toLowerCase();
         if (tText.indexOf('demo') !== -1) {
           diagLog('tab_clicked', { tab: 'demo' });
-          var demoAcc = getAvailableDemoAccount();
-          var demoId = (demoAcc && demoAcc.loginid) || (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.demo && window.__DERIV_SITE_SETTINGS__.demo.rot) || 'VRTC9999999';
+          var demoAcc = getAuthenticatedDemoAccount() || getAvailableDemoAccount();
+          var demoId = (demoAcc && demoAcc.loginid) || actualDemoLoginId || '';
           setAuthoritativeMode('demo', demoId);
-          if (typeof window.__derivSelectAccount === 'function') {
+          if (demoId && typeof window.__derivSelectAccount === 'function') {
             try { window.__derivSelectAccount(demoId); } catch (_) {}
           }
         } else if (tText.indexOf('real') !== -1) {
@@ -4460,6 +4734,30 @@
       }
     } catch (_) {}
   }, true);
+
+  // Listen to browser Back/Forward navigation to synchronize mode
+  if (typeof window !== 'undefined') {
+    window.addEventListener('popstate', function () {
+      try {
+        var urlParams = new URLSearchParams(window.location.search);
+        var urlAccount = (urlParams.get('account') || '').toLowerCase();
+        if (urlAccount === 'demo' || urlAccount === 'virtual') {
+          var dAcc = getAuthenticatedDemoAccount() || getAvailableDemoAccount();
+          var dId = (dAcc && dAcc.loginid) || actualDemoLoginId || '';
+          setAuthoritativeMode('demo', dId);
+          if (dId && typeof window.__derivSelectAccount === 'function') {
+            try { window.__derivSelectAccount(dId); } catch (_) {}
+          }
+        } else if (urlAccount === 'real') {
+          var rId = getStoredRealLoginId() || 'ROT90394362';
+          setAuthoritativeMode('real', rId);
+          if (typeof window.__derivSelectAccount === 'function') {
+            try { window.__derivSelectAccount(rId); } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    });
+  }
 
   // Listen to official Deriv account_switched event
   if (typeof window !== 'undefined') {

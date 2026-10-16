@@ -367,12 +367,13 @@ app.get('/api/marketing/demo-sync', (req, res) => {
   const isDemo = isDemoLoginid(reqLid) || req.query.mode === 'demo';
   const targetMode = isDemo ? 'demo' : 'real';
   const mkt = adminStore.getMarketingConfig(targetMode);
-  const activeLid = reqLid || mkt.rot || (isDemo ? 'VRTC9999999' : 'CR1234567');
+  const activeLid = reqLid || mkt.rot || '';
   res.json({
     success: true,
     mode: targetMode,
     rot: activeLid,
-    startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
+    useRealBalance: mkt.useRealBalance === true,
+    startingBalance: Number(mkt.startingBalance !== undefined && mkt.startingBalance !== null ? mkt.startingBalance : (isDemo ? null : 800.00)),
     app_markup_percentage: Number(mkt.app_markup_percentage || 0),
     processedContractIds: []
   });
@@ -385,13 +386,14 @@ app.post('/api/marketing/demo-sync', express.json(), (req, res) => {
   const isDemo = isDemoLoginid(reqLid) || body.mode === 'demo';
   const targetMode = isDemo ? 'demo' : 'real';
   const mkt = adminStore.getMarketingConfig(targetMode);
-  const activeLid = reqLid || mkt.rot || (isDemo ? 'VRTC9999999' : 'CR1234567');
+  const activeLid = reqLid || mkt.rot || '';
   res.json({
     success: true,
     mode: targetMode,
     action: body.action || 'sync',
     rot: activeLid,
-    startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
+    useRealBalance: mkt.useRealBalance === true,
+    startingBalance: Number(mkt.startingBalance !== undefined && mkt.startingBalance !== null ? mkt.startingBalance : (isDemo ? null : 800.00)),
     app_markup_percentage: Number(mkt.app_markup_percentage || 0)
   });
 });

@@ -89,11 +89,11 @@ function normalizeMarketingConfig(raw) {
 
   const defaultDemo = {
     useRealBalance: true,
-    rot: 'VRTC9999999',
-    startingBalance: 10000.00,
+    rot: '',
+    startingBalance: null,
     currency: 'USD',
     accuracy: 100,
-    mode: 'simulation',
+    mode: 'real',
     app_markup_percentage: 0,
     updatedAt: new Date().toISOString(),
     lastActivatedAt: null,
