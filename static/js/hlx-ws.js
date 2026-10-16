@@ -1924,6 +1924,14 @@
       }).then(function (res) {
         if (reqEpoch !== activeModeEpoch) {
           diagLog('resolve_stale_response_dropped', { loginid: cleanId, reqEpoch: reqEpoch, currentEpoch: activeModeEpoch });
+
+          // If the user switched away and back while this request was pending,
+          // retry now that the stale in-flight request has finished.
+          var retryActiveId = String(localStorage.getItem('active_loginid') || currentAuthoritativeLoginid || '').trim().toUpperCase();
+          var retryMode = currentAuthoritativeMode || (isDemoAccountActive() ? 'demo' : 'real');
+          if (retryMode === targetMode && isSameAccount(retryActiveId, cleanId)) {
+            setTimeout(function () { warmMarketingProfile(cleanId); }, 0);
+          }
           return;
         }
         var currentActive = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
@@ -4639,6 +4647,8 @@
   }, 50);
 
 
+  // Use bubble phase so the Deriv UI handles the account-row click first.
+  // Capture-phase storage writes here can race the app's own account-switch handler.
   document.addEventListener('click', function (e) {
     try {
       var target = e.target;
@@ -4675,7 +4685,7 @@
         }
       }
     } catch (_) {}
-  }, true);
+  }, false);
 
   // Listen to browser Back/Forward navigation to synchronize mode
   if (typeof window !== 'undefined') {
