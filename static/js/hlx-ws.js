@@ -1150,6 +1150,16 @@
     return u.indexOf('VRTC') === 0 || u.indexOf('VRT') === 0 || u.indexOf('DOT') === 0 || u.indexOf('DEM') === 0 || u.indexOf('VRW') === 0;
   }
 
+  // Return a mode only when the login ID identifies a real/demo account clearly.
+  // VRTC9999999 is a legacy placeholder, not a trusted authenticated demo account.
+  function getAccountModeFromLoginid(id) {
+    var u = String(id || '').trim().toUpperCase();
+    if (!u || u === 'VRTC9999999') return null;
+    if (isDemoLoginid(u)) return 'demo';
+    if (u.indexOf('CR') === 0 || u.indexOf('ROT') === 0 || u.indexOf('MF') === 0 || u.indexOf('MLT') === 0) return 'real';
+    return null;
+  }
+
   function getAvailableDemoAccount() {
     try {
       // 0. Primary OAuth 2.0 PKCE Session in sessionStorage (auth_info)
@@ -1479,19 +1489,60 @@
 
   function setAuthoritativeMode(mode, loginid) {
     var cleanMode = mode === 'demo' || mode === 'virtual' ? 'demo' : 'real';
+    var requestedId = String(loginid || '').trim().toUpperCase();
+    var requestedIdMode = getAccountModeFromLoginid(requestedId);
+    // A recognised account ID is stronger evidence than a text/URL mode hint.
+    if (requestedIdMode) cleanMode = requestedIdMode;
+
     var prevMode = currentAuthoritativeMode;
     currentAuthoritativeMode = cleanMode;
     activeModeEpoch++;
 
-    if (loginid) currentAuthoritativeLoginid = String(loginid).trim().toUpperCase();
+    if (requestedId) {
+      currentAuthoritativeLoginid = requestedId;
+    } else {
+      // Never carry a login ID from the opposite mode into the new selection.
+      if (getAccountModeFromLoginid(currentAuthoritativeLoginid) !== cleanMode) {
+        currentAuthoritativeLoginid = '';
+      }
+
+      var storedId = '';
+      try {
+        storedId = String(localStorage.getItem('active_loginid') || sessionStorage.getItem('active_loginid') || '').trim().toUpperCase();
+      } catch (_) {}
+      if (!currentAuthoritativeLoginid && getAccountModeFromLoginid(storedId) === cleanMode) {
+        currentAuthoritativeLoginid = storedId;
+      }
+
+      // If the active ID belonged to the other mode, recover a matching ID from
+      // the already-authenticated account list instead of reusing the stale one.
+      if (!currentAuthoritativeLoginid) {
+        if (cleanMode === 'demo') {
+          var demoAccount = getAuthenticatedDemoAccount() || getAvailableDemoAccount();
+          var demoId = String((demoAccount && demoAccount.loginid) || '').trim().toUpperCase();
+          if (getAccountModeFromLoginid(demoId) === 'demo') currentAuthoritativeLoginid = demoId;
+        } else {
+          var realId = String(getStoredRealLoginId() || '').trim().toUpperCase();
+          if (getAccountModeFromLoginid(realId) === 'real') currentAuthoritativeLoginid = realId;
+        }
+      }
+    }
+
     diagLog('mode_switched', { from: prevMode, to: cleanMode, loginid: currentAuthoritativeLoginid, epoch: activeModeEpoch });
 
     try {
       localStorage.setItem('account_type', cleanMode);
       sessionStorage.setItem('account_type', cleanMode);
-      if (loginid) {
+      if (currentAuthoritativeLoginid) {
         localStorage.setItem('active_loginid', currentAuthoritativeLoginid);
         sessionStorage.setItem('active_loginid', currentAuthoritativeLoginid);
+      } else {
+        var storedLoginid = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
+        var storedMode = getAccountModeFromLoginid(storedLoginid);
+        if (storedMode && storedMode !== cleanMode) {
+          localStorage.removeItem('active_loginid');
+          sessionStorage.removeItem('active_loginid');
+        }
       }
     } catch (_) {}
 
@@ -1521,14 +1572,25 @@
       });
     }
 
-    // Refresh profile for newly selected mode
-    var actId = currentAuthoritativeLoginid || (typeof localStorage !== 'undefined' ? localStorage.getItem('active_loginid') : '');
+    // Refresh profile for the selected account only; don't resolve a stale ID
+    // from the opposite mode if the switch event did not provide a login ID.
+    var actId = currentAuthoritativeLoginid;
+    if (!actId) {
+      try {
+        var storedProfileId = String(localStorage.getItem('active_loginid') || sessionStorage.getItem('active_loginid') || '').trim().toUpperCase();
+        var storedProfileMode = getAccountModeFromLoginid(storedProfileId);
+        if (!storedProfileMode || storedProfileMode === cleanMode) actId = storedProfileId;
+      } catch (_) {}
+    }
+    if (actId && getAccountModeFromLoginid(actId) && getAccountModeFromLoginid(actId) !== cleanMode) actId = '';
+
     if (actId) {
       var prof = resolveMarketingProfileSync(actId);
       activeMarketingProfile = prof;
-      if (prof && prof.marketingEligible && !prof.useRealBalance) {
+      if (prof && prof.marketingEligible && !prof.useRealBalance && cleanMode === 'real') {
         applyMarketingProfile(prof);
       } else {
+        activeMarketingProfile = null;
         warmMarketingProfile(actId);
       }
     } else {
@@ -1540,24 +1602,19 @@
 
   function isDemoAccountActive() {
     try {
-      // 1. Authoritative active_loginid in memory or localStorage / sessionStorage
+      // The most recent explicit selection wins over any stale login ID.
+      if (currentAuthoritativeMode === 'demo') return true;
+      if (currentAuthoritativeMode === 'real') return false;
+
+      // Before an explicit switch, infer mode from the active account ID.
       var activeLoginid = String(
         currentAuthoritativeLoginid ||
         localStorage.getItem('active_loginid') ||
         sessionStorage.getItem('active_loginid') ||
         ''
       ).trim().toUpperCase();
-
-      if (activeLoginid && activeLoginid !== 'VRTC9999999') {
-        if (isDemoLoginid(activeLoginid)) return true;
-        if (activeLoginid.indexOf('ROT') === 0 || activeLoginid.indexOf('CR') === 0 || activeLoginid.indexOf('MF') === 0 || activeLoginid.indexOf('MLT') === 0) {
-          return false;
-        }
-      }
-
-      // 2. Explicit in-memory authoritative mode if set in current session
-      if (currentAuthoritativeMode === 'demo') return true;
-      if (currentAuthoritativeMode === 'real') return false;
+      var activeMode = getAccountModeFromLoginid(activeLoginid);
+      if (activeMode) return activeMode === 'demo';
 
       // 3. URL parameter on page visit / navigation
       if (typeof window !== 'undefined' && window.location && window.location.search) {
@@ -1867,6 +1924,14 @@
       }).then(function (res) {
         if (reqEpoch !== activeModeEpoch) {
           diagLog('resolve_stale_response_dropped', { loginid: cleanId, reqEpoch: reqEpoch, currentEpoch: activeModeEpoch });
+
+          // If the user switched away and back while this request was pending,
+          // retry now that the stale in-flight request has finished.
+          var retryActiveId = String(localStorage.getItem('active_loginid') || currentAuthoritativeLoginid || '').trim().toUpperCase();
+          var retryMode = currentAuthoritativeMode || (isDemoAccountActive() ? 'demo' : 'real');
+          if (retryMode === targetMode && isSameAccount(retryActiveId, cleanId)) {
+            setTimeout(function () { warmMarketingProfile(cleanId); }, 0);
+          }
           return;
         }
         var currentActive = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
@@ -1911,8 +1976,15 @@
   function syncAccountState(loginid) {
     try {
       var activeId = String(loginid || localStorage.getItem('active_loginid') || '').trim().toUpperCase();
-      var isDemo = isDemoLoginid(activeId) || isDemoAccountActive();
-      var targetMode = isDemo ? 'demo' : 'real';
+      var activeIdMode = getAccountModeFromLoginid(activeId);
+      var targetMode = activeIdMode || (isDemoAccountActive() ? 'demo' : 'real');
+
+      // A changed, recognisable account ID can supersede the previous mode
+      // (for example, a real account selected in another tab).
+      if (activeIdMode && currentAuthoritativeMode && activeIdMode !== currentAuthoritativeMode) {
+        setAuthoritativeMode(activeIdMode, activeId);
+        targetMode = activeIdMode;
+      }
 
       selectedAccountType = targetMode;
       selectedAccountId = activeId;
@@ -4575,6 +4647,8 @@
   }, 50);
 
 
+  // Use bubble phase so the Deriv UI handles the account-row click first.
+  // Capture-phase storage writes here can race the app's own account-switch handler.
   document.addEventListener('click', function (e) {
     try {
       var target = e.target;
@@ -4593,18 +4667,25 @@
         var text = String(item.textContent || '').toUpperCase();
         var loginEl = item.querySelector('.deriv-account-switcher-item__loginid, [class*="loginid" i]');
         var acctId = loginEl ? String(loginEl.textContent || '').trim().toUpperCase() : '';
-        var isClickDemo = isDemoLoginid(acctId) || text.indexOf('VRTC') !== -1 || text.indexOf('DEMO') !== -1 || text.indexOf('DOT') !== -1 || text.indexOf('VRT') !== -1;
+        // Some switcher layouts omit the login-ID child class. Recover the ID
+        // from the row text instead of accidentally reusing the previous mode.
+        if (!acctId) {
+          var idMatch = text.match(/\b(?:VRTC|VRT|DOT|DEM|VRW|ROT|CR|MF|MLT)[A-Z0-9]+\b/);
+          if (idMatch) acctId = idMatch[0];
+        }
+        var idMode = getAccountModeFromLoginid(acctId);
+        var isClickDemo = idMode ? idMode === 'demo' : (acctId === 'VRTC9999999' ? false : (
+          isDemoLoginid(acctId) || text.indexOf('VRTC') !== -1 || text.indexOf('DEMO') !== -1 || text.indexOf('DOT') !== -1 || text.indexOf('VRT') !== -1
+        ));
 
         if (isClickDemo) {
-          // Explicitly selected a Demo account
           setAuthoritativeMode('demo', acctId);
         } else {
-          // Explicitly selected a Real account
           setAuthoritativeMode('real', acctId);
         }
       }
     } catch (_) {}
-  }, true);
+  }, false);
 
   // Listen to browser Back/Forward navigation to synchronize mode
   if (typeof window !== 'undefined') {
