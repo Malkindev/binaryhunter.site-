@@ -332,32 +332,31 @@ app.get('/api/marketing/resolve', (req, res) => {
     });
   }
 
-  const reqDigits = reqLid.replace(/^[^0-9]+/, '');
-  const rotDigits = configuredRot.replace(/^[^0-9]+/, '');
-  const isMatch = !!configuredRot && !!reqLid && (reqLid === configuredRot || (reqDigits && rotDigits && reqDigits === rotDigits));
+  // Marketing simulation is strictly for the single configured Real ROT marketing account (ROT90394362).
+  // Client accounts (CR..., etc.) and Demo accounts must NEVER receive marketing profile!
+  const isMatch = !isDemo && !!configuredRot && !!reqLid && (reqLid.toUpperCase() === configuredRot.toUpperCase());
 
-  if (configuredRot && (isMatch || !reqLid)) {
-    const activeRot = reqLid || configuredRot;
+  if (isMatch) {
     res.json({
       success: true,
-      mode: targetMode,
+      mode: 'real',
       marketingEligible: true,
       useRealBalance: false,
-      rot: activeRot,
-      loginid: activeRot,
+      rot: configuredRot,
+      loginid: configuredRot,
       currency: mkt.currency || 'USD',
-      startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
-      currentBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : (isDemo ? 10000.00 : 800.00)),
+      startingBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : 79.84),
+      currentBalance: Number(mkt.startingBalance !== undefined ? mkt.startingBalance : 79.84),
       accuracy: Number(mkt.accuracy !== undefined ? mkt.accuracy : 100),
-      targetMode: targetMode,
-      account_mode: targetMode,
-      mode: targetMode,
+      targetMode: 'real',
+      account_mode: 'real',
+      mode: 'real',
       tradingMode: mkt.mode || 'simulation',
       marketingMode: mkt.mode || 'simulation',
       app_markup_percentage: Number(mkt.app_markup_percentage || 0)
     });
   } else {
-    res.json({ success: false, mode: targetMode, marketingEligible: false, useRealBalance: false });
+    res.json({ success: true, mode: targetMode, marketingEligible: false, useRealBalance: true });
   }
 });
 

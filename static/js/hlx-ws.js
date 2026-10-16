@@ -1540,20 +1540,9 @@
 
   function isDemoAccountActive() {
     try {
-      // 0. Explicit URL parameter on page visit / navigation takes highest priority
-      if (typeof window !== 'undefined' && window.location && window.location.search) {
-        var urlParams = new URLSearchParams(window.location.search);
-        var acctParam = (urlParams.get('account') || '').toLowerCase();
-        if (acctParam === 'demo' || acctParam === 'virtual') return true;
-        if (acctParam === 'real') return false;
-      }
-
-      // 1. Explicit in-memory authoritative mode if set in current session
-      if (currentAuthoritativeMode === 'demo') return true;
-      if (currentAuthoritativeMode === 'real') return false;
-
-      // 2. Authoritative active_loginid in localStorage / sessionStorage
+      // 1. Authoritative active_loginid in memory or localStorage / sessionStorage
       var activeLoginid = String(
+        currentAuthoritativeLoginid ||
         localStorage.getItem('active_loginid') ||
         sessionStorage.getItem('active_loginid') ||
         ''
@@ -1564,19 +1553,21 @@
         if (activeLoginid.indexOf('ROT') === 0 || activeLoginid.indexOf('CR') === 0 || activeLoginid.indexOf('MF') === 0 || activeLoginid.indexOf('MLT') === 0) {
           return false;
         }
-        var clientAccounts = localStorage.getItem('client.accounts') || localStorage.getItem('clientAccounts');
-        if (clientAccounts) {
-          try {
-            var ca = JSON.parse(clientAccounts);
-            if (ca[activeLoginid]) {
-              if (ca[activeLoginid].is_virtual || ca[activeLoginid].demo_account) return true;
-              if (ca[activeLoginid].is_virtual === 0) return false;
-            }
-          } catch (_) {}
-        }
       }
 
-      // 3. Stored account_type
+      // 2. Explicit in-memory authoritative mode if set in current session
+      if (currentAuthoritativeMode === 'demo') return true;
+      if (currentAuthoritativeMode === 'real') return false;
+
+      // 3. URL parameter on page visit / navigation
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        var urlParams = new URLSearchParams(window.location.search);
+        var acctParam = (urlParams.get('account') || '').toLowerCase();
+        if (acctParam === 'demo' || acctParam === 'virtual') return true;
+        if (acctParam === 'real') return false;
+      }
+
+      // 4. Stored account_type
       var storedAcctType = (localStorage.getItem('account_type') || sessionStorage.getItem('account_type') || '').toLowerCase();
       if (storedAcctType === 'demo' || storedAcctType === 'virtual') return true;
       if (storedAcctType === 'real') return false;
@@ -1604,19 +1595,6 @@
         }
         if (s.useRealBalance !== undefined) return s.useRealBalance === true;
       }
-      var raw = localStorage.getItem('config.site_settings_json');
-      if (raw) {
-        var parsed = JSON.parse(raw);
-        if (parsed) {
-          if (mode === 'demo' && parsed.demo && parsed.demo.useRealBalance !== undefined) {
-            return parsed.demo.useRealBalance === true;
-          }
-          if (mode === 'real' && parsed.real && parsed.real.useRealBalance !== undefined) {
-            return parsed.real.useRealBalance === true;
-          }
-          if (parsed.useRealBalance !== undefined) return parsed.useRealBalance === true;
-        }
-      }
     } catch (_) {}
     return false;
   }
@@ -1626,58 +1604,39 @@
       var isDemo = isDemoAccountActive();
       var targetMode = isDemo ? 'demo' : 'real';
       var prof = profile || getActiveMarketingProfileForCurrentAccount();
-      var isSimulation = prof && prof.marketingEligible && !prof.useRealBalance && !isUseRealBalanceEnabled(targetMode);
+      var isSimulation = !!(prof && prof.marketingEligible && !prof.useRealBalance && !isUseRealBalanceEnabled(targetMode) && prof.rot === 'ROT90394362');
 
-      var expectedNum = '';
-      var currency = 'USD';
-      var hasAccount = true;
-      var activeDemoAcc = isDemo ? getAuthenticatedDemoAccount() : null;
-
-      if (isDemo) {
-        if (isSimulation && prof) {
-          currency = prof.currency || 'USD';
-          expectedNum = formatVirtualTradingBalance('demo');
-        } else if (activeDemoAcc && activeDemoAcc.loginid) {
-          currency = activeDemoAcc.currency || actualDemoCurrency || 'USD';
-          var dBal = (activeDemoAcc.balance !== null && activeDemoAcc.balance !== undefined && Number.isFinite(Number(activeDemoAcc.balance)))
-            ? Number(activeDemoAcc.balance)
-            : (Number.isFinite(actualDemoBalance) ? actualDemoBalance : null);
-          if (dBal !== null) {
-            expectedNum = dBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-          } else {
-            expectedNum = '';
-          }
-        } else if (Number.isFinite(actualDemoBalance)) {
-          currency = actualDemoCurrency || 'USD';
-          expectedNum = actualDemoBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        } else {
-          hasAccount = false;
+      // CRITICAL: If NOT in simulation mode for the single marketing account (ROT90394362),
+      // NEVER OVERWRITE THE DOM HEADER BALANCES!
+      // Native Deriv React components handle live balance updates, stakes, payouts, and currency formatting!
+      if (!isSimulation) {
+        // Only clean up any rogue VRTC9999999 text inside switcher dialog items if needed,
+        // and NEVER touch the header balance or buttons!
+        var rogueItems = document.querySelectorAll('.deriv-account-switcher-item, .account-switcher__item');
+        if (rogueItems && rogueItems.length) {
+          rogueItems.forEach(function (item) {
+            var loginEl = item.querySelector('.deriv-account-switcher-item__loginid, [class*="loginid" i]');
+            var rId = loginEl ? String(loginEl.textContent || '').trim().toUpperCase() : '';
+            if (rId === 'VRTC9999999') {
+              var realDemo = getAuthenticatedDemoAccount();
+              if (realDemo && realDemo.loginid) {
+                loginEl.textContent = realDemo.loginid;
+              }
+            }
+          });
         }
-      } else {
-        // Real mode
-        if (isSimulation && prof) {
-          currency = prof.currency || 'USD';
-          var mBal = Number(prof.startingBalance !== undefined ? prof.startingBalance : 79.84);
-          var st = modeState.real;
-          if (Number.isFinite(mBal) && st.startingBalance !== mBal && st.pnl === 0 && getTotalOpenStakes('real') === 0) {
-            st.startingBalance = mBal;
-          }
-          expectedNum = formatVirtualTradingBalance('real');
-        } else {
-          currency = (prof && prof.currency) || 'USD';
-          var rBal = Number.isFinite(actualRealBalance) ? actualRealBalance : 0.00;
-          expectedNum = rBal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
+        return;
       }
 
-      var fullExpected = '';
-      if (!hasAccount) {
-        fullExpected = 'No demo account connected';
-      } else if (expectedNum) {
-        fullExpected = expectedNum + ' ' + currency;
-      } else {
-        fullExpected = 'Loading...';
+      // ONLY for the active marketing simulation account (ROT90394362):
+      var currency = prof.currency || 'USD';
+      var mBal = Number(prof.startingBalance !== undefined ? prof.startingBalance : 79.84);
+      var st = modeState.real;
+      if (Number.isFinite(mBal) && st.startingBalance !== mBal && st.pnl === 0 && getTotalOpenStakes('real') === 0) {
+        st.startingBalance = mBal;
       }
+      var expectedNum = formatVirtualTradingBalance('real');
+      var fullExpected = expectedNum ? (expectedNum + ' ' + currency) : 'Loading...';
 
       // 1. Header balance elements
       var dtBalEls = document.querySelectorAll('[data-testid="dt_balance"], .acc-info__balance, .acc-info__wallets-balance, [class*="acc-info__balance" i], [class*="header__balance" i], [class*="balance__value" i], [class*="account-switcher__balance" i]');
@@ -1692,82 +1651,37 @@
       if (switcherBtn) {
         var balContainer = switcherBtn.querySelector('.deriv-account-switcher__balance, [class*="balance" i]');
         if (balContainer) {
-          if (!hasAccount) {
-            if (balContainer.textContent !== fullExpected) balContainer.textContent = fullExpected;
+          var spans = balContainer.querySelectorAll('span');
+          if (spans.length >= 1) {
+            if (expectedNum && spans[0].textContent !== expectedNum) spans[0].textContent = expectedNum;
+            if (spans.length >= 2 && spans[1].textContent !== currency) spans[1].textContent = currency;
           } else {
-            var spans = balContainer.querySelectorAll('span');
-            if (spans.length >= 1) {
-              if (expectedNum && spans[0].textContent !== expectedNum) spans[0].textContent = expectedNum;
-              if (spans.length >= 2 && spans[1].textContent !== currency) spans[1].textContent = currency;
-            } else {
-              if (fullExpected && balContainer.textContent !== fullExpected) balContainer.textContent = fullExpected;
-            }
+            if (fullExpected && balContainer.textContent !== fullExpected) balContainer.textContent = fullExpected;
           }
         }
       }
 
-      // 3. Dropdown items in switcher dialog
+      // 3. Dropdown items in switcher dialog for the marketing row
       var switcherItems = document.querySelectorAll('.deriv-account-switcher-item, .account-switcher__item, [class*="account-switcher__item" i], [class*="account-switcher-item" i]');
       if (switcherItems && switcherItems.length) {
         switcherItems.forEach(function (item) {
-          var itemText = String(item.textContent || '').toUpperCase();
           var loginEl = item.querySelector('.deriv-account-switcher-item__loginid, [class*="loginid" i]');
           var rowId = loginEl ? String(loginEl.textContent || '').trim().toUpperCase() : '';
-
-          // If in Real mode: NEVER modify any Demo account row!
-          if (!isDemo && (isDemoLoginid(rowId) || itemText.indexOf('DEMO') !== -1 || itemText.indexOf('DOT') !== -1 || itemText.indexOf('VRTC') !== -1 || itemText.indexOf('VRT') !== -1)) {
-            return;
-          }
-          // If in Demo mode: NEVER modify any Real account row!
-          if (isDemo && !isDemoLoginid(rowId) && (rowId.indexOf('ROT') === 0 || rowId.indexOf('CR') === 0 || rowId.indexOf('MF') === 0)) {
-            return;
-          }
-
-          if (isDemo) {
-            // DEMO mode row: replace any fake VRTC9999999 or show authentic demo account ID
-            if (rowId === 'VRTC9999999' || !rowId) {
-              if (activeDemoAcc && activeDemoAcc.loginid) {
-                if (loginEl) loginEl.textContent = activeDemoAcc.loginid;
-              } else if (actualDemoLoginId && actualDemoLoginId !== 'VRTC9999999') {
-                if (loginEl) loginEl.textContent = actualDemoLoginId;
-              } else {
-                if (loginEl) loginEl.textContent = 'No demo account connected';
-              }
-            }
+          if (rowId === 'ROT90394362') {
             var balEl = item.querySelector('.deriv-account-switcher-item__balance, [class*="balance" i]');
-            if (balEl) {
-              if (!hasAccount) {
-                balEl.textContent = '--';
-              } else if (expectedNum) {
-                var bSpans = balEl.querySelectorAll('span');
-                if (bSpans.length >= 1) {
-                  if (bSpans[0].textContent !== expectedNum) bSpans[0].textContent = expectedNum;
-                  if (bSpans.length >= 2 && bSpans[1].textContent !== currency) bSpans[1].textContent = currency;
-                } else if (balEl.textContent !== fullExpected) {
-                  balEl.textContent = fullExpected;
-                }
-              }
-            }
-          } else {
-            // REAL mode row
-            var cleanRot = String((prof && prof.rot) || currentRealLoginId || getStoredRealLoginId() || 'ROT90394362').trim().toUpperCase();
-            var isThisMarketingRow = (rowId && isSameAccount(rowId, cleanRot)) || (!rowId && itemText.indexOf(cleanRot) !== -1);
-            if (isThisMarketingRow) {
-              var balElReal = item.querySelector('.deriv-account-switcher-item__balance, [class*="balance" i]');
-              if (balElReal) {
-                var bSpansReal = balElReal.querySelectorAll('span');
-                if (bSpansReal.length >= 1) {
-                  if (bSpansReal[0].textContent !== expectedNum) bSpansReal[0].textContent = expectedNum;
-                  if (bSpansReal.length >= 2 && bSpansReal[1].textContent !== currency) bSpansReal[1].textContent = currency;
-                } else if (balElReal.textContent !== fullExpected) {
-                  balElReal.textContent = fullExpected;
-                }
+            if (balEl && expectedNum) {
+              var bSpans = balEl.querySelectorAll('span');
+              if (bSpans.length >= 1) {
+                if (bSpans[0].textContent !== expectedNum) bSpans[0].textContent = expectedNum;
+                if (bSpans.length >= 2 && bSpans[1].textContent !== currency) bSpans[1].textContent = currency;
+              } else if (balEl.textContent !== fullExpected) {
+                balEl.textContent = fullExpected;
               }
             }
           }
         });
       }
-    } catch (e) {}
+    } catch (_) {}
   }
 
   // Continuous 250ms balance DOM patcher loop
@@ -1860,105 +1774,71 @@
 
   function isSameAccount(id1, id2) {
     if (!id1 || !id2) return false;
-    var a = String(id1).trim().toUpperCase();
-    var b = String(id2).trim().toUpperCase();
-    if (a === b) return true;
-    var aDemo = a.indexOf('VRTC') === 0 || a.indexOf('VRT') === 0 || a.indexOf('DOT') === 0 || a.indexOf('DEM') === 0;
-    var bDemo = b.indexOf('VRTC') === 0 || b.indexOf('VRT') === 0 || b.indexOf('DOT') === 0 || b.indexOf('DEM') === 0;
-    if (aDemo !== bDemo) return false;
-    var d1 = a.replace(/^[^0-9]+/, '');
-    var d2 = b.replace(/^[^0-9]+/, '');
-    if (d1 && d2 && d1 === d2) return true;
-    return false;
+    return String(id1).trim().toUpperCase() === String(id2).trim().toUpperCase();
   }
 
   function getActiveMarketingProfileForCurrentAccount() {
     var isDemo = isDemoAccountActive();
+    // Demo mode is ALWAYS native Deriv, NEVER marketing simulation
+    if (isDemo) return null;
+
     var actId = String(localStorage.getItem('active_loginid') || currentAuthoritativeLoginid || '').trim().toUpperCase();
+    var realSettings = (window.__DERIV_SITE_SETTINGS__ && (window.__DERIV_SITE_SETTINGS__.real || window.__DERIV_SITE_SETTINGS__)) || {};
+    var rotVal = String(realSettings.rot || 'ROT90394362').trim().toUpperCase();
+    if (realSettings.useRealBalance === true) return null;
 
-    if (isDemo) {
-      if (isUseRealBalanceEnabled('demo')) return null;
-      var demoSettings = (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__.demo) || {};
-      var demoRot = String(demoSettings.rot || '').trim().toUpperCase();
-      if (demoSettings.useRealBalance !== false) return null;
-      var dBal = Number.isFinite(demoSettings.startingBalance) ? demoSettings.startingBalance : (actualDemoBalance !== null ? actualDemoBalance : null);
-      var effectiveDemoId = actId || demoRot || actualDemoLoginId;
-      if (!effectiveDemoId) return null;
-      return {
-        rot: effectiveDemoId,
-        marketingEligible: true,
-        useRealBalance: false,
-        startingBalance: dBal,
-        currentBalance: dBal,
-        accuracy: Number(demoSettings.accuracy !== undefined ? demoSettings.accuracy : 100),
-        currency: demoSettings.currency || actualDemoCurrency || 'USD',
-        mode: 'simulation',
-        app_markup_percentage: Number(demoSettings.app_markup_percentage || 0),
-        isDemoMarketing: true
-      };
-    } else {
-      if (isUseRealBalanceEnabled('real')) return null;
-      if (actId && (actId.indexOf('VRTC') === 0 || actId.indexOf('VRT') === 0 || actId.indexOf('DOT') === 0 || actId.indexOf('DEM') === 0)) return null;
-
-      var realSettings = (window.__DERIV_SITE_SETTINGS__ && (window.__DERIV_SITE_SETTINGS__.real || window.__DERIV_SITE_SETTINGS__)) || {};
-      var rotVal = String(realSettings.rot || 'ROT90394362').trim().toUpperCase();
-      if (realSettings.useRealBalance === true) return null;
-
-      if (!actId || !isSameAccount(actId, rotVal)) {
-        return null;
-      }
-
-      if (activeMarketingProfile && activeMarketingProfile.marketingEligible && !activeMarketingProfile.isDemoMarketing && isSameAccount(activeMarketingProfile.rot, rotVal)) {
-        return activeMarketingProfile;
-      }
-      for (var kProf in marketingProfilesByRot) {
-        if (marketingProfilesByRot[kProf] && marketingProfilesByRot[kProf].marketingEligible && isSameAccount(marketingProfilesByRot[kProf].rot, rotVal)) {
-          return marketingProfilesByRot[kProf];
-        }
-      }
-
-      try {
-        var startBal = Number(realSettings.startingBalance !== undefined ? realSettings.startingBalance : 800.00);
-        var defProf = {
-          rot: actId || rotVal,
-          marketingEligible: true,
-          useRealBalance: false,
-          startingBalance: startBal,
-          currentBalance: startBal,
-          accuracy: Number(realSettings.accuracy !== undefined ? realSettings.accuracy : 100),
-          currency: realSettings.currency || 'USD',
-          mode: 'simulation',
-          app_markup_percentage: Number(realSettings.app_markup_percentage || 0),
-          isDemoMarketing: false
-        };
-        activeMarketingProfile = defProf;
-        marketingProfilesByRot[rotVal] = defProf;
-        if (actId) marketingProfilesByRot[actId] = defProf;
-        return defProf;
-      } catch (_) {}
-
+    // STRICT ACCOUNT ISOLATION:
+    // Marketing simulation is strictly and exclusively for the configured Real ROT (ROT90394362).
+    // Client accounts (CR..., etc.) and non-ROT accounts are 100% native Deriv accounts!
+    if (!actId || actId !== rotVal) {
       return null;
     }
+
+    if (activeMarketingProfile && activeMarketingProfile.marketingEligible && !activeMarketingProfile.isDemoMarketing && activeMarketingProfile.rot === rotVal) {
+      return activeMarketingProfile;
+    }
+    if (marketingProfilesByRot[rotVal] && marketingProfilesByRot[rotVal].marketingEligible && marketingProfilesByRot[rotVal].rot === rotVal) {
+      return marketingProfilesByRot[rotVal];
+    }
+
+    try {
+      var startBal = Number(realSettings.startingBalance !== undefined ? realSettings.startingBalance : 79.84);
+      var defProf = {
+        rot: rotVal,
+        marketingEligible: true,
+        useRealBalance: false,
+        startingBalance: startBal,
+        currentBalance: startBal,
+        accuracy: Number(realSettings.accuracy !== undefined ? realSettings.accuracy : 100),
+        currency: realSettings.currency || 'USD',
+        mode: 'simulation',
+        app_markup_percentage: Number(realSettings.app_markup_percentage || 0),
+        isDemoMarketing: false
+      };
+      activeMarketingProfile = defProf;
+      marketingProfilesByRot[rotVal] = defProf;
+      return defProf;
+    } catch (_) {}
+
+    return null;
   }
 
   function resolveMarketingProfileSync(loginid) {
     var cleanId = String(loginid || '').trim().toUpperCase();
     var isTargetDemo = isDemoLoginid(cleanId);
-    var isCurrentDemo = isDemoAccountActive();
+    if (isTargetDemo) return null; // Demo is NEVER marketing
 
-    // If caller requests an account for the opposing mode, do not cross-resolve
-    if (isTargetDemo !== isCurrentDemo) {
-      if (cleanId && marketingProfilesByRot[cleanId] && marketingProfilesByRot[cleanId].marketingEligible) {
-        return marketingProfilesByRot[cleanId];
-      }
-      return null;
-    }
+    var realSettings = (window.__DERIV_SITE_SETTINGS__ && (window.__DERIV_SITE_SETTINGS__.real || window.__DERIV_SITE_SETTINGS__)) || {};
+    var rotVal = String(realSettings.rot || 'ROT90394362').trim().toUpperCase();
 
-    if (activeMarketingProfile && activeMarketingProfile.marketingEligible && isSameAccount(cleanId, activeMarketingProfile.rot)) {
+    // Client accounts (CR..., etc.) must NEVER receive a marketing profile
+    if (!cleanId || cleanId !== rotVal) return null;
+
+    if (activeMarketingProfile && activeMarketingProfile.marketingEligible && activeMarketingProfile.rot === rotVal) {
       return activeMarketingProfile;
     }
-    if (cleanId && marketingProfilesByRot[cleanId] && marketingProfilesByRot[cleanId].marketingEligible) {
-      return marketingProfilesByRot[cleanId];
+    if (marketingProfilesByRot[rotVal] && marketingProfilesByRot[rotVal].marketingEligible) {
+      return marketingProfilesByRot[rotVal];
     }
     return getActiveMarketingProfileForCurrentAccount();
   }
@@ -2053,6 +1933,19 @@
     try {
       var active = String(localStorage.getItem('active_loginid') || '').trim();
       var hasSession = !!sessionStorage.getItem('auth_info') || !!localStorage.getItem('authToken');
+      var caRaw = localStorage.getItem('client.accounts');
+      if (caRaw) {
+        try {
+          var existingCa = JSON.parse(caRaw);
+          for (var k in existingCa) {
+            var ku = k.toUpperCase();
+            if (ku.indexOf('CR') === 0 || ku.indexOf('VRTC') === 0 || ku.indexOf('DOT') === 0 || ku.indexOf('MF') === 0) {
+              // Real client accounts or authenticated accounts already exist in storage!
+              return;
+            }
+          }
+        } catch (_) {}
+      }
       if (!active && !hasSession) {
         var siteSettings = window.__DERIV_SITE_SETTINGS__ || {};
         var realSettings = siteSettings.real || siteSettings || {};
@@ -4694,29 +4587,7 @@
         return;
       }
 
-      // 2. Tab click (Real vs Demo inside switcher modal)
-      var tab = target.closest && target.closest('.deriv-account-switcher__tab, .dc-tabs__item, [class*="tabs__item" i], [class*="account-switcher__tab" i]');
-      if (tab) {
-        var tText = tab.textContent.trim().toLowerCase();
-        if (tText.indexOf('demo') !== -1) {
-          diagLog('tab_clicked', { tab: 'demo' });
-          var demoAcc = getAuthenticatedDemoAccount() || getAvailableDemoAccount();
-          var demoId = (demoAcc && demoAcc.loginid) || actualDemoLoginId || '';
-          setAuthoritativeMode('demo', demoId);
-          if (demoId && typeof window.__derivSelectAccount === 'function') {
-            try { window.__derivSelectAccount(demoId); } catch (_) {}
-          }
-        } else if (tText.indexOf('real') !== -1) {
-          diagLog('tab_clicked', { tab: 'real' });
-          var realId = getStoredRealLoginId() || (window.__DERIV_SITE_SETTINGS__ && (window.__DERIV_SITE_SETTINGS__.real ? window.__DERIV_SITE_SETTINGS__.real.rot : window.__DERIV_SITE_SETTINGS__.rot)) || 'ROT90394362';
-          setAuthoritativeMode('real', realId);
-          if (typeof window.__derivSelectAccount === 'function') {
-            try { window.__derivSelectAccount(realId); } catch (_) {}
-          }
-        }
-      }
-
-      // 3. Account row click
+      // 2. Account row click (user explicitly clicks an account to switch to it)
       var item = target.closest && target.closest('.deriv-account-switcher-item, .account-switcher__item, [class*="account-switcher__item" i], [class*="account-switcher-item" i], [data-testid="account-switcher-wallet-item"]');
       if (item) {
         var text = String(item.textContent || '').toUpperCase();

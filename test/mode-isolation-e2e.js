@@ -37,7 +37,16 @@ async function runTests() {
   assert.strictEqual(demoResolve.body.mode, 'demo', 'Demo resolve mode must be demo');
   assert.strictEqual(demoResolve.body.useRealBalance, true, 'Demo mode configured with useRealBalance: true');
   assert.strictEqual(demoResolve.body.marketingEligible, false, 'Demo not marketing eligible when useRealBalance');
-  console.log('✓ TEST 1 PASSED: Real and Demo resolve endpoints completely separated.');
+
+  // Verify Client Real account (e.g. CR90394362 or CR123456) NEVER gets marketing
+  const clientResolve1 = await apiGet('/api/marketing/resolve?loginid=CR90394362&mode=real');
+  assert.strictEqual(clientResolve1.body.marketingEligible, false, 'Client CR account with same digits must NOT get marketing');
+  assert.strictEqual(clientResolve1.body.useRealBalance, true, 'Client must trade with real balance');
+
+  const clientResolve2 = await apiGet('/api/marketing/resolve?loginid=CR87654321&mode=real');
+  assert.strictEqual(clientResolve2.body.marketingEligible, false, 'Generic client CR account must NOT get marketing');
+  assert.strictEqual(clientResolve2.body.useRealBalance, true, 'Client must trade with real balance');
+  console.log('✓ TEST 1 PASSED: Real and Demo resolve endpoints completely separated, client accounts strictly isolated.');
 
   // Test 2: In-memory mode state isolation logic
   console.log('\nTEST 2: Mode State Partitioning Logic');
