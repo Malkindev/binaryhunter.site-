@@ -935,6 +935,67 @@
     return true;
   }
 
+  // Sentinel proposal IDs (for example "1") are not quote identities. When
+  // a buy uses one, accept only a fresh quote that matches all essential fields.
+  function hasCompleteMarketingPurchaseParameters(request) {
+    if (!request || typeof request !== 'object') return false;
+    var p = request.parameters && typeof request.parameters === 'object'
+      ? request.parameters
+      : request;
+    var symbol = p.underlying_symbol || p.symbol;
+    var contractType = p.contract_type || p.contractType;
+    var amount = Number(p.amount);
+    var basis = String(p.basis || '').trim();
+    var currency = String(p.currency || '').trim();
+    var duration = p.duration;
+    var durationUnit = p.duration_unit || p.durationUnit || p.duration_type;
+    if (!symbol || !contractType || !Number.isFinite(amount) || amount <= 0 ||
+        !basis || !currency || duration === undefined || duration === null ||
+        String(duration).trim() === '' || !durationUnit) return false;
+    if (/^DIGIT/.test(String(contractType).trim().toUpperCase()) &&
+        (p.barrier === undefined || p.barrier === null || String(p.barrier).trim() === '')) return false;
+    return true;
+  }
+
+  function findMatchingMarketingProposal(request, buyProposalId) {
+    var id = String(buyProposalId === undefined || buyProposalId === null ? '' : buyProposalId).trim();
+    var byId = id && id !== '1' ? proposalsMap[id] : null;
+
+    // A real proposal ID is authoritative: never replace it with a different quote.
+    if (id && id !== '1') {
+      return byId && isFreshMarketingProposal(byId) &&
+        marketingProposalMatchesPurchase(byId, request) ? byId : null;
+    }
+
+    if (!hasCompleteMarketingPurchaseParameters(request)) return null;
+    var signature = buildProposalSignature(request);
+    var indexed = signature ? latestProposalsBySig[signature] : null;
+    if (indexed && isFreshMarketingProposal(indexed) &&
+        marketingProposalMatchesPurchase(indexed, request)) return indexed;
+
+    // Some Deriv responses echo only a subset of the original request, and
+    // expiry metadata can make a cache signature differ despite identical
+    // executable terms. Compare the full quote records against every field
+    // that the caller actually supplied, but still require all essential
+    // purchase dimensions and a fresh timestamp.
+    var unique = {};
+    Object.keys(proposalsMap).forEach(function (key) {
+      var candidate = proposalsMap[key];
+      if (candidate && candidate.id) unique[String(candidate.id)] = candidate;
+    });
+    Object.keys(latestProposalsBySig).forEach(function (key) {
+      var candidate = latestProposalsBySig[key];
+      if (candidate && candidate.id) unique[String(candidate.id)] = candidate;
+    });
+    var candidates = Object.keys(unique).map(function (key) { return unique[key]; });
+    candidates.sort(function (a, b) { return Number(b.timestamp || 0) - Number(a.timestamp || 0); });
+    for (var i = 0; i < candidates.length; i++) {
+      if (isFreshMarketingProposal(candidates[i]) &&
+          marketingProposalMatchesPurchase(candidates[i], request)) return candidates[i];
+    }
+    return null;
+  }
+
   var proposalsMap = (typeof window !== 'undefined' && (window.__hlx_proposals_map = window.__hlx_proposals_map || {})) || {};
   var proposalSubsMap = (typeof window !== 'undefined' && (window.__hlx_proposal_subs_map = window.__hlx_proposal_subs_map || {})) || {};
   var latestProposalsBySig = (typeof window !== 'undefined' && (window.__hlx_latest_proposals = window.__hlx_latest_proposals || {})) || {};
@@ -949,13 +1010,24 @@
     if (!msg || !msg.proposal) return null;
     var p = msg.proposal;
     var subId = msg.subscription && msg.subscription.id;
-    var echo = msg.echo_req ||
-      (subId && proposalSubsMap[subId]) ||
-      (msg.req_id !== undefined && outgoingProposalReqsById[String(msg.req_id)]) ||
-      {};
+    var trackedEcho = msg.req_id !== undefined ? outgoingProposalReqsById[String(msg.req_id)] : null;
+    var savedSubEcho = subId ? proposalSubsMap[subId] : null;
+    var request = {};
+    var mergeProposalRequest = function (source) {
+      if (!source || typeof source !== 'object') return;
+      Object.keys(source).forEach(function (key) {
+        if (key !== 'parameters') request[key] = source[key];
+      });
+      if (source.parameters && typeof source.parameters === 'object') {
+        Object.keys(source.parameters).forEach(function (key) {
+          request[key] = source.parameters[key];
+        });
+      }
+    };
+    mergeProposalRequest(trackedEcho);
+    mergeProposalRequest(savedSubEcho);
+    mergeProposalRequest(msg.echo_req);
     if (subId && msg.echo_req) proposalSubsMap[subId] = msg.echo_req;
-
-    var request = echo.parameters && typeof echo.parameters === 'object' ? echo.parameters : echo;
     var sym = request.underlying_symbol || request.symbol || p.underlying_symbol || '';
     var ct = request.contract_type || request.contractType || p.contract_type || '';
     var bar = (request.barrier !== undefined && request.barrier !== null)
@@ -1053,7 +1125,7 @@
     };
 
     if (proposalId) proposalsMap[proposalId] = record;
-    var signature = buildProposalSignature(echo);
+    var signature = buildProposalSignature(request);
     if (signature) latestProposalsBySig[signature] = record;
 
     return {
@@ -3032,6 +3104,15 @@
       if (msg.error) {
         var errCode = String(msg.error.code || '');
         var errMsg = String(msg.error.message || '');
+        if (/internal server error|internalservererror|server error/i.test(errMsg + ' ' + errCode)) {
+          console.error('[hlx-ws] Deriv/internal service error details:', {
+            code: errCode,
+            message: errMsg,
+            msg_type: msg.msg_type || 'error',
+            req_id: msg.req_id === undefined ? null : msg.req_id,
+            request: msg.echo_req || null
+          });
+        }
         if (errCode === 'InvalidSymbol' || errMsg.toLowerCase().indexOf('invalid symbol') !== -1 ||
             errCode === 'InvalidContractProposal' || errCode === 'ContractNotFound' || errCode === 'CustomContractNotFound' ||
             errMsg.toLowerCase().indexOf('contract proposal is invalid') !== -1 ||
@@ -4188,8 +4269,13 @@
 
             // Preserve the complete proposal request so the response can be
             // matched by stake/basis, duration, currency, barrier and contract.
-            if (req.proposal && (req.symbol || req.underlying_symbol) && req.contract_type) {
-              var reqSig = buildProposalSignature(req);
+            var outgoingProposalParams = req.parameters && typeof req.parameters === 'object'
+              ? req.parameters
+              : req;
+            if (req.proposal &&
+                (outgoingProposalParams.symbol || outgoingProposalParams.underlying_symbol) &&
+                (outgoingProposalParams.contract_type || outgoingProposalParams.contractType)) {
+              var reqSig = buildProposalSignature(outgoingProposalParams);
               if (reqSig) lastOutgoingProposalReqs[reqSig] = req;
               if (req.req_id !== undefined) outgoingProposalReqsById[String(req.req_id)] = req;
             }
@@ -4309,27 +4395,32 @@
                 var buyPropId = String(req.buy || (req.buy_contract_for_multiple_accounts && req.buy_contract_for_multiple_accounts.tokens && req.buy_contract_for_multiple_accounts.tokens[0]) || '');
                 var pParams = req.parameters || null;
 
-                var matchedProp = null;
-                if (buyPropId && buyPropId !== '1' && proposalsMap[buyPropId]) {
-                  matchedProp = proposalsMap[buyPropId];
-                }
-                if (!matchedProp && pParams) {
-                  var pSig = buildProposalSignature(pParams);
-                  if (pSig) matchedProp = latestProposalsBySig[pSig] || null;
-                }
+                var matchedProp = findMatchingMarketingProposal(req, buyPropId);
 
                 // A buy price is a maximum-price limit, not a replacement for
                 // the proposal's actual ask_price. Never scale a payout from a
                 // different stake or a stale/mismatched proposal.
-                if (!matchedProp || !isFreshMarketingProposal(matchedProp) ||
-                    !marketingProposalMatchesPurchase(matchedProp, req)) {
+                if (!matchedProp) {
+                  var diagnosticParams = pParams && typeof pParams === 'object' ? pParams : {};
+                  console.error('[hlx-ws] Marketing proposal match failed:', {
+                    proposalId: buyPropId || null,
+                    hasParameters: !!pParams,
+                    symbol: diagnosticParams.underlying_symbol || diagnosticParams.symbol || null,
+                    contractType: diagnosticParams.contract_type || diagnosticParams.contractType || null,
+                    barrier: diagnosticParams.barrier === undefined ? null : diagnosticParams.barrier,
+                    duration: diagnosticParams.duration === undefined ? null : diagnosticParams.duration,
+                    durationUnit: diagnosticParams.duration_unit || diagnosticParams.durationUnit || diagnosticParams.duration_type || null,
+                    currency: diagnosticParams.currency || null,
+                    amount: diagnosticParams.amount === undefined ? null : diagnosticParams.amount,
+                    basis: diagnosticParams.basis || null
+                  });
                   setTimeout(function () {
                     emitWsMessage(ws, {
                       echo_req: req,
                       msg_type: 'error',
                       error: {
                         code: 'MARKETING_PROPOSAL_MISMATCH',
-                        message: 'Marketing trade stopped: no fresh proposal matched the exact symbol, contract, barrier, duration, currency and requested stake. Request a new Deriv proposal; no estimated payout was used.'
+                        message: 'Marketing trade stopped: no fresh verified quote matched this buy request. Refresh the quote and retry; no estimated payout was used.'
                       },
                       req_id: req.req_id
                     });
