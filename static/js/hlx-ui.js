@@ -505,10 +505,38 @@
     el.style.setProperty('-webkit-text-fill-color',color,'important');
     el.querySelectorAll('span,label,strong,b,em,i').forEach(function(n){ n.style.setProperty('color',color,'important'); n.style.setProperty('-webkit-text-fill-color',color,'important'); n.style.setProperty('opacity','1','important'); n.style.setProperty('visibility','visible','important'); });
   }
+  function cleanLandingAuthGlitch(){
+    try {
+      var injected = document.querySelectorAll('.landing-v2 [data-sitebuilder-auth-label], [class*="landing-v2"] [data-sitebuilder-auth-label]');
+      for(var i=0; i<injected.length; i++){
+        if(injected[i] && injected[i].parentNode){
+          injected[i].parentNode.removeChild(injected[i]);
+        }
+      }
+      var loginBtns = document.querySelectorAll('.landing-v2__nav-btn-login');
+      for(var j=0; j<loginBtns.length; j++){
+        var lb = loginBtns[j];
+        var lt = text(lb);
+        if(/log\s*in\s*login/i.test(lt) || /login\s*login/i.test(lt)){
+          lb.textContent = 'Log In';
+        }
+      }
+      var signupBtns = document.querySelectorAll('.landing-v2__nav-btn-signup');
+      for(var k=0; k<signupBtns.length; k++){
+        var sb = signupBtns[k];
+        var st = text(sb);
+        if(/get\s*started\s*sign\s*up/i.test(st) || (st !== 'Get Started' && /sign\s*up/i.test(st))){
+          sb.textContent = 'Get Started';
+        }
+      }
+    } catch (_) {}
+  }
   function ensureLabel(button,key,color,sample){
+    if(!button || button.closest('.landing-v2, [class*="landing-v2"]')) return;
     var label=AUTH_LABELS[key], re=key==='login'?/log\s*in|login/i:/sign\s*up|signup/i;
     var existing=Array.prototype.find.call(button.querySelectorAll('span,label,strong,b,em'),function(n){return re.test(text(n));});
     if(existing){ existing.textContent=label; copyTypography(existing,sample); paint(existing,color); return; }
+    if(re.test(text(button))){ paint(button,color); return; }
     var node=document.createElement('span');
     node.setAttribute('data-sitebuilder-auth-label',key);
     node.textContent=label;
@@ -523,7 +551,9 @@
     paint(button,color);
   }
   function findSample(){
-    return Array.prototype.find.call(document.querySelectorAll('button,a,[role="button"],span,label'),function(el){return isApiToken(el);}) || null;
+    return Array.prototype.find.call(document.querySelectorAll('.auth-actions button, .auth-actions a, [class*="auth-actions"] button, [data-testid*="auth" i] button'),function(el){
+      return !el.closest('.landing-v2, [class*="landing-v2"]') && isApiToken(el);
+    }) || null;
   }
   function likelyAuth(el,color){
     var h=hint(el);
@@ -535,11 +565,21 @@
   }
   function findButtons(settings){
     var color=String((settings&&settings.loginButtonColor)||'').trim();
-    var roots=Array.prototype.slice.call(document.querySelectorAll('.auth-actions,.auth-actions__container,[class*="auth-actions"],[data-testid*="auth" i]'));
+    var roots=Array.prototype.slice.call(document.querySelectorAll('.auth-actions,.auth-actions__container,[class*="auth-actions"],[data-testid*="auth" i]'))
+      .filter(function(el){ return !el.closest('.landing-v2, [class*="landing-v2"]'); });
     var sample=findSample(), ancestor=sample&&sample.parentElement;
-    if(!roots.length && ancestor){ for(var i=0;ancestor&&i<7;i++,ancestor=ancestor.parentElement){ if(ancestor.querySelectorAll('button,a,[role="button"]').length>=2){ roots=[ancestor]; break; } } }
+    if(!roots.length && ancestor && !ancestor.closest('.landing-v2, [class*="landing-v2"]')){
+      for(var i=0;ancestor&&i<7;i++,ancestor=ancestor.parentElement){
+        if(ancestor.closest('.landing-v2, [class*="landing-v2"]')) break;
+        if(ancestor.querySelectorAll('button,a,[role="button"]').length>=2){ roots=[ancestor]; break; }
+      }
+    }
     var candidates=[];
-    roots.forEach(function(root){ Array.prototype.forEach.call(root.querySelectorAll('button,a,[role="button"]'),function(el){ if(!isApiToken(el)&&candidates.indexOf(el)<0)candidates.push(el); }); });
+    roots.forEach(function(root){
+      Array.prototype.forEach.call(root.querySelectorAll('button,a,[role="button"]'),function(el){
+        if(!isApiToken(el) && !el.closest('.landing-v2, [class*="landing-v2"]') && candidates.indexOf(el)<0) candidates.push(el);
+      });
+    });
     var likely=candidates.filter(function(el){return likelyAuth(el,color);});
     if(likely.length>=2)candidates=likely;
     var login=candidates.find(function(el){return /log\s*in|login/.test(hint(el));})||candidates[0]||null;
@@ -547,6 +587,7 @@
     return {login:login,signup:signup,sample:sample};
   }
   function repairAuth(settings){
+    cleanLandingAuthGlitch();
     if(isRepairing)return false;
     isRepairing=true;
     try{
