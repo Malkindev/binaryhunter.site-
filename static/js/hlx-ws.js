@@ -463,6 +463,33 @@
     return formatVirtualTradingBalance('demo');
   }
 
+  
+  // Keep all Marketing balance views in sync with the authoritative local ledger.
+  // The Marketing simulation is separate from the authenticated Deriv account.
+  function syncMarketingProfileBalance(profile, balance) {
+    var amount = Number(balance);
+    if (!profile || !Number.isFinite(amount)) return;
+    amount = Number(amount.toFixed(2));
+    profile.currentBalance = amount;
+
+    var lid = String(profile.rot || '').trim().toUpperCase();
+    if (lid && marketingProfilesByRot && marketingProfilesByRot[lid]) {
+      marketingProfilesByRot[lid].currentBalance = amount;
+    }
+
+    try {
+      if (!lid) return;
+      var cacheKey = 'sitebuilder_marketing_cache_' + lid;
+      var cachedRaw = localStorage.getItem(cacheKey);
+      if (!cachedRaw) return;
+      var cachedProfile = JSON.parse(cachedRaw);
+      if (cachedProfile && typeof cachedProfile === 'object') {
+        cachedProfile.currentBalance = amount;
+        localStorage.setItem(cacheKey, JSON.stringify(cachedProfile));
+      }
+    } catch (_) {}
+  }
+
   function getStoredRealLoginId() {
     try {
       var actId = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
@@ -2331,6 +2358,22 @@
       var buy = buyMsg && buyMsg.buy;
       if (!buy || !buy.contract_id) return;
 
+      // Synthetic Marketing buys already emit their own local contract and balance
+      // updates. Querying Deriv for a synthetic contract ID and the backing account's
+      // native balance can overwrite the simulated balance immediately after entry.
+      var buyContractId = String(buy.contract_id);
+      var currentProfile = getActiveMarketingProfileForCurrentAccount();
+      var isSyntheticMarketingBuy = !!(
+        !isDemoAccountActive() &&
+        syntheticContractsMap &&
+        syntheticContractsMap[buyContractId] &&
+        currentProfile &&
+        currentProfile.marketingEligible &&
+        !currentProfile.useRealBalance &&
+        !currentProfile.isDemoMarketing
+      );
+      if (isSyntheticMarketingBuy) return;
+
       setTimeout(function () {
         try {
           rawSend.call(ws, JSON.stringify({
@@ -3201,6 +3244,7 @@
           }
 
           var updatedBal = getVirtualTradingBalance('real');
+          syncMarketingProfileBalance(curMktProfBuy, updatedBal);
           msg.buy.balance_after = updatedBal;
           modified = true;
 
@@ -3260,6 +3304,7 @@
           }
           handleSettledVirtualContract(poc, 'real');
           var newBal = getVirtualTradingBalance('real');
+          syncMarketingProfileBalance(curMktProfPoc, newBal);
           poc.balance_after = newBal;
           modified = true;
 
@@ -4380,6 +4425,7 @@
                 openContractsMap[String(contractId)] = stakePaid;
                 var balAfterBuy = getVirtualTradingBalance('real');
                 if (!Number.isFinite(balAfterBuy)) balAfterBuy = 100.00;
+                syncMarketingProfileBalance(curMktProfCheck, balAfterBuy);
                 var purchaseEpoch = Math.floor(Date.now() / 1000);
 
                 var initialPoc = {
@@ -4516,6 +4562,7 @@
                     saveVirtualTradingState('real');
                     var balAfterSettle = getVirtualTradingBalance('real');
                     if (!Number.isFinite(balAfterSettle)) balAfterSettle = modeState.real.startingBalance;
+                    syncMarketingProfileBalance(curMktProfCheck, balAfterSettle);
                     var settleEpoch = Math.floor(Date.now() / 1000);
 
                     // Conforming exit spot calculation
