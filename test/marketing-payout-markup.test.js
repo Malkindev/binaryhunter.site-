@@ -525,6 +525,10 @@ assert(nativeRawSends.some((payload) => payload.balance === 1));
 // Sentinel buy IDs must be correlated to a complete, fresh quote by exact
 // executable terms when the signature differs only because optional expiry
 // metadata was omitted on the buy request.
+const savedProposalMap = { ...sandbox.proposalsMap };
+const savedLatestProposalMap = { ...sandbox.latestProposalsBySig };
+Object.keys(sandbox.proposalsMap).forEach((key) => { delete sandbox.proposalsMap[key]; });
+Object.keys(sandbox.latestProposalsBySig).forEach((key) => { delete sandbox.latestProposalsBySig[key]; });
 const expiryQuote = {
   ...markedQuote,
   id: 'fixture-expiry-quote',
@@ -572,6 +576,10 @@ assert.strictEqual(
   'A missing non-sentinel proposal ID must never be replaced with a different quote'
 );
 delete sandbox.proposalsMap[expiryQuote.id];
+Object.keys(sandbox.proposalsMap).forEach((key) => { delete sandbox.proposalsMap[key]; });
+Object.assign(sandbox.proposalsMap, savedProposalMap);
+Object.keys(sandbox.latestProposalsBySig).forEach((key) => { delete sandbox.latestProposalsBySig[key]; });
+Object.assign(sandbox.latestProposalsBySig, savedLatestProposalMap);
 
 // The outgoing request is the fallback source when a response has an echo_req
 // containing only req_id/proposal. The resulting cached record retains all
