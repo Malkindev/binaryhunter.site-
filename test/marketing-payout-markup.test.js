@@ -344,7 +344,9 @@ const buyHandler = production.slice(buyStart, buyEnd);
 assert(buyHandler.includes('findMatchingMarketingProposal(req, buyPropId)'));
 assert(buyHandler.includes('isFreshMarketingProposal(matchedProp)') || buyHandler.includes('findMatchingMarketingProposal(req, buyPropId)'),
   'Proposal matching must require a fresh quote before trade execution');
-assert(buyHandler.includes('marketingProposalMatchesPurchase(matchedProp, req)'));
+assert(production.includes('marketingProposalMatchesPurchase(byId, request)'));
+assert(production.includes('marketingProposalMatchesPurchase(candidates[i], request)'),
+  'Quote recovery must validate every candidate against the supplied trade parameters');
 assert(!buyHandler.includes('calculateContractPayout(contractType, barrier, stakePaid, null'),
   'A fallback multiplier must not replace a missing/mismatched live proposal');
 
