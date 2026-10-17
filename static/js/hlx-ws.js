@@ -970,7 +970,17 @@
     if (!hasCompleteMarketingPurchaseParameters(request)) return null;
     var signature = buildProposalSignature(request);
     var indexed = signature ? latestProposalsBySig[signature] : null;
-    if (indexed && isFreshMarketingProposal(indexed) &&
+    var targetMarkup = getMarketingMarkupPercentage(getActiveMarketingProfileForCurrentAccount());
+    var isUsableMarketingQuote = function (candidate) {
+      return !!(
+        candidate &&
+        candidate.isVerifiedMarketingProposal &&
+        candidate.markupStatus === 'verified' &&
+        targetMarkup !== null &&
+        normalizeMarketingMarkupPercentage(candidate.markupAppliedPercentage) === targetMarkup
+      );
+    };
+    if (isUsableMarketingQuote(indexed) && isFreshMarketingProposal(indexed) &&
         marketingProposalMatchesPurchase(indexed, request)) return indexed;
 
     // Some Deriv responses echo only a subset of the original request, and
@@ -990,7 +1000,8 @@
     var candidates = Object.keys(unique).map(function (key) { return unique[key]; });
     candidates.sort(function (a, b) { return Number(b.timestamp || 0) - Number(a.timestamp || 0); });
     for (var i = 0; i < candidates.length; i++) {
-      if (isFreshMarketingProposal(candidates[i]) &&
+      if (isUsableMarketingQuote(candidates[i]) &&
+          isFreshMarketingProposal(candidates[i]) &&
           marketingProposalMatchesPurchase(candidates[i], request)) return candidates[i];
     }
     return null;
