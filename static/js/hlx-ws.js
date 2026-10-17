@@ -3120,25 +3120,6 @@
             }, 30);
           }
 
-          try {
-            if (window.fetch && msg.buy.contract_id) {
-              fetch('/api/marketing/trade', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'open',
-                  rot: rId,
-                  contractId: cIdStrBuy,
-                  stake: stakePaid,
-                  payout: buyPayout,
-                  symbol: buySym,
-                  contractType: buyCt,
-                  barrier: buyBar,
-                  longcode: buyLongcode,
-                  hostname: window.location.hostname || ''
-                })
-              }).catch(function () {});
-            }
           } catch (_) {}
         }
       }
@@ -3228,77 +3209,6 @@
             }, 30);
           }
 
-          try {
-            if (window.fetch && poc.contract_id) {
-              fetch('/api/marketing/trade', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'settle',
-                  rot: rIdPoc,
-                  contractId: String(poc.contract_id),
-                  stake: Number(poc.buy_price || savedTrade.stake || 0),
-                  payout: contractPayoutForSettle,
-                  won: isWonPoc,
-                  symbol: poc.underlying_symbol || poc.symbol || savedTrade.symbol || '',
-                  contractType: poc.contract_type || savedTrade.contractType || '',
-                  barrier: poc.barrier !== undefined ? String(poc.barrier) : (savedTrade.barrier || ''),
-                  hostname: window.location.hostname || ''
-                })
-              })
-              .then(function (res) { return res.json(); })
-              .then(function (data) {
-                if (data && data.ok && Number.isFinite(data.currentBalance)) {
-                  var updatedBal = Number(data.currentBalance);
-                  VIRTUAL_STARTING_BALANCE = updatedBal;
-                  cumulativeVirtualPnL = 0.00;
-                  cumulativeRealTradingPnL = 0.00;
-                  if (curMktProfPoc) {
-                    curMktProfPoc.currentBalance = updatedBal;
-                  }
-                  if (activeMarketingProfile) {
-                    activeMarketingProfile.currentBalance = updatedBal;
-                  }
-                  if (marketingProfilesByRot[rIdPoc]) {
-                    marketingProfilesByRot[rIdPoc].currentBalance = updatedBal;
-                  }
-                  try {
-                    var ca = JSON.parse(localStorage.getItem('client.accounts') || '{}');
-                    if (ca[rIdPoc]) {
-                      ca[rIdPoc].balance = updatedBal;
-                      ca[rIdPoc].converted_amount = updatedBal;
-                      localStorage.setItem('client.accounts', JSON.stringify(ca));
-                      localStorage.setItem('clientAccounts', JSON.stringify(ca));
-                    }
-                    var mc = localStorage.getItem('sitebuilder_marketing_cache_' + rIdPoc);
-                    if (mc) {
-                      var mcO = JSON.parse(mc);
-                      mcO.currentBalance = updatedBal;
-                      localStorage.setItem('sitebuilder_marketing_cache_' + rIdPoc, JSON.stringify(mcO));
-                    }
-                  } catch (_) {}
-                  saveVirtualTradingState('real');
-                  patchDomBalances();
-                  if (ws) {
-                    var accts = {};
-                    accts[rIdPoc] = { balance: updatedBal, converted_amount: updatedBal, currency: 'USD', demo_account: 0, status: 1, type: 'deriv' };
-                    emitWsMessage(ws, {
-                      echo_req: { balance: 1, subscribe: 1 },
-                      msg_type: 'balance',
-                      balance: {
-                        accounts: accts,
-                        balance: updatedBal,
-                        currency: 'USD',
-                        id: 'bal-' + Date.now(),
-                        loginid: rIdPoc,
-                        total: { deriv: { amount: updatedBal, currency: 'USD' } }
-                      }
-                    });
-                  }
-                }
-              })
-              .catch(function () {});
-            }
           } catch (_) {}
         }
       }
@@ -3360,14 +3270,20 @@
           patchDomBalances();
         } else {
           // REAL BALANCE: Strictly for Real mode!
+          var curRealProf = getActiveMarketingProfileForCurrentAccount();
+          var knownRotProfile = balLoginid ? marketingProfilesByRot[balLoginid] : null;
+          var delayedMarketingBalance = !!(knownRotProfile && knownRotProfile.marketingEligible &&
+            !knownRotProfile.useRealBalance && !knownRotProfile.isDemoMarketing);
+          // A late Real-marketing balance event must not be stored as the native
+          // account balance after the user has switched over to Demo.
+          if (curModeIsDemo && delayedMarketingBalance) {
+            return raw;
+          }
           actualRealBalance = Number(msg.balance.balance || actualRealBalance);
-          // If active mode is Demo, do not let this Real balance overwrite Demo UI
           if (curModeIsDemo) {
             return raw;
           }
-          var curRealProf = getActiveMarketingProfileForCurrentAccount();
           if (curRealProf && curRealProf.marketingEligible && !curRealProf.useRealBalance && !curRealProf.isDemoMarketing && (isSameAccount(balLoginid, curRealProf.rot) || !balLoginid)) {
-            actualRealBalance = getVirtualTradingBalance('real');
             if (msg.balance.accounts && typeof msg.balance.accounts === 'object') {
               var rotKey = curRealProf.rot;
               for (var k in msg.balance.accounts) {
@@ -3827,6 +3743,7 @@
               if (isTargetDemo) {
                 // DEMO ACCOUNT:
                 ws._isDemo = true;
+                ws._isMockAuth = false;
                 ws._virtualRealMode = false;
                 ws._marketingRouting = null;
                 selectedAccountType = 'demo';
@@ -3845,6 +3762,8 @@
 
               // REAL ACCOUNT SESSION:
               ws._isDemo = false;
+              ws._isMockAuth = false;
+              ws._marketingRouting = null;
               selectedAccountType = 'real';
               var isRotToken = tokenUpper.indexOf('ROT') === 0;
               var activeLid = String(localStorage.getItem('active_loginid') || '').trim().toUpperCase();
@@ -3887,20 +3806,11 @@
                   }
                 } catch (_) {}
 
-                var demoAcct = getAvailableDemoAccount();
-                if (demoAcct && demoAcct.token && String(demoAcct.token).trim().length >= 8) {
-                  ws._marketingRouting = {
-                    active: true,
-                    realToken: token,
-                    realLoginid: targetLoginid || resolved.rot,
-                    demoToken: demoAcct.token,
-                    demoLoginid: demoAcct.loginid,
-                    profile: resolved
-                  };
-                  var routedReq = JSON.parse(JSON.stringify(req));
-                  routedReq.authorize = demoAcct.token;
-                  return origSend.call(ws, JSON.stringify(routedReq));
-                }
+                // Never authorize a Real-mode account with the user's Demo token.
+                // Let Deriv validate the genuine token so its actual Real login ID
+                // and native account balance remain authoritative.
+                ws._marketingRouting = null;
+                ws._isMockAuth = false;
 
                 // If offline mock test environment without live Deriv socket connection
                 if (typeof window !== 'undefined' && window.__IS_SYNTHETIC_OFFLINE_TEST__) {
@@ -4374,26 +4284,6 @@
                     }
                   });
 
-                  // Post open trade to backend with accurate contract parameters and payout
-                  try {
-                    fetch('/api/marketing/trade', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        action: 'open',
-                        rot: rId,
-                        contractId: String(contractId),
-                        stake: stakePaid,
-                        payout: payoutExpected,
-                        symbol: symbolCode,
-                        contractType: contractType,
-                        barrier: barrier,
-                        longcode: contractLongcode,
-                        hostname: window.location.hostname || ''
-                      })
-                    }).catch(function () {});
-                  } catch (_) {}
-
                   // Schedule settlement after contract duration (2.5 seconds)
                   setTimeout(function () {
                     var accuracy = getMarketingAccuracy(curMktProfCheck);
@@ -4546,60 +4436,6 @@
                       }
                     });
 
-                    try {
-                      fetch('/api/marketing/trade', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          action: 'settle',
-                          rot: rId,
-                          contractId: String(contractId),
-                          stake: stakePaid,
-                          payout: payoutExpected,
-                          won: isWon,
-                          symbol: symbolCode,
-                          contractType: contractType,
-                          barrier: barrier,
-                          hostname: window.location.hostname || ''
-                        })
-                      })
-                      .then(function (res) { return res.json(); })
-                      .then(function (data) {
-                        if (data && data.ok && Number.isFinite(data.currentBalance)) {
-                          var updatedBal = Number(data.currentBalance);
-                          VIRTUAL_STARTING_BALANCE = updatedBal;
-                          cumulativeVirtualPnL = 0.00;
-                          cumulativeRealTradingPnL = 0.00;
-                          if (curMktProfCheck) {
-                            curMktProfCheck.currentBalance = updatedBal;
-                          }
-                          if (activeMarketingProfile) {
-                            activeMarketingProfile.currentBalance = updatedBal;
-                          }
-                          if (marketingProfilesByRot[rId]) {
-                            marketingProfilesByRot[rId].currentBalance = updatedBal;
-                          }
-                          try {
-                            var ca = JSON.parse(localStorage.getItem('client.accounts') || '{}');
-                            if (ca[rId]) {
-                              ca[rId].balance = updatedBal;
-                              ca[rId].converted_amount = updatedBal;
-                              localStorage.setItem('client.accounts', JSON.stringify(ca));
-                              localStorage.setItem('clientAccounts', JSON.stringify(ca));
-                            }
-                            var mc = localStorage.getItem('sitebuilder_marketing_cache_' + rId);
-                            if (mc) {
-                              var mcO = JSON.parse(mc);
-                              mcO.currentBalance = updatedBal;
-                              localStorage.setItem('sitebuilder_marketing_cache_' + rId, JSON.stringify(mcO));
-                            }
-                          } catch (_) {}
-                          saveVirtualTradingState('real');
-                          patchDomBalances();
-                        }
-                      })
-                      .catch(function () {});
-                    } catch (_) {}
                   }, 2500);
                 }, 100);
 
