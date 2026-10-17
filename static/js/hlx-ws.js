@@ -778,38 +778,134 @@
   function normalizeMarketingMarkupPercentage(value) {
     if (value === undefined || value === null || value === '') return null;
     var n = Number(value);
-    if (!Number.isFinite(n)) return null;
-    return Math.max(0, Math.min(3, n));
+    if (!Number.isFinite(n) || n < 0 || n > 3) return null;
+    return n;
   }
 
-  function getKnownDerivAppMarkupPercentage() {
-    try {
-      var settings = window.__DERIV_SITE_SETTINGS__ || {};
-      var appId = String(settings.derivAppId || window.__DERIV_APP_ID__ || '').trim();
-      if (/^\d{1,8}$/.test(appId) && marketingAppMarkupById[appId] !== undefined) {
-        return normalizeMarketingMarkupPercentage(marketingAppMarkupById[appId]);
+  // Read the app_id actually used by this WebSocket connection, not the OAuth
+  // client ID from the site theme/configuration.
+  function getWebSocketAppId(ws) {
+    var url = String((ws && ws.url) || '');
+    var question = url.indexOf('?');
+    if (question < 0) return null;
+    var query = url.slice(question + 1).split('&');
+    for (var i = 0; i < query.length; i++) {
+      var pair = query[i].split('=');
+      var key = '';
+      var value = '';
+      try {
+        key = decodeURIComponent(pair[0] || '');
+        value = decodeURIComponent(pair.slice(1).join('=') || '');
+      } catch (_) {
+        continue;
       }
-    } catch (_) {}
+      if (key.toLowerCase() === 'app_id' && value.trim()) return value.trim();
+    }
     return null;
   }
 
+  function getKnownDerivAppMarkupPercentage(ws) {
+    var appId = getWebSocketAppId(ws);
+    if (!appId || marketingAppMarkupById[appId] === undefined) return null;
+    return normalizeMarketingMarkupPercentage(marketingAppMarkupById[appId]);
+  }
+
   function getMarketingMarkupPercentage(profile) {
-    // Marketing payouts must always reflect the requested 3% markup.
-    // Do not let stale account/profile/browser settings turn it off.
-    return 3;
+    var value = profile && (profile.app_markup_percentage !== undefined
+      ? profile.app_markup_percentage
+      : profile.appMarkupPercentage);
+    if (value === undefined || value === null || value === '') {
+      var settings = (window.__DERIV_SITE_SETTINGS__ && window.__DERIV_SITE_SETTINGS__) || {};
+      var realSettings = settings.real || settings;
+      value = realSettings.app_markup_percentage !== undefined
+        ? realSettings.app_markup_percentage
+        : realSettings.appMarkupPercentage;
+    }
+    return normalizeMarketingMarkupPercentage(value);
+  }
+
+  // A quote from a 0%-markup app can be adjusted to the target once. If the
+  // quote is already marked at the target, preserve Deriv's exact quoted value.
+  // Re-marking a differently marked, already-rounded quote is not exact to the
+  // cent without an unmarked reference quote, so fail closed instead.
+  function adjustPayoutToTargetMarkup(basePayout, sourceMarkup, targetMarkup) {
+    var base = Number(basePayout);
+    var source = normalizeMarketingMarkupPercentage(sourceMarkup);
+    var target = normalizeMarketingMarkupPercentage(targetMarkup);
+    if (!Number.isFinite(base) || base <= 0 || source === null || target === null) return null;
+    var baseCents = Math.round(base * 100);
+    if (source === target) return Number((baseCents / 100).toFixed(2));
+    if (source !== 0) return null;
+    var payoutCents = Math.round(baseCents * (100 - target) / 100);
+    return Number((payoutCents / 100).toFixed(2));
   }
 
   function applyMarketingMarkupToPayout(basePayout, profile) {
-    var base = Number(basePayout);
-    if (!Number.isFinite(base) || base <= 0) return base;
-    var markup = getMarketingMarkupPercentage(profile);
-    if (!Number.isFinite(markup) || markup <= 0) return Number(base.toFixed(2));
+    var target = getMarketingMarkupPercentage(profile);
+    var adjusted = adjustPayoutToTargetMarkup(basePayout, 0, target);
+    return adjusted === null ? NaN : adjusted;
+  }
 
-    // Work in cents before rounding to avoid JavaScript floating-point cases
-    // such as 19.50 * 0.97 becoming 18.914999999... and incorrectly paying 18.91.
-    var baseCents = Math.round(base * 100);
-    var payoutCents = Math.round(baseCents * (100 - markup) / 100);
-    return Number((payoutCents / 100).toFixed(2));
+  // Signature includes all proposal dimensions that can change pricing.
+  // A short symbol/type/barrier cache key is not safe for buy matching.
+  function buildProposalSignature(params) {
+    if (!params || typeof params !== 'object') return '';
+    var p = params.parameters && typeof params.parameters === 'object'
+      ? params.parameters
+      : params;
+    var symbol = String(p.underlying_symbol || p.symbol || '').trim().toUpperCase();
+    var contractType = String(p.contract_type || p.contractType || '').trim().toUpperCase();
+    if (!symbol || !contractType) return '';
+    var barrier = (p.barrier === undefined || p.barrier === null) ? '' : String(p.barrier).trim();
+    var duration = (p.duration === undefined || p.duration === null) ? '' : String(p.duration);
+    var durationUnit = String(p.duration_unit || p.durationUnit || p.duration_type || '').trim().toLowerCase();
+    var currency = String(p.currency || '').trim().toUpperCase();
+    var amount = '';
+    if (p.amount !== undefined && p.amount !== null && p.amount !== '') {
+      var numericAmount = Number(p.amount);
+      amount = Number.isFinite(numericAmount) ? String(numericAmount) : String(p.amount).trim();
+    }
+    var basis = String(p.basis || '').trim().toLowerCase();
+    var expiry = (p.date_expiry === undefined || p.date_expiry === null)
+      ? ((p.expiry_time === undefined || p.expiry_time === null) ? '' : String(p.expiry_time))
+      : String(p.date_expiry);
+    return [symbol, contractType, barrier, duration, durationUnit, currency, amount, basis, expiry].join('|');
+  }
+
+  function isFreshMarketingProposal(proposal, nowMs) {
+    if (!proposal) return false;
+    var stamp = Number(proposal.timestamp);
+    var now = nowMs === undefined ? Date.now() : Number(nowMs);
+    if (!Number.isFinite(stamp) || !Number.isFinite(now)) return false;
+    var age = now - stamp;
+    return age >= 0 && age <= 30000;
+  }
+
+  function marketingProposalMatchesPurchase(proposal, request) {
+    if (!proposal || !request) return false;
+    var params = request.parameters && typeof request.parameters === 'object'
+      ? request.parameters
+      : null;
+    if (!params) return true; // The exact proposal ID is the contract identity.
+    var has = function (key) { return Object.prototype.hasOwnProperty.call(params, key); };
+    var reqSymbol = params.underlying_symbol !== undefined ? params.underlying_symbol : params.symbol;
+    if (reqSymbol !== undefined && String(reqSymbol).trim().toUpperCase() !== String(proposal.symbol || '').trim().toUpperCase()) return false;
+    var reqType = params.contract_type !== undefined ? params.contract_type : params.contractType;
+    if (reqType !== undefined && String(reqType).trim().toUpperCase() !== String(proposal.contractType || '').trim().toUpperCase()) return false;
+    if (has('barrier') && String(params.barrier) !== String(proposal.barrier === undefined || proposal.barrier === null ? '' : proposal.barrier)) return false;
+    if (has('duration') && String(params.duration) !== String(proposal.duration === undefined || proposal.duration === null ? '' : proposal.duration)) return false;
+    var reqUnit = params.duration_unit !== undefined ? params.duration_unit : (params.durationUnit !== undefined ? params.durationUnit : params.duration_type);
+    if (reqUnit !== undefined && String(reqUnit).trim().toLowerCase() !== String(proposal.durationUnit || '').trim().toLowerCase()) return false;
+    if (has('currency') && String(params.currency).trim().toUpperCase() !== String(proposal.currency || '').trim().toUpperCase()) return false;
+    if (has('amount')) {
+      var reqAmount = Number(params.amount);
+      var quoteAmount = Number(proposal.requestedAmount);
+      if (!Number.isFinite(reqAmount) || !Number.isFinite(quoteAmount) || Math.abs(reqAmount - quoteAmount) > 0.000001) return false;
+    }
+    if (has('basis') && String(params.basis).trim().toLowerCase() !== String(proposal.basis || '').trim().toLowerCase()) return false;
+    var reqExpiry = params.date_expiry !== undefined ? params.date_expiry : params.expiry_time;
+    if (reqExpiry !== undefined && String(reqExpiry) !== String(proposal.expiry || '')) return false;
+    return true;
   }
 
   var proposalsMap = (typeof window !== 'undefined' && (window.__hlx_proposals_map = window.__hlx_proposals_map || {})) || {};
@@ -822,156 +918,172 @@
   var syntheticContractsMap = (typeof window !== 'undefined' && (window.__hlx_synthetic_contracts = window.__hlx_synthetic_contracts || {})) || {};
   var marketingTradeHistoryList = (typeof window !== 'undefined' && (window.__hlx_marketing_history = window.__hlx_marketing_history || [])) || [];
 
-  function recordLiveDerivProposal(msg) {
-    if (!msg || !msg.proposal) return;
+  function recordLiveDerivProposal(msg, ws) {
+    if (!msg || !msg.proposal) return null;
     var p = msg.proposal;
     var subId = msg.subscription && msg.subscription.id;
-    var echo = msg.echo_req || (subId && proposalSubsMap[subId]) || {};
-    if (subId && msg.echo_req) {
-      proposalSubsMap[subId] = msg.echo_req;
-    }
+    var echo = msg.echo_req ||
+      (subId && proposalSubsMap[subId]) ||
+      (msg.req_id !== undefined && outgoingProposalReqsById[String(msg.req_id)]) ||
+      {};
+    if (subId && msg.echo_req) proposalSubsMap[subId] = msg.echo_req;
 
-    var sym = echo.symbol || (subId && proposalSubsMap[subId] && proposalSubsMap[subId].symbol) || '';
-    var ct = echo.contract_type || (subId && proposalSubsMap[subId] && proposalSubsMap[subId].contract_type) || '';
-    var bar = (echo.barrier !== undefined) ? String(echo.barrier) : ((p.barrier !== undefined) ? String(p.barrier) : '');
-    var st = Number(p.ask_price || echo.amount || 1.0);
-    var py = Number(p.payout || 0);
-    var lc = p.longcode || '';
-    var sp = Number(p.spot || 0);
-    // Marketing trades are simulated locally, so the incoming Deriv proposal
-    // is only a price quote; the site's 3% payout reduction is applied below
-    // before this proposal is recorded. Do not confuse app_get configuration
-    // with a markup already deducted from this particular quote.
-    var marketingProfile = getActiveMarketingProfileForCurrentAccount();
+    var request = echo.parameters && typeof echo.parameters === 'object' ? echo.parameters : echo;
+    var sym = request.underlying_symbol || request.symbol || p.underlying_symbol || '';
+    var ct = request.contract_type || request.contractType || p.contract_type || '';
+    var bar = (request.barrier !== undefined && request.barrier !== null)
+      ? String(request.barrier)
+      : ((p.barrier !== undefined && p.barrier !== null) ? String(p.barrier) : '');
+    var askPrice = Number(p.ask_price);
+    var requestedAmount = (request.amount !== undefined && request.amount !== null && request.amount !== '')
+      ? Number(request.amount)
+      : null;
+    var currency = String(request.currency || p.currency || '').toUpperCase();
+    var duration = (request.duration !== undefined && request.duration !== null) ? String(request.duration) : '';
+    var durationUnit = String(request.duration_unit || request.durationUnit || request.duration_type || '').toLowerCase();
+    var basis = String(request.basis || '').toLowerCase();
+    var expiry = request.date_expiry !== undefined ? String(request.date_expiry)
+      : (request.expiry_time !== undefined ? String(request.expiry_time) : '');
+    var rawPayout = Number(p.payout);
+    var payout = rawPayout;
+    var longcode = p.longcode || '';
+    var spot = Number(p.spot || 0);
+    var profile = getActiveMarketingProfileForCurrentAccount();
     var isSyntheticMarketingQuote = !!(
-      marketingProfile &&
-      marketingProfile.marketingEligible &&
-      !marketingProfile.useRealBalance &&
-      !marketingProfile.isDemoMarketing &&
+      profile &&
+      profile.marketingEligible &&
+      !profile.useRealBalance &&
+      !profile.isDemoMarketing &&
       !isDemoAccountActive()
     );
-    var proposalMarkup = isSyntheticMarketingQuote
-      ? getMarketingMarkupPercentage(marketingProfile)
-      : getKnownDerivAppMarkupPercentage();
-    if (!isSyntheticMarketingQuote && proposalMarkup === null) {
-      proposalMarkup = normalizeMarketingMarkupPercentage(
-        echo.app_markup_percentage ??
-        (echo.parameters && echo.parameters.app_markup_percentage)
-      );
+
+    // The app-level value is only trusted when it belongs to the app_id on
+    // this exact WebSocket, or when the proposal itself explicitly includes
+    // a markup field. Site theme/configuration alone is not quote provenance.
+    var explicitMarkup = normalizeMarketingMarkupPercentage(
+      p.markup_applied_percentage !== undefined
+        ? p.markup_applied_percentage
+        : p.app_markup_percentage
+    );
+    var sourceMarkup = explicitMarkup !== null ? explicitMarkup : getKnownDerivAppMarkupPercentage(ws);
+    var targetMarkup = isSyntheticMarketingQuote ? getMarketingMarkupPercentage(profile) : null;
+    var adjusted = false;
+    var verified = !isSyntheticMarketingQuote;
+    var reason = '';
+
+    if (isSyntheticMarketingQuote) {
+      var proposalIdForCheck = p.id === undefined || p.id === null ? '' : String(p.id);
+      if (!proposalIdForCheck || !Number.isFinite(askPrice) || askPrice <= 0 ||
+          !Number.isFinite(rawPayout) || rawPayout <= 0) {
+        reason = 'Deriv did not return a complete proposal ID, ask price, and payout. No simulated trade was opened.';
+      } else if (targetMarkup === null) {
+        reason = 'The Marketing account markup configuration is missing or invalid. No simulated trade was opened.';
+      } else if (sourceMarkup === null) {
+        reason = 'The active WebSocket app markup could not be verified from a matching Deriv app_get response or explicit proposal metadata. Refresh the quote after verifying the registered app ID; no estimated payout was substituted.';
+      } else {
+        var adjustedPayout = adjustPayoutToTargetMarkup(rawPayout, sourceMarkup, targetMarkup);
+        if (adjustedPayout === null) {
+          reason = 'The active Deriv app is using a different non-zero markup than Marketing. An unmarked reference proposal is needed for exact cent rounding, so this quote was not used.';
+        } else {
+          payout = adjustedPayout;
+          verified = true;
+          if (Math.abs(adjustedPayout - rawPayout) > 0.000001) {
+            p.payout = adjustedPayout;
+            p.display_value = adjustedPayout.toFixed(2);
+            adjusted = true;
+          }
+        }
+      }
     }
 
+    var proposalId = p.id === undefined || p.id === null ? '' : String(p.id);
     var record = {
-      id: String(p.id),
-      symbol: sym,
-      contractType: ct,
+      id: proposalId,
+      derivAppId: getWebSocketAppId(ws),
+      symbol: String(sym || '').toUpperCase(),
+      contractType: String(ct || '').toUpperCase(),
       barrier: bar,
-      stake: st,
-      payout: py,
-      longcode: lc,
-      spot: sp,
+      stake: askPrice,
+      askPrice: askPrice,
+      requestedAmount: Number.isFinite(requestedAmount) ? requestedAmount : null,
+      basis: basis,
+      currency: currency,
+      duration: duration,
+      durationUnit: durationUnit,
+      expiry: expiry,
+      rawPayout: rawPayout,
+      payout: payout,
+      longcode: longcode,
+      spot: spot,
       spot_time: p.spot_time,
-      display_value: p.display_value || String(py),
-      markupAppliedPercentage: proposalMarkup,
+      display_value: p.display_value || (Number.isFinite(payout) ? payout.toFixed(2) : ''),
+      sourceMarkupPercentage: sourceMarkup,
+      markupAppliedPercentage: (isSyntheticMarketingQuote && verified) ? targetMarkup : sourceMarkup,
+      markupStatus: isSyntheticMarketingQuote ? (verified ? 'verified' : 'unverified') : (sourceMarkup === null ? 'unknown' : 'native'),
+      isVerifiedMarketingProposal: !!(isSyntheticMarketingQuote && verified),
+      isPayoutEstimate: false,
       timestamp: Date.now()
     };
 
-    proposalsMap[String(p.id)] = record;
-    if (sym && ct) {
-      var sigWithBar = [sym, ct, bar].filter(function (x) { return x !== undefined && x !== ''; }).join('_').toUpperCase();
-      latestProposalsBySig[sigWithBar] = record;
-      var sigWithoutBar = [sym, ct].filter(function (x) { return x !== undefined && x !== ''; }).join('_').toUpperCase();
-      if (!latestProposalsBySig[sigWithoutBar] || !bar) {
-        latestProposalsBySig[sigWithoutBar] = record;
-      }
-    }
+    if (proposalId) proposalsMap[proposalId] = record;
+    var signature = buildProposalSignature(echo);
+    if (signature) latestProposalsBySig[signature] = record;
+
+    return {
+      marketingQuote: isSyntheticMarketingQuote,
+      verified: verified,
+      adjusted: adjusted,
+      blocked: !!(isSyntheticMarketingQuote && !verified),
+      reason: reason,
+      record: record
+    };
   }
 
   function calculateContractPayout(contractType, barrier, stakePaid, matchedProp, marketingProfile) {
     var ct = String(contractType || 'CALL').toUpperCase();
-    var st = Number(stakePaid) || 1.0;
-    if (!Number.isFinite(st) || st <= 0) st = 1.0;
+    var st = Number(stakePaid);
+    if (!Number.isFinite(st) || st <= 0) return NaN;
+    var targetMarkup = getMarketingMarkupPercentage(marketingProfile);
 
-    var finalize = function (rawPayout) {
-      var raw = Number(rawPayout);
-      if (!Number.isFinite(raw) || raw <= 0) return raw;
+    if (matchedProp) {
+      if (!matchedProp.isVerifiedMarketingProposal ||
+          matchedProp.markupStatus !== 'verified' ||
+          targetMarkup === null ||
+          normalizeMarketingMarkupPercentage(matchedProp.markupAppliedPercentage) !== targetMarkup ||
+          !isFreshMarketingProposal(matchedProp)) return NaN;
+      if (String(matchedProp.contractType || '').toUpperCase() !== ct) return NaN;
+      var requestedBarrier = (barrier === undefined || barrier === null) ? '' : String(barrier);
+      var recordedBarrier = (matchedProp.barrier === undefined || matchedProp.barrier === null) ? '' : String(matchedProp.barrier);
+      if (requestedBarrier !== recordedBarrier) return NaN;
+      var actualAskPrice = Number(matchedProp.askPrice !== undefined ? matchedProp.askPrice : matchedProp.stake);
+      if (!Number.isFinite(actualAskPrice) || actualAskPrice <= 0 || Math.abs(actualAskPrice - st) > 0.001) return NaN;
+      var verifiedPayout = Number(matchedProp.payout);
+      return Number.isFinite(verifiedPayout) && verifiedPayout > 0 ? verifiedPayout : NaN;
+    }
 
-      // Only a proposal explicitly processed by this Marketing quote path is
-      // considered already marked. The registered app's app_get value does
-      // not prove that a synthetic/local trade's payout has been adjusted.
-      var alreadyMarked = matchedProp
-        ? normalizeMarketingMarkupPercentage(matchedProp.markupAppliedPercentage)
-        : null;
-
-      var targetMarkup = getMarketingMarkupPercentage(marketingProfile);
-      if (alreadyMarked !== null && Number.isFinite(targetMarkup)) {
-        var currentFactor = 1 - (alreadyMarked / 100);
-        var targetFactor = 1 - (targetMarkup / 100);
-        if (currentFactor > 0 && targetFactor > 0) {
-          return Number((raw * targetFactor / currentFactor).toFixed(2));
-        }
-      }
-
-      // Unknown/unmarked proposals and generated fallback prices must receive
-      // the markup instead of bypassing it.
-      return applyMarketingMarkupToPayout(raw, marketingProfile);
+    // This branch is an estimate for offline/fallback displays only. The
+    // Marketing buy path never uses it as a substitute for a verified quote.
+    var finalizeEstimate = function (grossEstimate) {
+      return applyMarketingMarkupToPayout(grossEstimate, marketingProfile);
     };
 
-    // Prefer the exact Deriv proposal for this contract type, barrier, and stake.
-    if (matchedProp && matchedProp.contractType && String(matchedProp.contractType).toUpperCase() === ct) {
-      var barrierMatches = true;
-      if (barrier !== undefined && barrier !== null && barrier !== '' &&
-          matchedProp.barrier !== undefined && matchedProp.barrier !== null && matchedProp.barrier !== '') {
-        barrierMatches = String(barrier).trim() === String(matchedProp.barrier).trim();
-      }
-      if (barrierMatches) {
-        var rawPropPayout = Number(matchedProp.payout);
-        var propStake = Number(matchedProp.stake) || st;
-        if (Number.isFinite(rawPropPayout) && rawPropPayout > 0 && Number.isFinite(propStake) && propStake > 0) {
-          if (Math.abs(propStake - st) > 0.001) {
-            return finalize((rawPropPayout / propStake) * st);
-          }
-          return finalize(rawPropPayout);
-        }
-      }
-    }
-
     if (ct === 'DIGITOVER' || ct === 'OVER') {
-      var b = parseInt(barrier, 10);
-      if (!Number.isFinite(b) || b < 0 || b > 8) b = 5;
-      var winWays = 9 - b;
-      var mult = (10 / winWays) * 0.953;
-      return finalize(st * mult);
+      var overBarrier = parseInt(barrier, 10);
+      if (!Number.isFinite(overBarrier) || overBarrier < 0 || overBarrier > 8) overBarrier = 5;
+      return finalizeEstimate(st * (10 / (9 - overBarrier)) * 0.953);
     }
-
     if (ct === 'DIGITUNDER' || ct === 'UNDER') {
-      var b = parseInt(barrier, 10);
-      if (!Number.isFinite(b) || b < 1 || b > 9) b = 5;
-      var winWays = b;
-      var mult = (10 / winWays) * 0.953;
-      return finalize(st * mult);
+      var underBarrier = parseInt(barrier, 10);
+      if (!Number.isFinite(underBarrier) || underBarrier < 1 || underBarrier > 9) underBarrier = 5;
+      return finalizeEstimate(st * (10 / underBarrier) * 0.953);
     }
-
-    if (ct === 'DIGITMATCH' || ct === 'MATCHES' || ct === 'MATCH') {
-      return finalize(st * 9.53);
+    if (ct === 'DIGITMATCH' || ct === 'MATCHES' || ct === 'MATCH') return finalizeEstimate(st * 9.53);
+    if (ct === 'DIGITDIFF' || ct === 'DIFFERS' || ct === 'DIFF') return finalizeEstimate(st * 1.055);
+    if (ct === 'DIGITEVEN' || ct === 'EVEN' || ct === 'DIGITODD' || ct === 'ODD') return finalizeEstimate(st * 1.96);
+    if (ct === 'CALL' || ct === 'HIGHER' || ct === 'RISE' || ct === 'PUT' || ct === 'LOWER' || ct === 'FALL') {
+      return finalizeEstimate(st * 1.95);
     }
-
-    if (ct === 'DIGITDIFF' || ct === 'DIFFERS' || ct === 'DIFF') {
-      return finalize(st * 1.055);
-    }
-
-    if (ct === 'DIGITEVEN' || ct === 'EVEN' || ct === 'DIGITODD' || ct === 'ODD') {
-      return finalize(st * 1.96);
-    }
-
-    if (ct === 'CALL' || ct === 'HIGHER' || ct === 'RISE') {
-      return finalize(st * 1.95);
-    }
-
-    if (ct === 'PUT' || ct === 'LOWER' || ct === 'FALL') {
-      return finalize(st * 1.95);
-    }
-
-    return finalize(st * 1.95);
+    return NaN;
   }
 
   function getSymbolDisplayName(sym) {
@@ -1064,9 +1176,17 @@
     var st = Number(pObj.stake || 1.0);
     // Route fallback contracts through the same markup-aware calculation;
     // a raw payout must never bypass the 3% rule just because it exists.
-    var py = calculateContractPayout(ct, bar, st, pObj, prof);
+    var hasVerifiedQuote = !!(
+      pObj.isVerifiedMarketingProposal &&
+      pObj.markupStatus === 'verified' &&
+      normalizeMarketingMarkupPercentage(pObj.markupAppliedPercentage) === getMarketingMarkupPercentage(prof)
+    );
+    var py = calculateContractPayout(ct, bar, st, hasVerifiedQuote ? pObj : null, prof);
     var profVal = Number((py - st).toFixed(2));
     var lc = pObj.longcode || generateContractLongcode(sym, ct, bar, st);
+    if (!hasVerifiedQuote) {
+      lc = 'ESTIMATE ONLY — NO VERIFIED LIVE DERIV PROPOSAL. ' + lc;
+    }
 
     var sCont = {
       contractId: Number(cId || Math.floor(1000000000 + Math.random() * 9000000000)),
@@ -1083,6 +1203,8 @@
       profit: profVal,
       profitPercentage: Number(((profVal / st) * 100).toFixed(2)),
       sellPrice: py,
+      payoutSource: hasVerifiedQuote ? 'verified-deriv-proposal' : 'estimated-fallback',
+      isPayoutEstimate: !hasVerifiedQuote,
       isWon: true,
       isSettled: false,
       startTime: nowSec,
@@ -1150,6 +1272,8 @@
       is_valid_to_sell: settled ? 0 : 1,
       longcode: simCont.longcode || generateContractLongcode(simCont.symbol, simCont.contractType, simCont.barrier, simCont.stake),
       payout: Number(simCont.payout || 0),
+      marketing_payout_source: simCont.payoutSource || (simCont.isPayoutEstimate ? 'estimated-fallback' : 'verified-deriv-proposal'),
+      payout_is_estimate: !!simCont.isPayoutEstimate,
       profit: Number(profitVal || 0),
       profit_percentage: Number(settled ? simCont.profitPercentage : 0),
       purchase_time: simCont.startTime,
@@ -3307,13 +3431,24 @@
         }
       }
 
-      // 3. Proposal response from Deriv.
-      // The registered Deriv application applies its configured 3% markup to
-      // live proposal pricing already. Do not subtract another 3% here.
-      // recordLiveDerivProposal tags this quote with the configured Marketing
-      // markup, so the synthetic buy/settlement paths use it without recharging.
+      // 3. Proposal response from Deriv. Marketing may only display/use a
+      // payout after the active socket app's markup has been verified. An
+      // explicitly unmarked quote is adjusted once; an already-marked quote
+      // at the target remains exactly as returned by Deriv.
       if (msg.msg_type === 'proposal' && msg.proposal) {
-        recordLiveDerivProposal(msg);
+        var marketingQuoteResult = recordLiveDerivProposal(msg, ws);
+        if (marketingQuoteResult && marketingQuoteResult.blocked) {
+          return JSON.stringify({
+            echo_req: msg.echo_req || {},
+            msg_type: 'error',
+            error: {
+              code: 'MARKETING_MARKUP_UNVERIFIED',
+              message: marketingQuoteResult.reason || 'Marketing markup could not be verified. No simulated trade was opened.'
+            },
+            req_id: msg.req_id
+          });
+        }
+        if (marketingQuoteResult && marketingQuoteResult.adjusted) modified = true;
       }
 
             // 4. Fallback/authentic symbol catalog for contracts_for
@@ -3590,9 +3725,6 @@
             getPatchedEventData(event);
             if (typeof event.data === 'string') {
               var m = JSON.parse(event.data);
-              if (m && m.msg_type === 'proposal' && m.proposal) {
-                recordLiveDerivProposal(m);
-              }
               if (m && m.msg_type === 'app_get' && m.app_get) {
                 var appInfo = m.app_get;
                 var appIdKey = String(appInfo.app_id || '').trim();
@@ -3797,16 +3929,17 @@
                 loadVirtualTradingState(resolved.rot);
                 applyMarketingProfile(resolved);
 
-                // Best-effort lookup of the markup configured on a numeric
-                // Deriv application. This is read-only and only warms the
-                // Marketing payout calculation; it never changes account state.
+                // Query markup for the app_id on this actual WebSocket.
+                // The OAuth/client ID in site config may be a different identifier.
                 try {
-                  var markupSettings = window.__DERIV_SITE_SETTINGS__ || {};
-                  var markupAppId = String(markupSettings.derivAppId || '').trim();
-                  if (/^\d{1,8}$/.test(markupAppId) && marketingAppMarkupById[markupAppId] === undefined) {
+                  var markupAppId = getWebSocketAppId(ws);
+                  var numericMarkupAppId = Number(markupAppId);
+                  if (markupAppId && Number.isFinite(numericMarkupAppId) && numericMarkupAppId > 0 &&
+                      String(numericMarkupAppId) === markupAppId &&
+                      marketingAppMarkupById[markupAppId] === undefined) {
                     setTimeout(function () {
                       try {
-                        origSend.call(ws, JSON.stringify({ app_get: Number(markupAppId) }));
+                        origSend.call(ws, JSON.stringify({ app_get: numericMarkupAppId }));
                       } catch (_) {}
                     }, 150);
                   }
@@ -4009,13 +4142,12 @@
 
 
 
-            // Track outgoing proposal requests so contract parameters (symbol, type, barrier) are never lost
-            if (req.proposal && req.symbol && req.contract_type) {
-              var reqSig = [req.symbol, req.contract_type, req.barrier !== undefined ? String(req.barrier) : ''].filter(Boolean).join('_').toUpperCase();
-              lastOutgoingProposalReqs[reqSig] = req;
-              if (req.req_id) {
-                outgoingProposalReqsById[String(req.req_id)] = req;
-              }
+            // Preserve the complete proposal request so the response can be
+            // matched by stake/basis, duration, currency, barrier and contract.
+            if (req.proposal && (req.symbol || req.underlying_symbol) && req.contract_type) {
+              var reqSig = buildProposalSignature(req);
+              if (reqSig) lastOutgoingProposalReqs[reqSig] = req;
+              if (req.req_id !== undefined) outgoingProposalReqsById[String(req.req_id)] = req;
             }
 
             // Intercept profit_table for active Marketing accounts
@@ -4138,24 +4270,102 @@
                   matchedProp = proposalsMap[buyPropId];
                 }
                 if (!matchedProp && pParams) {
-                  var pSigWithBar = [pParams.symbol, pParams.contract_type, pParams.barrier !== undefined ? String(pParams.barrier) : ''].filter(Boolean).join('_').toUpperCase();
-                  matchedProp = latestProposalsBySig[pSigWithBar] ||
-                                latestProposalsBySig[[pParams.symbol, pParams.contract_type].filter(Boolean).join('_').toUpperCase()];
-                }
-                if (!matchedProp && buyPropId && proposalsMap[buyPropId]) {
-                  matchedProp = proposalsMap[buyPropId];
+                  var pSig = buildProposalSignature(pParams);
+                  if (pSig) matchedProp = latestProposalsBySig[pSig] || null;
                 }
 
-                // If parameters are provided, prefer them; otherwise take from matched proposal
-                var symbolCode = (pParams && pParams.symbol) || (matchedProp && matchedProp.symbol) || '1HZ100V';
-                var contractType = (pParams && pParams.contract_type) || (matchedProp && matchedProp.contractType) || 'CALL';
-                var barrier = String((pParams && pParams.barrier) !== undefined ? pParams.barrier : ((matchedProp && matchedProp.barrier) !== undefined ? matchedProp.barrier : '0'));
-                var stakePaid = Number(req.price || (pParams && pParams.amount) || (matchedProp && matchedProp.stake) || 1.0);
+                // A buy price is a maximum-price limit, not a replacement for
+                // the proposal's actual ask_price. Never scale a payout from a
+                // different stake or a stale/mismatched proposal.
+                if (!matchedProp || !isFreshMarketingProposal(matchedProp) ||
+                    !marketingProposalMatchesPurchase(matchedProp, req)) {
+                  setTimeout(function () {
+                    emitWsMessage(ws, {
+                      echo_req: req,
+                      msg_type: 'error',
+                      error: {
+                        code: 'MARKETING_PROPOSAL_MISMATCH',
+                        message: 'Marketing trade stopped: no fresh proposal matched the exact symbol, contract, barrier, duration, currency and requested stake. Request a new Deriv proposal; no estimated payout was used.'
+                      },
+                      req_id: req.req_id
+                    });
+                  }, 0);
+                  return;
+                }
 
-                // Contract-specific payout resolution: strictly for this exact contract type, barrier, and stake
+                var requiredMarkup = getMarketingMarkupPercentage(curMktProfCheck);
+                if (!matchedProp.isVerifiedMarketingProposal ||
+                    matchedProp.markupStatus !== 'verified' ||
+                    requiredMarkup === null ||
+                    normalizeMarketingMarkupPercentage(matchedProp.markupAppliedPercentage) !== requiredMarkup) {
+                  setTimeout(function () {
+                    emitWsMessage(ws, {
+                      echo_req: req,
+                      msg_type: 'error',
+                      error: {
+                        code: 'MARKETING_MARKUP_UNVERIFIED',
+                        message: 'Marketing trade stopped: the exact proposal does not have verified markup provenance at the configured percentage. No estimate or mock live payout was used.'
+                      },
+                      req_id: req.req_id
+                    });
+                  }, 0);
+                  return;
+                }
+
+                var symbolCode = (pParams && (pParams.underlying_symbol || pParams.symbol)) || matchedProp.symbol;
+                var contractType = (pParams && pParams.contract_type) || matchedProp.contractType;
+                var barrier = String((pParams && pParams.barrier) !== undefined
+                  ? pParams.barrier
+                  : (matchedProp.barrier === undefined ? '' : matchedProp.barrier));
+                var stakePaid = Number(matchedProp.askPrice !== undefined ? matchedProp.askPrice : matchedProp.stake);
+                var maximumPrice = Number(req.price);
+                if (Number.isFinite(maximumPrice) && maximumPrice > 0 &&
+                    Number.isFinite(stakePaid) && maximumPrice + 0.001 < stakePaid) {
+                  setTimeout(function () {
+                    emitWsMessage(ws, {
+                      echo_req: req,
+                      msg_type: 'error',
+                      error: {
+                        code: 'MARKETING_PRICE_LIMIT',
+                        message: 'Marketing trade stopped: Deriv proposal ask_price exceeds the maximum buy price. Refresh the proposal before buying.'
+                      },
+                      req_id: req.req_id
+                    });
+                  }, 0);
+                  return;
+                }
+                if (!Number.isFinite(stakePaid) || stakePaid <= 0) {
+                  setTimeout(function () {
+                    emitWsMessage(ws, {
+                      echo_req: req,
+                      msg_type: 'error',
+                      error: {
+                        code: 'MARKETING_PROPOSAL_INVALID',
+                        message: 'Marketing trade stopped: the matched Deriv proposal has no valid ask_price.'
+                      },
+                      req_id: req.req_id
+                    });
+                  }, 0);
+                  return;
+                }
+
+                // A verified proposal's payout is already normalized to the
+                // Marketing target markup by the proposal handler. Do not run
+                // the multiplier fallback or apply the markup again here.
                 var payoutExpected = calculateContractPayout(contractType, barrier, stakePaid, matchedProp, curMktProfCheck);
                 if (!Number.isFinite(payoutExpected) || payoutExpected <= 0) {
-                  payoutExpected = calculateContractPayout(contractType, barrier, stakePaid, null, curMktProfCheck);
+                  setTimeout(function () {
+                    emitWsMessage(ws, {
+                      echo_req: req,
+                      msg_type: 'error',
+                      error: {
+                        code: 'MARKETING_PAYOUT_UNVERIFIED',
+                        message: 'Marketing trade stopped because the payout could not be verified against the matched proposal.'
+                      },
+                      req_id: req.req_id
+                    });
+                  }, 0);
+                  return;
                 }
 
                 var contractDisplayName = getSymbolDisplayName(symbolCode);
