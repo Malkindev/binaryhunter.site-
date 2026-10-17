@@ -794,35 +794,9 @@
   }
 
   function getMarketingMarkupPercentage(profile) {
-    var candidates = [];
-    if (profile) {
-      candidates.push(profile.app_markup_percentage, profile.appMarkupPercentage, profile.markupPercentage);
-    }
-    try {
-      var settings = window.__DERIV_SITE_SETTINGS__ || {};
-      candidates.push(settings.app_markup_percentage, settings.appMarkupPercentage, settings.markupPercentage);
-    } catch (_) {}
-    try {
-      var raw = localStorage.getItem('config.site_settings_json');
-      if (raw) {
-        var settingsLocal = JSON.parse(raw) || {};
-        candidates.push(settingsLocal.app_markup_percentage, settingsLocal.appMarkupPercentage, settingsLocal.markupPercentage);
-      }
-    } catch (_) {}
-    try {
-      candidates.push(window.__DERIV_APP_MARKUP_PERCENTAGE__);
-    } catch (_) {}
-
-    for (var iMarkup = 0; iMarkup < candidates.length; iMarkup++) {
-      var direct = normalizeMarketingMarkupPercentage(candidates[iMarkup]);
-      if (direct !== null) return direct;
-    }
-
-    // Best-effort fallback to live Deriv app details.
-    var cached = getKnownDerivAppMarkupPercentage();
-    if (cached !== null) return cached;
-
-    return 0;
+    // The requested BinaryHunter marketing payout markup is fixed at 3%.
+    // Do not let stale profile/browser settings silently disable it.
+    return 3;
   }
 
   function applyMarketingMarkupToPayout(basePayout, profile) {
@@ -904,25 +878,21 @@
       var raw = Number(rawPayout);
       if (!Number.isFinite(raw) || raw <= 0) return raw;
 
+      // Normalize a quote with known existing markup back to its gross value,
+      // then apply the required 3% exactly once. If its existing markup is
+      // unknown, apply 3% instead of silently returning the unadjusted quote.
       var alreadyMarked = matchedProp
         ? normalizeMarketingMarkupPercentage(matchedProp.markupAppliedPercentage)
         : null;
       if (alreadyMarked === null) alreadyMarked = getKnownDerivAppMarkupPercentage();
-
       var targetMarkup = getMarketingMarkupPercentage(marketingProfile);
       if (alreadyMarked !== null && Number.isFinite(targetMarkup)) {
-        // Convert an already-marked quote to the configured target markup.
         var currentFactor = 1 - (alreadyMarked / 100);
         var targetFactor = 1 - (targetMarkup / 100);
         if (currentFactor > 0 && targetFactor > 0) {
           return Number((raw * targetFactor / currentFactor).toFixed(2));
         }
-        return Number(raw.toFixed(2));
       }
-
-      // A matched live quote is the source of truth while app_get is pending.
-      // Only fallback calculations receive a manual markup here.
-      if (matchedProp) return Number(raw.toFixed(2));
       return applyMarketingMarkupToPayout(raw, marketingProfile);
     };
 
