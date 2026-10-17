@@ -3277,7 +3277,8 @@
           if (curModeIsDemo && delayedMarketingBalance) {
             return raw;
           }
-          actualRealBalance = Number(msg.balance.balance || actualRealBalance);
+          var incomingRealBalance = Number(msg.balance.balance);
+          if (Number.isFinite(incomingRealBalance)) actualRealBalance = incomingRealBalance;
           if (curModeIsDemo) {
             return raw;
           }
