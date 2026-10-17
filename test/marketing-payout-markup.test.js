@@ -16,6 +16,10 @@ const production = fs.readFileSync(
   'utf8'
 );
 
+// Parse the complete production file so a passing helper test cannot hide a
+// syntax error elsewhere in the WebSocket interception/settlement code.
+new vm.Script(production, { filename: 'static/js/hlx-ws.js' });
+
 function extractFunction(name) {
   const marker = 'function ' + name + '(';
   const start = production.indexOf(marker);
