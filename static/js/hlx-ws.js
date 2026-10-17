@@ -3267,22 +3267,33 @@
           }
           patchDomBalances();
         } else {
-          // REAL BALANCE: Strictly for Real mode!
+          // REAL BALANCE: Keep the native Real balance separate from the
+          // site's ROT Marketing simulation and from whatever mode is visible.
           var curRealProf = getActiveMarketingProfileForCurrentAccount();
           var knownRotProfile = balLoginid ? marketingProfilesByRot[balLoginid] : null;
-          var delayedMarketingBalance = !!(knownRotProfile && knownRotProfile.marketingEligible &&
+          var isConfiguredMarketingBalance = !!(curRealProf && curRealProf.marketingEligible &&
+            !curRealProf.useRealBalance && !curRealProf.isDemoMarketing &&
+            (isSameAccount(balLoginid, curRealProf.rot) || !balLoginid));
+          var isKnownMarketingProfile = !!(knownRotProfile && knownRotProfile.marketingEligible &&
             !knownRotProfile.useRealBalance && !knownRotProfile.isDemoMarketing);
-          // A late Real-marketing balance event must not be stored as the native
-          // account balance after the user has switched over to Demo.
-          if (curModeIsDemo && delayedMarketingBalance) {
+          var isRotBalanceEvent = balLoginid.indexOf('ROT') === 0;
+
+          // Ignore unrelated/delayed ROT profile balances; never store them as
+          // the native Real balance or let them overwrite the visible account.
+          if ((isKnownMarketingProfile || isRotBalanceEvent) && !isConfiguredMarketingBalance) {
             return raw;
           }
-          var incomingRealBalance = Number(msg.balance.balance);
-          if (Number.isFinite(incomingRealBalance)) actualRealBalance = incomingRealBalance;
+
+          if (!isConfiguredMarketingBalance) {
+            var incomingRealBalance = Number(msg.balance.balance);
+            if (Number.isFinite(incomingRealBalance)) actualRealBalance = incomingRealBalance;
+          }
+          // Continue recording native Real balance updates while Demo is visible,
+          // but do not let them overwrite Demo's displayed balance.
           if (curModeIsDemo) {
             return raw;
           }
-          if (curRealProf && curRealProf.marketingEligible && !curRealProf.useRealBalance && !curRealProf.isDemoMarketing && (isSameAccount(balLoginid, curRealProf.rot) || !balLoginid)) {
+          if (isConfiguredMarketingBalance) {
             if (msg.balance.accounts && typeof msg.balance.accounts === 'object') {
               var rotKey = curRealProf.rot;
               for (var k in msg.balance.accounts) {
