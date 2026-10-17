@@ -2411,12 +2411,10 @@
   ];
 
   function normalizeSymbolForDeriv(sym) {
+    // Preserve the exact Deriv API symbol. Rewriting one index to another can
+    // silently change the traded market and make prices/contracts inconsistent.
     if (!sym || typeof sym !== 'string') return sym;
-    var u = String(sym).trim();
-    if (u === '1HZ150V' || u === '1HZ200V' || u === '1HZ250V' || u === '1HZ300V') {
-      return '1HZ100V';
-    }
-    return u;
+    return String(sym).trim();
   }
 
   function getContractsForSymbolCatalog(sym, market, submarket) {
@@ -2985,24 +2983,25 @@
       if (!msg || typeof msg !== 'object') return raw;
       var modified = false;
 
-      // Suppress contract & symbol errors from Deriv so they never reach the UI or crash the bot
+      // Keep genuine Deriv symbol/contract errors visible. Returning a fake
+      // contracts_for catalogue or a success-shaped empty message hides an
+      // invalid underlying symbol and can lead the UI to request bad proposals.
       if (msg.error) {
         var errCode = String(msg.error.code || '');
         var errMsg = String(msg.error.message || '');
-        if (errCode === 'InvalidSymbol' || errMsg.indexOf('Invalid symbol') !== -1 ||
+        if (errCode === 'InvalidSymbol' || errMsg.toLowerCase().indexOf('invalid symbol') !== -1 ||
             errCode === 'InvalidContractProposal' || errCode === 'ContractNotFound' || errCode === 'CustomContractNotFound' ||
-            errMsg.indexOf('contract proposal is invalid') !== -1 || errMsg.indexOf('Contract does not exist') !== -1) {
-          console.warn('[hlx-ws] Suppressing Deriv symbol/contract error:', errCode, errMsg);
-          if (msg.echo_req && msg.echo_req.contracts_for) {
-            var reqSym = normalizeSymbolForDeriv(msg.echo_req.contracts_for);
-            var fallbackContracts = getContractsForSymbolCatalog(reqSym);
-            return JSON.stringify({
-              echo_req: msg.echo_req,
-              msg_type: 'contracts_for',
-              contracts_for: { available: fallbackContracts, close: 0, feed_license: 'realtime', hit_count: 0, open: 0, spot: 1000.00 }
-            });
-          }
-          return JSON.stringify({ echo_req: msg.echo_req || {}, msg_type: msg.msg_type || 'error_suppressed' });
+            errMsg.toLowerCase().indexOf('contract proposal is invalid') !== -1 ||
+            errMsg.toLowerCase().indexOf('contract does not exist') !== -1) {
+          console.error('[hlx-ws] Deriv rejected symbol/contract request:', {
+            code: errCode,
+            message: errMsg,
+            msg_type: msg.msg_type || 'error',
+            request: msg.echo_req || null
+          });
+          // Return Deriv's original error so the caller can surface it, and so
+          // the precise rejected symbol/contract parameters remain inspectable.
+          return raw;
         }
       }
 
