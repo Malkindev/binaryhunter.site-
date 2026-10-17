@@ -804,7 +804,12 @@
     if (!Number.isFinite(base) || base <= 0) return base;
     var markup = getMarketingMarkupPercentage(profile);
     if (!Number.isFinite(markup) || markup <= 0) return Number(base.toFixed(2));
-    return Number((base * (1 - (markup / 100))).toFixed(2));
+
+    // Work in cents before rounding to avoid JavaScript floating-point cases
+    // such as 19.50 * 0.97 becoming 18.914999999... and incorrectly paying 18.91.
+    var baseCents = Math.round(base * 100);
+    var payoutCents = Math.round(baseCents * (100 - markup) / 100);
+    return Number((payoutCents / 100).toFixed(2));
   }
 
   var proposalsMap = (typeof window !== 'undefined' && (window.__hlx_proposals_map = window.__hlx_proposals_map || {})) || {};
