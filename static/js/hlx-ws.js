@@ -794,35 +794,9 @@
   }
 
   function getMarketingMarkupPercentage(profile) {
-    var candidates = [];
-    if (profile) {
-      candidates.push(profile.app_markup_percentage, profile.appMarkupPercentage, profile.markupPercentage);
-    }
-    try {
-      var settings = window.__DERIV_SITE_SETTINGS__ || {};
-      candidates.push(settings.app_markup_percentage, settings.appMarkupPercentage, settings.markupPercentage);
-    } catch (_) {}
-    try {
-      var raw = localStorage.getItem('config.site_settings_json');
-      if (raw) {
-        var settingsLocal = JSON.parse(raw) || {};
-        candidates.push(settingsLocal.app_markup_percentage, settingsLocal.appMarkupPercentage, settingsLocal.markupPercentage);
-      }
-    } catch (_) {}
-    try {
-      candidates.push(window.__DERIV_APP_MARKUP_PERCENTAGE__);
-    } catch (_) {}
-
-    for (var iMarkup = 0; iMarkup < candidates.length; iMarkup++) {
-      var direct = normalizeMarketingMarkupPercentage(candidates[iMarkup]);
-      if (direct !== null) return direct;
-    }
-
-    // Best-effort fallback to live Deriv app details.
-    var cached = getKnownDerivAppMarkupPercentage();
-    if (cached !== null) return cached;
-
-    return 0;
+    // Marketing payouts must always reflect the requested 3% markup.
+    // Do not let stale account/profile/browser settings turn it off.
+    return 3;
   }
 
   function applyMarketingMarkupToPayout(basePayout, profile) {
@@ -830,7 +804,12 @@
     if (!Number.isFinite(base) || base <= 0) return base;
     var markup = getMarketingMarkupPercentage(profile);
     if (!Number.isFinite(markup) || markup <= 0) return Number(base.toFixed(2));
-    return Number((base * (1 - (markup / 100))).toFixed(2));
+
+    // Work in cents before rounding to avoid JavaScript floating-point cases
+    // such as 19.50 * 0.97 becoming 18.914999999... and incorrectly paying 18.91.
+    var baseCents = Math.round(base * 100);
+    var payoutCents = Math.round(baseCents * (100 - markup) / 100);
+    return Number((payoutCents / 100).toFixed(2));
   }
 
   var proposalsMap = (typeof window !== 'undefined' && (window.__hlx_proposals_map = window.__hlx_proposals_map || {})) || {};
@@ -859,10 +838,22 @@
     var py = Number(p.payout || 0);
     var lc = p.longcode || '';
     var sp = Number(p.spot || 0);
-    // Prefer the authoritative app setting; live Deriv proposals may already
-    // have the app markup incorporated into their payout.
-    var proposalMarkup = getKnownDerivAppMarkupPercentage();
-    if (proposalMarkup === null) {
+    // Marketing trades are simulated locally, so the incoming Deriv proposal
+    // is only a price quote; the site's 3% payout reduction is applied below
+    // before this proposal is recorded. Do not confuse app_get configuration
+    // with a markup already deducted from this particular quote.
+    var marketingProfile = getActiveMarketingProfileForCurrentAccount();
+    var isSyntheticMarketingQuote = !!(
+      marketingProfile &&
+      marketingProfile.marketingEligible &&
+      !marketingProfile.useRealBalance &&
+      !marketingProfile.isDemoMarketing &&
+      !isDemoAccountActive()
+    );
+    var proposalMarkup = isSyntheticMarketingQuote
+      ? getMarketingMarkupPercentage(marketingProfile)
+      : getKnownDerivAppMarkupPercentage();
+    if (!isSyntheticMarketingQuote && proposalMarkup === null) {
       proposalMarkup = normalizeMarketingMarkupPercentage(
         echo.app_markup_percentage ??
         (echo.parameters && echo.parameters.app_markup_percentage)
@@ -904,25 +895,24 @@
       var raw = Number(rawPayout);
       if (!Number.isFinite(raw) || raw <= 0) return raw;
 
+      // Only a proposal explicitly processed by this Marketing quote path is
+      // considered already marked. The registered app's app_get value does
+      // not prove that a synthetic/local trade's payout has been adjusted.
       var alreadyMarked = matchedProp
         ? normalizeMarketingMarkupPercentage(matchedProp.markupAppliedPercentage)
         : null;
-      if (alreadyMarked === null) alreadyMarked = getKnownDerivAppMarkupPercentage();
 
       var targetMarkup = getMarketingMarkupPercentage(marketingProfile);
       if (alreadyMarked !== null && Number.isFinite(targetMarkup)) {
-        // Convert an already-marked quote to the configured target markup.
         var currentFactor = 1 - (alreadyMarked / 100);
         var targetFactor = 1 - (targetMarkup / 100);
         if (currentFactor > 0 && targetFactor > 0) {
           return Number((raw * targetFactor / currentFactor).toFixed(2));
         }
-        return Number(raw.toFixed(2));
       }
 
-      // A matched live quote is the source of truth while app_get is pending.
-      // Only fallback calculations receive a manual markup here.
-      if (matchedProp) return Number(raw.toFixed(2));
+      // Unknown/unmarked proposals and generated fallback prices must receive
+      // the markup instead of bypassing it.
       return applyMarketingMarkupToPayout(raw, marketingProfile);
     };
 
@@ -1072,7 +1062,9 @@
     var ct = pObj.contractType || 'CALL';
     var bar = pObj.barrier || '0';
     var st = Number(pObj.stake || 1.0);
-    var py = (Number.isFinite(Number(pObj.payout)) && Number(pObj.payout) > 0) ? Number(pObj.payout) : calculateContractPayout(ct, bar, st, pObj, prof);
+    // Route fallback contracts through the same markup-aware calculation;
+    // a raw payout must never bypass the 3% rule just because it exists.
+    var py = calculateContractPayout(ct, bar, st, pObj, prof);
     var profVal = Number((py - st).toFixed(2));
     var lc = pObj.longcode || generateContractLongcode(sym, ct, bar, st);
 
@@ -3315,8 +3307,30 @@
         }
       }
 
-      // 3. Authentic Proposal response from Deriv
+      // 3. Proposal response from Deriv. Marketing buys are simulated locally,
+      // so apply the 3% reduction to the quoted payout before the UI and the
+      // synthetic purchase both consume it. The recorded proposal is tagged
+      // with 3% by recordLiveDerivProposal to prevent a second deduction.
       if (msg.msg_type === 'proposal' && msg.proposal) {
+        var payoutProfile = getActiveMarketingProfileForCurrentAccount();
+        var applyMarketingPayoutMarkup = !!(
+          payoutProfile &&
+          payoutProfile.marketingEligible &&
+          !payoutProfile.useRealBalance &&
+          !payoutProfile.isDemoMarketing &&
+          !isDemoAccountActive()
+        );
+        if (applyMarketingPayoutMarkup) {
+          var rawProposalPayout = Number(msg.proposal.payout);
+          if (Number.isFinite(rawProposalPayout) && rawProposalPayout > 0) {
+            var markedProposalPayout = applyMarketingMarkupToPayout(rawProposalPayout, payoutProfile);
+            if (Number.isFinite(markedProposalPayout) && markedProposalPayout !== rawProposalPayout) {
+              msg.proposal.payout = markedProposalPayout;
+              msg.proposal.display_value = markedProposalPayout.toFixed(2);
+              modified = true;
+            }
+          }
+        }
         recordLiveDerivProposal(msg);
       }
 
