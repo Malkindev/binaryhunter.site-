@@ -16,10 +16,10 @@ const production = fs.readFileSync(
 );
 
 function extractFunction(name) {
-  const match = new RegExp('function\\s+' + name + '\\s*\\(').exec(production);
-  assert(match, 'Missing production function: ' + name);
-  const start = match.index;
-  const open = production.indexOf('{', match.index);
+  const marker = 'function ' + name + '(';
+  const start = production.indexOf(marker);
+  assert(start >= 0, 'Missing production function: ' + name);
+  const open = production.indexOf('{', start + marker.length);
   assert(open >= 0, 'Missing function body: ' + name);
 
   let depth = 0;
@@ -46,7 +46,7 @@ function extractFunction(name) {
     if (quote) {
       if (escaped) {
         escaped = false;
-      } else if (ch === '\\\\') {
+      } else if (ch.charCodeAt(0) === 92) {
         escaped = true;
       } else if (ch === quote) {
         quote = null;
@@ -63,7 +63,7 @@ function extractFunction(name) {
       i++;
       continue;
     }
-    if (ch === "'" || ch === '"' || ch === '`') {
+    if (ch === "'" || ch === '"' || ch.charCodeAt(0) === 96) {
       quote = ch;
       continue;
     }
@@ -97,6 +97,8 @@ assert.strictEqual(sandbox.getMarketingMarkupPercentage(profile), 3,
   'Stale profile settings must not disable the required 3% markup');
 assert.strictEqual(sandbox.applyMarketingMarkupToPayout(17.20, profile), 16.68,
   '$17.20 gross payout must become $16.68 at 3% markup');
+assert.strictEqual(sandbox.applyMarketingMarkupToPayout(19.50, profile), 18.92,
+  '$19.50 gross payout must be rounded safely to $18.92 after 3% markup');
 
 assert.strictEqual(
   sandbox.calculateContractPayout('CALL', '', 10, null, profile),
@@ -129,11 +131,11 @@ assert.strictEqual(
 );
 
 assert(
-  /var py = calculateContractPayout\(ct, bar, st, pObj, prof\);/.test(production),
+  production.includes('var py = calculateContractPayout(ct, bar, st, pObj, prof);'),
   'Fallback simulated contracts must always use the markup-aware payout calculation'
 );
 assert(
-  /var markedProposalPayout = applyMarketingMarkupToPayout\(rawProposalPayout, payoutProfile\);/.test(production),
+  production.includes('var markedProposalPayout = applyMarketingMarkupToPayout(rawProposalPayout, payoutProfile);'),
   'The Marketing quote shown to the UI must receive the same 3% payout adjustment'
 );
 
