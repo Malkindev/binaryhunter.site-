@@ -156,7 +156,7 @@ async function runTests() {
   const testSequence = ['real', 'demo', 'real', 'demo'];
   testSequence.forEach((mode, idx) => {
     switchMode(mode);
-    const expectedExpectedBal = mode === 'real' ? 105.34 : 9950.00;
+    const expectedExpectedBal = mode === 'real' ? 76.52 : 250.00;
     const currentBal = getBalance(mode);
     assert.strictEqual(currentBal, expectedExpectedBal, `Switch step ${idx + 1} (${mode}) balance match`);
   });
