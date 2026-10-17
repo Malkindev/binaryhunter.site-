@@ -87,13 +87,15 @@ const names = [
   'isFreshMarketingProposal',
   'marketingProposalMatchesPurchase',
   'recordLiveDerivProposal',
-  'calculateContractPayout'
+  'calculateContractPayout',
+  'syncAfterSuccessfulBuy'
 ];
 const testSource = `
 var proposalSubsMap = {};
 var outgoingProposalReqsById = {};
 var proposalsMap = {};
 var latestProposalsBySig = {};
+var syntheticContractsMap = {};
 var activeMarketingTestProfile = null;
 var activeMarketingTestDemo = false;
 function getActiveMarketingProfileForCurrentAccount() { return activeMarketingTestProfile; }
@@ -112,9 +114,13 @@ function isDemoAccountActive() { return activeMarketingTestDemo; }
   '\nthis.isFreshMarketingProposal = isFreshMarketingProposal;' +
   '\nthis.marketingProposalMatchesPurchase = marketingProposalMatchesPurchase;' +
   '\nthis.recordLiveDerivProposal = recordLiveDerivProposal;' +
-  '\nthis.calculateContractPayout = calculateContractPayout;';
+  '\nthis.calculateContractPayout = calculateContractPayout;' +
+  '\nthis.syncAfterSuccessfulBuy = syncAfterSuccessfulBuy;' +
+  '\nthis.syntheticContractsMap = syntheticContractsMap;' ;
 
 const appMarkup = { '1089': 0, '777': 3 };
+const scheduledTimers = [];
+const emittedWsMessages = [];
 const sandbox = {
   Number,
   Math,
@@ -122,7 +128,11 @@ const sandbox = {
   Date,
   Object,
   window: { __DERIV_SITE_SETTINGS__: { real: { app_markup_percentage: 3 } } },
-  marketingAppMarkupById: appMarkup
+  marketingAppMarkupById: appMarkup,
+  currentRealLoginId: 'ROT90394362',
+  localStorage: { getItem: (key) => key === 'active_loginid' ? 'ROT90394362' : null },
+  setTimeout: (fn, delay) => { scheduledTimers.push({ fn, delay }); return scheduledTimers.length; },
+  emitWsMessage: (_ws, message) => { emittedWsMessages.push(message); }
 };
 vm.runInNewContext(testSource, sandbox);
 
@@ -458,5 +468,46 @@ assert.strictEqual(demoResult.marketingQuote, false);
 assert.strictEqual(demoMessage.proposal.payout, 17.20,
   'Demo proposal payload must never receive Marketing markup adjustments');
 sandbox.setDemoMode(false);
+
+// Synthetic Marketing buys must not request the real Deriv balance or query a
+// synthetic contract ID from Deriv; either response can overwrite the local ledger.
+sandbox.setActiveProfile({
+  marketingEligible: true,
+  useRealBalance: false,
+  isDemoMarketing: false,
+  rot: 'ROT90394362'
+});
+sandbox.setDemoMode(false);
+sandbox.syntheticContractsMap['fixture-synthetic-contract'] = { contractId: 'fixture-synthetic-contract' };
+const marketingTimersBefore = scheduledTimers.length;
+const marketingEmitsBefore = emittedWsMessages.length;
+const marketingRawSends = [];
+sandbox.syncAfterSuccessfulBuy({}, (payload) => marketingRawSends.push(payload), {
+  buy: { contract_id: 'fixture-synthetic-contract', balance_after: 90, currency: 'USD' }
+});
+assert.strictEqual(scheduledTimers.length, marketingTimersBefore,
+  'Synthetic Marketing buys must not schedule native balance/contract refreshes');
+assert.strictEqual(marketingRawSends.length, 0,
+  'Synthetic Marketing buys must not query Deriv for the synthetic contract');
+assert.strictEqual(emittedWsMessages.length, marketingEmitsBefore,
+  'The synthetic trade handler owns the authoritative Marketing balance event');
+
+delete sandbox.syntheticContractsMap['fixture-synthetic-contract'];
+sandbox.setActiveProfile(null);
+const nativeTimersBefore = scheduledTimers.length;
+const nativeEmitsBefore = emittedWsMessages.length;
+const nativeRawSends = [];
+sandbox.syncAfterSuccessfulBuy({}, (payload) => nativeRawSends.push(JSON.parse(payload)), {
+  buy: { contract_id: 'fixture-native-contract', balance_after: 89, currency: 'USD' }
+});
+assert.strictEqual(scheduledTimers.length - nativeTimersBefore, 2,
+  'Ordinary Deriv buys must keep native contract/balance reconciliation');
+assert.strictEqual(emittedWsMessages.length - nativeEmitsBefore, 1,
+  'Ordinary Deriv buys must still emit their returned balance');
+scheduledTimers.splice(nativeTimersBefore).forEach((timer) => timer.fn());
+assert.strictEqual(nativeRawSends.length, 2,
+  'Ordinary Deriv buys must continue refreshing the authoritative native balance');
+assert(nativeRawSends.some((payload) => payload.proposal_open_contract === 1));
+assert(nativeRawSends.some((payload) => payload.balance === 1));
 
 console.log('PASS: authoritative markup provenance, 3% exactly once, strict quote matching, stake/profit arithmetic, and explicit fallback handling.');
