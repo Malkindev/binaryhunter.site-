@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/marketing-payout-markup.test.js"
+    "test": "npm run test:payout",
+    "test:payout": "node test/marketing-payout-markup.test.js"
   },
   "dependencies": {
     "express": "^4.19.2"
