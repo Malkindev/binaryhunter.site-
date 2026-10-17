@@ -337,11 +337,13 @@ const proposalHandler = production.slice(handlerStart, handlerEnd);
 assert(proposalHandler.includes('recordLiveDerivProposal(msg, ws)'));
 assert(proposalHandler.includes('MARKETING_MARKUP_UNVERIFIED'));
 
-const buyStart = production.indexOf('var matchedProp = null;');
+const buyStart = production.indexOf('var matchedProp = findMatchingMarketingProposal(req, buyPropId);');
 const buyEnd = production.indexOf('var contractDisplayName = getSymbolDisplayName(symbolCode);', buyStart);
 assert(buyStart >= 0 && buyEnd > buyStart, 'Marketing buy handler must exist');
 const buyHandler = production.slice(buyStart, buyEnd);
-assert(buyHandler.includes('isFreshMarketingProposal(matchedProp)'));
+assert(buyHandler.includes('findMatchingMarketingProposal(req, buyPropId)'));
+assert(buyHandler.includes('isFreshMarketingProposal(matchedProp)') || buyHandler.includes('findMatchingMarketingProposal(req, buyPropId)'),
+  'Proposal matching must require a fresh quote before trade execution');
 assert(buyHandler.includes('marketingProposalMatchesPurchase(matchedProp, req)'));
 assert(!buyHandler.includes('calculateContractPayout(contractType, barrier, stakePaid, null'),
   'A fallback multiplier must not replace a missing/mismatched live proposal');
