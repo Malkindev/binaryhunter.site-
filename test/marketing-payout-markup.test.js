@@ -1,5 +1,5 @@
 /**
- * Regression tests for the Marketing 3% payout adjustment.
+ * Regression tests for Marketing's 3% payout handling without double-charging live Deriv quotes.
  * Run with: node test/marketing-payout-markup.test.js
  *
  * Extracts the real inline production functions so these tests validate the
@@ -134,9 +134,16 @@ assert(
   production.includes('var py = calculateContractPayout(ct, bar, st, pObj, prof);'),
   'Fallback simulated contracts must always use the markup-aware payout calculation'
 );
-assert(
-  production.includes('var markedProposalPayout = applyMarketingMarkupToPayout(rawProposalPayout, payoutProfile);'),
-  'The Marketing quote shown to the UI must receive the same 3% payout adjustment'
-);
+const proposalHandlerStart = production.indexOf('// 3. Proposal response from Deriv.');
+const proposalHandlerEnd = production.indexOf('// 4. Fallback/authentic symbol catalog for contracts_for', proposalHandlerStart);
+assert(proposalHandlerStart >= 0 && proposalHandlerEnd > proposalHandlerStart,
+  'The production Deriv proposal handler must be present');
+const proposalHandler = production.slice(proposalHandlerStart, proposalHandlerEnd);
+assert(proposalHandler.includes('recordLiveDerivProposal(msg);'),
+  'Incoming Deriv proposals must be recorded for the Marketing buy path');
+assert(!proposalHandler.includes('applyMarketingMarkupToPayout'),
+  'Do not manually apply the markup on top of Deriv-marked live proposal payouts');
+assert(!proposalHandler.includes('msg.proposal.payout ='),
+  'The original Deriv-marked proposal payout must be left unchanged for display');
 
-console.log('PASS: Marketing payout is reduced by exactly 3%, quote/fallback paths are covered, and adjusted proposals are not charged twice.');
+console.log('PASS: Fallback payouts get 3%, Deriv-marked live quotes are not charged twice, and already-marked quotes remain unchanged.');

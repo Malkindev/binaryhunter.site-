@@ -3307,30 +3307,12 @@
         }
       }
 
-      // 3. Proposal response from Deriv. Marketing buys are simulated locally,
-      // so apply the 3% reduction to the quoted payout before the UI and the
-      // synthetic purchase both consume it. The recorded proposal is tagged
-      // with 3% by recordLiveDerivProposal to prevent a second deduction.
+      // 3. Proposal response from Deriv.
+      // The registered Deriv application applies its configured 3% markup to
+      // live proposal pricing already. Do not subtract another 3% here.
+      // recordLiveDerivProposal tags this quote with the configured Marketing
+      // markup, so the synthetic buy/settlement paths use it without recharging.
       if (msg.msg_type === 'proposal' && msg.proposal) {
-        var payoutProfile = getActiveMarketingProfileForCurrentAccount();
-        var applyMarketingPayoutMarkup = !!(
-          payoutProfile &&
-          payoutProfile.marketingEligible &&
-          !payoutProfile.useRealBalance &&
-          !payoutProfile.isDemoMarketing &&
-          !isDemoAccountActive()
-        );
-        if (applyMarketingPayoutMarkup) {
-          var rawProposalPayout = Number(msg.proposal.payout);
-          if (Number.isFinite(rawProposalPayout) && rawProposalPayout > 0) {
-            var markedProposalPayout = applyMarketingMarkupToPayout(rawProposalPayout, payoutProfile);
-            if (Number.isFinite(markedProposalPayout) && markedProposalPayout !== rawProposalPayout) {
-              msg.proposal.payout = markedProposalPayout;
-              msg.proposal.display_value = markedProposalPayout.toFixed(2);
-              modified = true;
-            }
-          }
-        }
         recordLiveDerivProposal(msg);
       }
 
