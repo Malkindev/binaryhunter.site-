@@ -85,9 +85,21 @@ const names = [
   'buildProposalSignature',
   'isFreshMarketingProposal',
   'marketingProposalMatchesPurchase',
+  'recordLiveDerivProposal',
   'calculateContractPayout'
 ];
-const testSource = names.map(extractFunction).join('\n') +
+const testSource = `
+var proposalSubsMap = {};
+var outgoingProposalReqsById = {};
+var proposalsMap = {};
+var latestProposalsBySig = {};
+var activeMarketingTestProfile = null;
+var activeMarketingTestDemo = false;
+function getActiveMarketingProfileForCurrentAccount() { return activeMarketingTestProfile; }
+function isDemoAccountActive() { return activeMarketingTestDemo; }
+` + names.map(extractFunction).join('\n') +
+  '\nthis.setActiveProfile = function (profile) { activeMarketingTestProfile = profile; };' +
+  '\nthis.setDemoMode = function (demo) { activeMarketingTestDemo = !!demo; };' +
   '\nthis.normalizeMarketingMarkupPercentage = normalizeMarketingMarkupPercentage;' +
   '\nthis.getWebSocketAppId = getWebSocketAppId;' +
   '\nthis.getKnownDerivAppMarkupPercentage = getKnownDerivAppMarkupPercentage;' +
@@ -97,6 +109,7 @@ const testSource = names.map(extractFunction).join('\n') +
   '\nthis.buildProposalSignature = buildProposalSignature;' +
   '\nthis.isFreshMarketingProposal = isFreshMarketingProposal;' +
   '\nthis.marketingProposalMatchesPurchase = marketingProposalMatchesPurchase;' +
+  '\nthis.recordLiveDerivProposal = recordLiveDerivProposal;' +
   '\nthis.calculateContractPayout = calculateContractPayout;';
 
 const appMarkup = { '1089': 0, '777': 3 };
@@ -301,5 +314,131 @@ assert(production.includes('var profitEarned = isWon ? Number((payoutExpected - 
   'Profit must be calculated from total payout minus the actual paid price on a win');
 assert(production.includes('payout: payoutExpected,'),
   'Purchase confirmation and open-contract history must carry the same verified payout');
+
+// End-to-end quote normalization: the same response data flows from Deriv
+// proposal through the displayed proposal and into the settlement calculation.
+sandbox.setActiveProfile({
+  marketingEligible: true,
+  useRealBalance: false,
+  isDemoMarketing: false,
+  app_markup_percentage: 3,
+  currency: 'USD'
+});
+
+function makeProposalMessage(id, payout) {
+  return {
+    echo_req: {
+      proposal: 1,
+      amount: 10,
+      basis: 'stake',
+      contract_type: 'CALL',
+      currency: 'USD',
+      symbol: 'R_10',
+      duration: 5,
+      duration_unit: 't'
+    },
+    msg_type: 'proposal',
+    proposal: {
+      id,
+      ask_price: 10,
+      payout,
+      longcode: 'Test CALL proposal'
+    }
+  };
+}
+
+// App 1089 is a test fixture representing an authoritative 0%-markup app.
+// Its unmarked $17.20 proposal must be adjusted once to $16.68.
+const unmarkedMessage = makeProposalMessage('fixture-unmarked-1', 17.20);
+const unmarkedResult = sandbox.recordLiveDerivProposal(
+  unmarkedMessage,
+  { url: 'wss://ws.derivws.com/websockets/v3?app_id=1089' }
+);
+assert.strictEqual(unmarkedResult.blocked, false);
+assert.strictEqual(unmarkedResult.verified, true);
+assert.strictEqual(unmarkedResult.adjusted, true);
+assert.strictEqual(unmarkedResult.record.sourceMarkupPercentage, 0);
+assert.strictEqual(unmarkedResult.record.markupAppliedPercentage, 3);
+assert.strictEqual(unmarkedResult.record.rawPayout, 17.20);
+assert.strictEqual(unmarkedResult.record.payout, 16.68);
+assert.strictEqual(unmarkedMessage.proposal.payout, 16.68,
+  'Displayed proposal payload must carry the adjusted payout');
+assert.strictEqual(unmarkedMessage.proposal.display_value, '16.68',
+  'Displayed payout text must agree with the normalized numeric payout');
+const purchasePayoutFromSameQuote = sandbox.calculateContractPayout(
+  'CALL', '', 10, unmarkedResult.record, profile3
+);
+const settlementPayoutFromSameQuote = purchasePayoutFromSameQuote;
+const profitCreditedOnWin = Number((settlementPayoutFromSameQuote - 10).toFixed(2));
+assert.strictEqual(purchasePayoutFromSameQuote, 16.68);
+assert.strictEqual(settlementPayoutFromSameQuote, 16.68);
+assert.strictEqual(profitCreditedOnWin, 6.68,
+  'Final credited profit is total payout minus the $10 stake, not the total payout itself');
+
+// App 777 represents an authoritative 3%-markup app. In that case the quoted
+// $16.68 is already marked; it must not be reduced a second time.
+const alreadyMarkedMessage = makeProposalMessage('fixture-marked-1', 16.68);
+const alreadyMarkedResult = sandbox.recordLiveDerivProposal(
+  alreadyMarkedMessage,
+  { url: 'wss://ws.derivws.com/websockets/v3?app_id=777' }
+);
+assert.strictEqual(alreadyMarkedResult.blocked, false);
+assert.strictEqual(alreadyMarkedResult.verified, true);
+assert.strictEqual(alreadyMarkedResult.adjusted, false);
+assert.strictEqual(alreadyMarkedResult.record.sourceMarkupPercentage, 3);
+assert.strictEqual(alreadyMarkedMessage.proposal.payout, 16.68,
+  'An already-marked quote must retain its exact payout');
+assert.strictEqual(
+  sandbox.calculateContractPayout('CALL', '', 10, alreadyMarkedResult.record, profile3),
+  16.68
+);
+
+// If the quote has no explicit markup information and app_get data for the
+// active WebSocket app is unavailable, the Marketing quote must be rejected.
+const unknownMarkupMessage = makeProposalMessage('fixture-unknown-1', 17.20);
+const unknownMarkupResult = sandbox.recordLiveDerivProposal(
+  unknownMarkupMessage,
+  { url: 'wss://ws.derivws.com/websockets/v3?app_id=999' }
+);
+assert.strictEqual(unknownMarkupResult.blocked, true);
+assert.strictEqual(unknownMarkupResult.verified, false);
+assert.strictEqual(unknownMarkupResult.record.markupStatus, 'unverified');
+assert.strictEqual(unknownMarkupMessage.proposal.payout, 17.20,
+  'An unknown-markup quote may not be silently rewritten and presented as verified');
+
+// Confirm the Marketing transformation cannot bleed into an ordinary real
+// account or a Demo-mode connection.
+sandbox.setActiveProfile({
+  marketingEligible: false,
+  useRealBalance: true,
+  app_markup_percentage: 3,
+  currency: 'USD'
+});
+const ordinaryMessage = makeProposalMessage('fixture-ordinary-1', 17.20);
+const ordinaryResult = sandbox.recordLiveDerivProposal(
+  ordinaryMessage,
+  { url: 'wss://ws.derivws.com/websockets/v3?app_id=1089' }
+);
+assert.strictEqual(ordinaryResult.marketingQuote, false);
+assert.strictEqual(ordinaryMessage.proposal.payout, 17.20,
+  'Ordinary Deriv client proposal must not be changed by Marketing markup logic');
+
+sandbox.setActiveProfile({
+  marketingEligible: true,
+  useRealBalance: false,
+  isDemoMarketing: false,
+  app_markup_percentage: 3,
+  currency: 'USD'
+});
+sandbox.setDemoMode(true);
+const demoMessage = makeProposalMessage('fixture-demo-1', 17.20);
+const demoResult = sandbox.recordLiveDerivProposal(
+  demoMessage,
+  { url: 'wss://ws.derivws.com/websockets/v3?app_id=1089' }
+);
+assert.strictEqual(demoResult.marketingQuote, false);
+assert.strictEqual(demoMessage.proposal.payout, 17.20,
+  'Demo proposal payload must never receive Marketing markup adjustments');
+sandbox.setDemoMode(false);
 
 console.log('PASS: authoritative markup provenance, 3% exactly once, strict quote matching, stake/profit arithmetic, and explicit fallback handling.');
