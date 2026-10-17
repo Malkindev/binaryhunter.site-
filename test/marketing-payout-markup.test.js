@@ -77,6 +77,7 @@ function extractFunction(name) {
 
 const names = [
   'normalizeMarketingMarkupPercentage',
+  'normalizeSymbolForDeriv',
   'getWebSocketAppId',
   'getKnownDerivAppMarkupPercentage',
   'getMarketingMarkupPercentage',
@@ -101,6 +102,7 @@ function isDemoAccountActive() { return activeMarketingTestDemo; }
   '\nthis.setActiveProfile = function (profile) { activeMarketingTestProfile = profile; };' +
   '\nthis.setDemoMode = function (demo) { activeMarketingTestDemo = !!demo; };' +
   '\nthis.normalizeMarketingMarkupPercentage = normalizeMarketingMarkupPercentage;' +
+  '\nthis.normalizeSymbolForDeriv = normalizeSymbolForDeriv;' +
   '\nthis.getWebSocketAppId = getWebSocketAppId;' +
   '\nthis.getKnownDerivAppMarkupPercentage = getKnownDerivAppMarkupPercentage;' +
   '\nthis.getMarketingMarkupPercentage = getMarketingMarkupPercentage;' +
@@ -126,6 +128,13 @@ vm.runInNewContext(testSource, sandbox);
 
 const profile3 = { marketingEligible: true, app_markup_percentage: 3 };
 const profile0 = { marketingEligible: true, app_markup_percentage: 0 };
+
+// Symbol handling must never substitute a different instrument.
+assert.strictEqual(sandbox.normalizeSymbolForDeriv(' 1HZ150V '), '1HZ150V');
+assert.strictEqual(sandbox.normalizeSymbolForDeriv('1HZ200V'), '1HZ200V');
+assert.strictEqual(sandbox.normalizeSymbolForDeriv('1HZ250V'), '1HZ250V');
+assert.strictEqual(sandbox.normalizeSymbolForDeriv('1HZ300V'), '1HZ300V');
+assert.strictEqual(sandbox.normalizeSymbolForDeriv('1HZ90V'), '1HZ90V');
 
 assert.strictEqual(sandbox.normalizeMarketingMarkupPercentage(3), 3);
 assert.strictEqual(sandbox.normalizeMarketingMarkupPercentage(0), 0);
@@ -284,6 +293,15 @@ assert.strictEqual(sandbox.marketingProposalMatchesPurchase(markedQuote, {
 assert.strictEqual(sandbox.isFreshMarketingProposal(markedQuote, markedQuote.timestamp + 30000), true);
 assert.strictEqual(sandbox.isFreshMarketingProposal(markedQuote, markedQuote.timestamp + 30001), false,
   'Quotes older than the freshness window must not be used for purchase');
+
+assert(!production.includes('Suppressing Deriv symbol/contract error'),
+  'The WebSocket layer must not suppress native Deriv symbol/contract errors');
+assert(production.includes('return raw;'),
+  'Original Deriv symbol/contract errors must be returned to the caller');
+assert(production.includes('Deriv rejected symbol/contract request'),
+  'Invalid symbol diagnostics must include the rejected request details');
+assert(!production.includes("u === '1HZ150V' || u === '1HZ200V'"),
+  'Do not hard-code unrelated Deriv symbol aliases');
 
 assert(production.includes('The active WebSocket app markup could not be verified'),
   'Unknown markup provenance must be surfaced as an error');
