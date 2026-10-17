@@ -86,6 +86,8 @@ const names = [
   'buildProposalSignature',
   'isFreshMarketingProposal',
   'marketingProposalMatchesPurchase',
+  'hasCompleteMarketingPurchaseParameters',
+  'findMatchingMarketingProposal',
   'recordLiveDerivProposal',
   'calculateContractPayout',
   'syncAfterSuccessfulBuy'
@@ -95,6 +97,7 @@ var proposalSubsMap = {};
 var outgoingProposalReqsById = {};
 var proposalsMap = {};
 var latestProposalsBySig = {};
+var lastOutgoingProposalReqs = {};
 var syntheticContractsMap = {};
 var activeMarketingTestProfile = null;
 var activeMarketingTestDemo = false;
@@ -113,6 +116,11 @@ function isDemoAccountActive() { return activeMarketingTestDemo; }
   '\nthis.buildProposalSignature = buildProposalSignature;' +
   '\nthis.isFreshMarketingProposal = isFreshMarketingProposal;' +
   '\nthis.marketingProposalMatchesPurchase = marketingProposalMatchesPurchase;' +
+  '\nthis.hasCompleteMarketingPurchaseParameters = hasCompleteMarketingPurchaseParameters;' +
+  '\nthis.findMatchingMarketingProposal = findMatchingMarketingProposal;' +
+  '\nthis.outgoingProposalReqsById = outgoingProposalReqsById;' +
+  '\nthis.proposalsMap = proposalsMap;' +
+  '\nthis.latestProposalsBySig = latestProposalsBySig;' +
   '\nthis.recordLiveDerivProposal = recordLiveDerivProposal;' +
   '\nthis.calculateContractPayout = calculateContractPayout;' +
   '\nthis.syncAfterSuccessfulBuy = syncAfterSuccessfulBuy;' +
@@ -509,5 +517,103 @@ assert.strictEqual(nativeRawSends.length, 2,
   'Ordinary Deriv buys must continue refreshing the authoritative native balance');
 assert(nativeRawSends.some((payload) => payload.proposal_open_contract === 1));
 assert(nativeRawSends.some((payload) => payload.balance === 1));
+
+// Sentinel buy IDs must be correlated to a complete, fresh quote by exact
+// executable terms when the signature differs only because optional expiry
+// metadata was omitted on the buy request.
+const expiryQuote = {
+  ...markedQuote,
+  id: 'fixture-expiry-quote',
+  expiry: '1780000000',
+  timestamp: Date.now()
+};
+sandbox.proposalsMap[expiryQuote.id] = expiryQuote;
+const sentinelBuy = {
+  buy: '1',
+  parameters: {
+    symbol: 'R_10',
+    contract_type: 'CALL',
+    amount: 10,
+    basis: 'stake',
+    currency: 'USD',
+    duration: 5,
+    duration_unit: 't'
+  }
+};
+assert.strictEqual(sandbox.hasCompleteMarketingPurchaseParameters(sentinelBuy), true);
+assert.strictEqual(
+  sandbox.findMatchingMarketingProposal(sentinelBuy, '1').id,
+  expiryQuote.id,
+  'A sentinel buy may recover a fresh quote only when the provided trade dimensions match'
+);
+assert.strictEqual(
+  sandbox.findMatchingMarketingProposal({
+    buy: '1',
+    parameters: { ...sentinelBuy.parameters, amount: 11 }
+  }, '1'),
+  null,
+  'Sentinel matching must reject a different requested stake'
+);
+assert.strictEqual(
+  sandbox.findMatchingMarketingProposal({
+    buy: '1',
+    parameters: { symbol: 'R_10', contract_type: 'CALL', amount: 10 }
+  }, '1'),
+  null,
+  'Incomplete parameters must not select a quote by guesswork'
+);
+assert.strictEqual(
+  sandbox.findMatchingMarketingProposal(sentinelBuy, 'not-cached-proposal-id'),
+  null,
+  'A missing non-sentinel proposal ID must never be replaced with a different quote'
+);
+delete sandbox.proposalsMap[expiryQuote.id];
+
+// The outgoing request is the fallback source when a response has an echo_req
+// containing only req_id/proposal. The resulting cached record retains all
+// original price-determining fields so the exact payout can safely be matched.
+sandbox.setActiveProfile({
+  marketingEligible: true,
+  useRealBalance: false,
+  isDemoMarketing: false,
+  app_markup_percentage: 3,
+  currency: 'USD'
+});
+sandbox.setDemoMode(false);
+sandbox.outgoingProposalReqsById['77'] = {
+  req_id: 77,
+  proposal: 1,
+  amount: 10,
+  basis: 'stake',
+  contract_type: 'CALL',
+  currency: 'USD',
+  symbol: 'R_10',
+  duration: 5,
+  duration_unit: 't'
+};
+const partialEchoMessage = {
+  req_id: 77,
+  echo_req: { req_id: 77, proposal: 1 },
+  msg_type: 'proposal',
+  proposal: {
+    id: 'fixture-partial-echo-1',
+    ask_price: 10,
+    payout: 17.20,
+    longcode: 'Test CALL proposal from partial echo'
+  }
+};
+const partialEchoResult = sandbox.recordLiveDerivProposal(
+  partialEchoMessage,
+  { url: 'wss://ws.derivws.com/websockets/v3?app_id=1089' }
+);
+assert.strictEqual(partialEchoResult.blocked, false);
+assert.strictEqual(partialEchoResult.record.symbol, 'R_10');
+assert.strictEqual(partialEchoResult.record.contractType, 'CALL');
+assert.strictEqual(partialEchoResult.record.requestedAmount, 10);
+assert.strictEqual(partialEchoResult.record.duration, '5');
+assert.strictEqual(partialEchoResult.record.durationUnit, 't');
+assert.strictEqual(partialEchoResult.record.payout, 16.68,
+  'The recovered outgoing parameters must allow only the correctly marked quote to be used');
+delete sandbox.outgoingProposalReqsById['77'];
 
 console.log('PASS: authoritative markup provenance, 3% exactly once, strict quote matching, stake/profit arithmetic, and explicit fallback handling.');
